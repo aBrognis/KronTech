@@ -92,10 +92,11 @@ const api = {
     selecionarPasta: ()                       => ipcRenderer.invoke('config:selecionarPasta'),
   },
   update: {
-    check:    ()  => ipcRenderer.invoke('update:check'),
-    download: ()  => ipcRenderer.invoke('update:download'),
-    install:  ()  => ipcRenderer.invoke('update:install'),
-    version:  ()  => ipcRenderer.invoke('update:version'),
+    check:         ()  => ipcRenderer.invoke('update:check'),
+    download:      ()  => ipcRenderer.invoke('update:download'),
+    install:       ()  => ipcRenderer.invoke('update:install'),
+    version:       ()  => ipcRenderer.invoke('update:version'),
+    getLastState:  ()  => ipcRenderer.invoke('update:getLastState'),
     onStatus: (cb) => {
       const channels = [
         'update:checking', 'update:available', 'update:not-available',

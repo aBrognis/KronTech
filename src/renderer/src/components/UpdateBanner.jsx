@@ -2,32 +2,33 @@ import { useState, useEffect } from 'react'
 import { Download, RefreshCw, ArrowDown, X } from 'lucide-react'
 
 export default function UpdateBanner() {
-  const [status, setStatus]     = useState(null)   // 'available' | 'downloading' | 'ready' | 'error'
-  const [info, setInfo]         = useState(null)
-  const [progress, setProgress] = useState(0)
+  const [status, setStatus]       = useState(null)
+  const [info, setInfo]           = useState(null)
+  const [progress, setProgress]   = useState(0)
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    const unsub = window.api.update.onStatus((event, data) => {
-      if (event === 'available') {
-        setInfo(data)
-        setStatus('available')
-        setDismissed(false)
-      }
-      if (event === 'progress') {
-        setProgress(Math.round(data.percent ?? 0))
-        setStatus('downloading')
-      }
-      if (event === 'downloaded') {
-        setInfo(data)
-        setStatus('ready')
-      }
-      if (event === 'error') {
-        setStatus('error')
-      }
+    // Busca estado já existente (evento pode ter disparado antes do renderer montar)
+    window.api.update.getLastState?.().then(({ event, data }) => {
+      if (!event || event === 'checking' || event === 'not-available') return
+      applyEvent(event, data)
     })
+
+    const unsub = window.api.update.onStatus((event, data) => applyEvent(event, data))
     return unsub
   }, [])
+
+  function applyEvent(event, data) {
+    if (event === 'available')     { setInfo(data); setStatus('available'); setDismissed(false) }
+    if (event === 'progress')      { setProgress(Math.round(data?.percent ?? 0)); setStatus('downloading') }
+    if (event === 'downloaded')    { setInfo(data); setStatus('ready') }
+    if (event === 'error')         { setStatus('error') }
+  }
+
+  function handleAtualizar() {
+    setStatus('downloading')
+    window.api.update.download().catch(() => {})
+  }
 
   if (!status || dismissed) return null
 
@@ -40,7 +41,6 @@ export default function UpdateBanner() {
       display: 'flex', alignItems: 'center', gap: 12,
       minWidth: 300, maxWidth: 380,
     }}>
-      {/* Ícone */}
       <div style={{ color: status === 'error' ? 'var(--red)' : 'var(--or)', flexShrink: 0 }}>
         {status === 'available'   && <ArrowDown size={18} />}
         {status === 'downloading' && <Download size={18} />}
@@ -48,14 +48,13 @@ export default function UpdateBanner() {
         {status === 'error'       && <X size={18} />}
       </div>
 
-      {/* Texto */}
       <div style={{ flex: 1, minWidth: 0 }}>
         {status === 'available' && (
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', marginBottom: 2 }}>
               Nova versão disponível — {info?.version}
             </div>
-            <div style={{ fontSize: 10, color: 'var(--t3)' }}>Clique em Baixar para atualizar</div>
+            <div style={{ fontSize: 10, color: 'var(--t3)' }}>Clique em Atualizar para baixar</div>
           </>
         )}
         {status === 'downloading' && (
@@ -81,15 +80,14 @@ export default function UpdateBanner() {
         )}
       </div>
 
-      {/* Ações */}
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
         {status === 'available' && (
           <button
             className="btn btn-primary"
             style={{ fontSize: 11, padding: '4px 10px' }}
-            onClick={() => window.api.update.download()}
+            onClick={handleAtualizar}
           >
-            Baixar
+            Atualizar
           </button>
         )}
         {status === 'ready' && (

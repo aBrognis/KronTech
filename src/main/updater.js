@@ -1,18 +1,18 @@
 import { autoUpdater } from 'electron-updater'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 
-// Token injetado em build-time via electron.vite.config.mjs — não existe em runtime
 const UPDATER_TOKEN = __UPDATER_TOKEN__
 
+let lastEvent = null
+let lastData  = null
+
 export function setupAutoUpdater() {
-  // Só verifica atualizações no app empacotado
   if (!app.isPackaged) return
 
-  autoUpdater.autoDownload = true
+  autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = false
 
-  // Configura o feed explicitamente
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'aBrognis',
@@ -20,14 +20,18 @@ export function setupAutoUpdater() {
     token: UPDATER_TOKEN,
   })
 
-  autoUpdater.on('checking-for-update',  ()     => broadcast('update:checking'))
-  autoUpdater.on('update-available',     (info) => broadcast('update:available', info))
-  autoUpdater.on('update-not-available', ()     => broadcast('update:not-available'))
-  autoUpdater.on('download-progress',    (prog) => broadcast('update:progress', prog))
-  autoUpdater.on('update-downloaded',    (info) => broadcast('update:downloaded', info))
-  autoUpdater.on('error',                (err)  => broadcast('update:error', err.message))
+  const save = (ev, data) => { lastEvent = ev; lastData = data; broadcast('update:' + ev, data) }
 
-  // Dispara 3s após o app estar pronto — garante que o renderer já carregou
+  autoUpdater.on('checking-for-update',  ()     => save('checking'))
+  autoUpdater.on('update-available',     (info) => save('available', info))
+  autoUpdater.on('update-not-available', ()     => save('not-available'))
+  autoUpdater.on('download-progress',    (prog) => save('progress', prog))
+  autoUpdater.on('update-downloaded',    (info) => save('downloaded', info))
+  autoUpdater.on('error',                (err)  => save('error', err.message))
+
+  // Quando o renderer pede o estado atual (caso já tenha disparado antes de carregar)
+  ipcMain.handle('update:getLastState', () => ({ event: lastEvent, data: lastData }))
+
   app.whenReady().then(() => {
     setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000)
   })
