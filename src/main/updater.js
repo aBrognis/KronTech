@@ -1,8 +1,8 @@
 import { autoUpdater } from 'electron-updater'
 import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url)
-const { UPDATER_TOKEN } = require('./secrets')
+
+// Token injetado em build-time via electron.vite.config.mjs — não existe em runtime
+const UPDATER_TOKEN = __UPDATER_TOKEN__
 
 export function setupAutoUpdater() {
   // Só verifica atualizações no app empacotado
