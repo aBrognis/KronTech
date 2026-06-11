@@ -97,8 +97,8 @@ case 'arquivos':    return <Arquivos    newTrigger={newTrigger} />
     }
   }
 
-  if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} />
-  if (appPhase === 'login')  return <LoginPage  onLogin={() => { window.api.win.maximize(); setAppPhase('app') }} />
+  if (appPhase === 'splash') return <SplashScreen onDone={() => { setAppPhase('login'); window.api.update?.check?.() }} />
+  if (appPhase === 'login')  return <><LoginPage onLogin={() => { window.api.win.maximize(); setAppPhase('app') }} /><UpdateBanner /></>
 
   return (
     <div className="app">

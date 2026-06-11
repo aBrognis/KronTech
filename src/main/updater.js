@@ -15,10 +15,7 @@ export function setupAutoUpdater() {
   autoUpdater.on('update-downloaded',    (info)   => broadcast('update:downloaded', info))
   autoUpdater.on('error',                (err)    => broadcast('update:error', err.message))
 
-  // Verifica 8 segundos após a janela abrir
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(() => {})
-  }, 8000)
+  // Verificação disparada pelo frontend quando a splash termina
 }
 
 export function checkForUpdates() {
