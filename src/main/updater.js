@@ -29,13 +29,16 @@ export function setupAutoUpdater() {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = false
-  autoUpdater.logger = null  // desativa verificação automática interna
+  autoUpdater.logger = null
+
+  autoUpdater.addAuthHeader(`token ${UPDATER_TOKEN}`)
 
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'aBrognis',
     repo: 'KronTech',
     token: UPDATER_TOKEN,
+    private: true,
   })
 
   const save = (ev, data) => {
@@ -59,7 +62,7 @@ export function setupAutoUpdater() {
     setTimeout(() => {
       log('chamando checkForUpdates...')
       autoUpdater.checkForUpdates().catch(e => log('checkForUpdates CATCH: ' + e.message))
-    }, 10000)
+    }, 2000)
   })
 }
 
