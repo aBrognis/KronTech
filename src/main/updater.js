@@ -59,7 +59,7 @@ export function setupAutoUpdater() {
     setTimeout(() => {
       log('chamando checkForUpdates...')
       autoUpdater.checkForUpdates().catch(e => log('checkForUpdates CATCH: ' + e.message))
-    }, 3000)
+    }, 5000)
   })
 }
 
