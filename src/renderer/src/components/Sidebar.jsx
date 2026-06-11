@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings
@@ -40,13 +40,14 @@ const MENU_BASE = [
 const LABELS_KEY = { inicio: 'label_inicio', gestao: 'label_gestao', ferramentas: 'label_ferramentas' }
 
 export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
-  const [collapsed,   setCollapsed]   = useState(false)
-  const [openGroups,  setOpenGroups]  = useState({ inicio: true, gestao: true, ferramentas: true })
-  const [version,     setVersion]     = useState('1.1')
-  const [telasDin,    setTelasDin]    = useState([])
-  const [reloading,   setReloading]   = useState(false)
-  const [autoReload,  setAutoReload]  = useState(0)
-  const [agora,       setAgora]       = useState(new Date())
+  const [collapsed,      setCollapsed]      = useState(false)
+  const [openGroups,     setOpenGroups]     = useState({ inicio: true, gestao: true, ferramentas: true })
+  const [version,        setVersion]        = useState('1.1')
+  const [telasDin,       setTelasDin]       = useState([])
+  const [reloading,      setReloading]      = useState(false)
+  const [autoReload,     setAutoReload]     = useState(0)
+  const [agora,          setAgora]          = useState(new Date())
+  const [designerConfirm, setDesignerConfirm] = useState(false)
 
   useEffect(() => {
     const id = setInterval(() => setAgora(new Date()), 1000)
@@ -243,7 +244,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
                   </>
               }
             </div>
-            <div className="sb-logo-tag">v{version} · 2026</div>
+            <div className="sb-logo-tag">v{version} · {__BUILD_DATE__} · {__BUILD_TIME__}</div>
           </div>
         </div>
 
@@ -264,7 +265,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
                     className={`ni${activePage === id || (id === 'dashboard' && activePage === 'dashboard-designer') ? ' active' : ''}`}
                     data-tip={label}
                     onClick={() => id === 'formbuilder'
-                      ? window.confirm('Abrir o KronTech Designer?') && window.api.designer?.open()
+                      ? setDesignerConfirm(true)
                       : onNavigate(id)}
                   >
                     <span className="ni-icon">
@@ -344,6 +345,41 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
         </div>
 
       </div>
+
+      {/* Modal confirmação KronTech Designer */}
+      {designerConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'var(--s1)', border: '1px solid var(--bd)',
+            borderRadius: 14, padding: '28px 28px 22px',
+            width: 320, boxShadow: '0 24px 64px rgba(0,0,0,.4)',
+            display: 'flex', flexDirection: 'column', gap: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 34, height: 34, flexShrink: 0 }}>
+                <LogoIcon />
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>KronTech Designer</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>Abrir o criador de telas?</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setDesignerConfirm(false)}>
+                Cancelar
+              </button>
+              <button className="btn btn-primary" style={{ height: 32, fontSize: 12 }} onClick={() => { setDesignerConfirm(false); window.api.designer?.open() }}>
+                Abrir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </aside>
   )
 }

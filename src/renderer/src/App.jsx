@@ -62,7 +62,8 @@ export default function App() {
       document.head.appendChild(s)
     }
     window.api.config.get().then(cfg => {
-      const hex = cfg?.Personalizacao?.cor_primaria
+      let hex = cfg?.Personalizacao?.cor_primaria
+      if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) aplicarCorSistema(hex)
     }).catch(() => {})
   }, [])
@@ -97,7 +98,7 @@ case 'arquivos':    return <Arquivos    newTrigger={newTrigger} />
   }
 
   if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} />
-  if (appPhase === 'login')  return <LoginPage  onLogin={() => setAppPhase('app')} />
+  if (appPhase === 'login')  return <LoginPage  onLogin={() => { window.api.win.maximize(); setAppPhase('app') }} />
 
   return (
     <div className="app">

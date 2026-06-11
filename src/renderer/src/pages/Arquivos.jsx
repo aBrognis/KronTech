@@ -494,7 +494,7 @@ export default function Arquivos({ newTrigger }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 12, marginBottom: 14 }}>
                     <div className="form-group">
                       <label className="form-label">Código</label>
-                      <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, background: 'var(--s2)', cursor: 'default', color: form.codigo ? 'var(--t1)' : 'var(--t3)', fontFamily: 'monospace' }}>
+                      <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
                         {form.codigo || '—'}
                       </div>
                     </div>
@@ -524,7 +524,7 @@ export default function Arquivos({ newTrigger }) {
                   <div className="form-group" style={{ marginBottom: 14 }}>
                     <label className="form-label">Arquivo</label>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <div className="form-input" style={{ flex: 1, height: 37, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s2)', cursor: 'default', fontSize: 12, color: form.arquivo_nome ? 'var(--t1)' : 'var(--t3)' }}>
+                      <div className="form-input" style={{ flex: 1, height: 37, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s1)', cursor: 'default', fontSize: 12, color: form.arquivo_nome ? 'var(--t1)' : 'var(--t3)' }}>
                         <ExtIcon ext={form.arquivo_ext} size={14} />
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {form.arquivo_nome || 'Nenhum arquivo selecionado'}
@@ -579,7 +579,7 @@ export default function Arquivos({ newTrigger }) {
 
                   {/* Info do arquivo */}
                   {form.arquivo_nome && (
-                    <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                    <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Informações do Arquivo</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {[
@@ -602,11 +602,11 @@ export default function Arquivos({ newTrigger }) {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div className="form-group">
                           <label className="form-label">Criado em</label>
-                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 37, background: 'var(--s2)', cursor: 'default' }}>{fmtDate(currentItem.dt_criacao)}</div>
+                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 37, background: 'var(--s1)', cursor: 'default' }}>{fmtDate(currentItem.dt_criacao)}</div>
                         </div>
                         <div className="form-group">
                           <label className="form-label">Atualizado em</label>
-                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 37, background: 'var(--s2)', cursor: 'default' }}>{fmtDate(currentItem.dt_atualizacao)}</div>
+                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 37, background: 'var(--s1)', cursor: 'default' }}>{fmtDate(currentItem.dt_atualizacao)}</div>
                         </div>
                       </div>
                     </div>

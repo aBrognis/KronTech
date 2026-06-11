@@ -77,7 +77,8 @@ export default function DesignerApp() {
       document.head.appendChild(s)
     }
     window.api.config.get().then(cfg => {
-      const hex = cfg?.Personalizacao?.cor_primaria
+      let hex = cfg?.Personalizacao?.cor_primaria
+      if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) aplicarCorSistema(hex)
     }).catch(() => {})
     window.api.update?.version().then(v => setVersion(v)).catch(() => {})
@@ -128,7 +129,7 @@ export default function DesignerApp() {
           }}>
             <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--or)', opacity: 0.85 }} />
             <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--or)', letterSpacing: 0.3 }}>
-              v{version}
+              v{version} · {__BUILD_DATE__} · {__BUILD_TIME__}
             </span>
           </div>
         </div>

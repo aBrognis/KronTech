@@ -96,8 +96,9 @@ html.light .sb::before {
 }
 .sb-logo-name em { color: var(--or); font-style: normal; font-weight: 400; }
 .sb-logo-tag {
-  font-size: 8px; letter-spacing: 2.5px; color: var(--t3);
+  font-size: 8px; letter-spacing: 0.5px; color: var(--t3);
   margin-top: 3px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* Scroll */

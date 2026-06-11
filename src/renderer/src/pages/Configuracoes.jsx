@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Palette, User, Save, RotateCcw, Pencil, Check } from 'lucide-react'
 
 const CORES = [
-  { nome: 'KronTech',  hex: '#FF6B2B' },
+  { nome: 'KronTech',  hex: '#D95218' },
   { nome: 'Âmbar',    hex: '#F59E0B' },
   { nome: 'Lima',     hex: '#84CC16' },
   { nome: 'Verde',    hex: '#10B981' },
@@ -15,7 +15,7 @@ const CORES = [
 ]
 
 const VAZIO = {
-  cor: '#FF6B2B', nomeSistema: 'KronTech',
+  cor: '#D95218', nomeSistema: 'KronTech',
   nomeUsuario: 'Anderson', cargoUsuario: 'Administrador',
 }
 
@@ -133,8 +133,9 @@ export default function Configuracoes() {
   useEffect(() => {
     window.api.config.get().then(cfg => {
       const p = cfg?.Personalizacao || {}
+      const corSalva = p.cor_primaria === '#FF6B2B' ? '#D95218' : (p.cor_primaria || VAZIO.cor)
       const loaded = {
-        cor:          p.cor_primaria || VAZIO.cor,
+        cor:          corSalva,
         nomeSistema:  p.nome_sistema || VAZIO.nomeSistema,
         nomeUsuario:  p.nome_usuario || VAZIO.nomeUsuario,
         cargoUsuario: p.cargo_usuario || VAZIO.cargoUsuario,

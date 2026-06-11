@@ -18,16 +18,13 @@ html.light .lp-tag-item{border-color:rgba(232,90,26,.14);background:rgba(232,90,
 .lp-win-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--lp-input-bd,#222);background:transparent;color:var(--lp-t3,#303030);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .22s;outline:none}
 .lp-win-btn:hover{background:var(--lp-input-bg,rgba(255,255,255,.04));color:var(--lp-t1,#f0f0f0)}
 .lp-win-btn.danger:hover{background:rgba(248,113,113,.1);color:#F87171;border-color:rgba(248,113,113,.35)}
-.lp-badge-dot{width:5px;height:5px;border-radius:50%;background:#FF6B2B;box-shadow:0 0 10px #FF6B2B,0 0 4px #FF6B2B;animation:lp-pulse 2.4s ease-in-out infinite}
-html.light .lp-badge-dot{background:#E85A1A;box-shadow:0 0 10px #E85A1A,0 0 4px #E85A1A}
+.lp-badge-dot{width:5px;height:5px;border-radius:50%;background:#D95218;box-shadow:0 0 10px #D95218,0 0 4px #D95218;animation:lp-pulse 2.4s ease-in-out infinite}
 @keyframes lp-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .lp-input{width:100%;height:46px;padding:0 14px;border-radius:10px;outline:none;font-size:13.5px;font-family:inherit;transition:border-color .22s,background .22s,box-shadow .22s;box-sizing:border-box}
 .lp-input::placeholder{opacity:.45}
-.lp-input:focus{border-color:#FF6B2B !important;background:rgba(255,107,43,.05) !important;box-shadow:0 0 0 3px rgba(255,107,43,.3),0 2px 8px rgba(0,0,0,.15) !important}
-html.light .lp-input:focus{border-color:#E85A1A !important;background:rgba(232,90,26,.04) !important;box-shadow:0 0 0 3px rgba(232,90,26,.28),0 2px 8px rgba(0,0,0,.08) !important}
+.lp-input:focus{border-color:#D95218 !important;background:rgba(217,82,24,.05) !important;box-shadow:0 0 0 3px rgba(217,82,24,.28),0 2px 8px rgba(0,0,0,.12) !important}
 .lp-input-icon{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;display:flex;transition:color .22s}
-.lp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,107,43,.5) 50%,transparent)}
-html.light .lp-card::before{background:linear-gradient(90deg,transparent,rgba(232,90,26,.45) 50%,transparent)}
+.lp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(217,82,24,.45) 50%,transparent)}
 .lp-btn{margin-top:6px;height:48px;border-radius:12px;border:none;color:#fff;font-size:14px;font-weight:700;letter-spacing:.2px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;transition:transform .22s,box-shadow .22s}
 .lp-btn:hover:not(:disabled){transform:translateY(-2px)}
 .lp-btn:active:not(:disabled){transform:translateY(0)}
@@ -230,9 +227,9 @@ export default function LoginPage({ onLogin }) {
     inputBg:'rgba(255,255,255,.04)', inputBd:'#222',
     t1:'#f0f0f0', t2:'#707070', t3:'#303030', accent:'#FF6B2B',
     rightGlow:'radial-gradient(ellipse 90% 100% at 50% 0%,rgba(255,107,43,.025) 0%,transparent 70%)',
-    btnBg:'linear-gradient(135deg,#C94D13 0%,#FF6B2B 55%,#FF8C55 100%)',
-    btnSh:'0 6px 28px rgba(255,107,43,.4),0 2px 8px rgba(255,107,43,.2)',
-    btnShH:'0 10px 36px rgba(255,107,43,.55),0 3px 12px rgba(255,107,43,.3)',
+    btnBg:'linear-gradient(135deg,#B84510 0%,#E85A1A 55%,#FF7A3A 100%)',
+    btnSh:'0 6px 28px rgba(192,72,18,.4),0 2px 8px rgba(192,72,18,.2)',
+    btnShH:'0 10px 36px rgba(192,72,18,.55),0 3px 12px rgba(192,72,18,.3)',
     cardSh:'0 32px 80px rgba(0,0,0,.55),0 8px 24px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04)',
     divLine:'#1f1f1f', checkBd:'#2a2a2a',
     errBg:'rgba(248,113,113,.07)', errBd:'rgba(248,113,113,.2)', errC:'#F87171',
@@ -306,7 +303,13 @@ export default function LoginPage({ onLogin }) {
         </div>
 
         {/* decorações */}
-        <div style={{position:'absolute',bottom:18,left:20,fontSize:'8.5px',letterSpacing:'2.5px',color:tk.t3}}>v1.0 · 2026</div>
+        <div style={{position:'absolute',bottom:18,left:20,fontSize:'8.5px',letterSpacing:'1.5px',color:tk.t3,display:'flex',gap:6,alignItems:'center'}}>
+          <span>v{__APP_VERSION__}</span>
+          <span style={{opacity:.4}}>·</span>
+          <span>{__BUILD_DATE__}</span>
+          <span style={{opacity:.4}}>·</span>
+          <span>{__BUILD_TIME__}</span>
+        </div>
         {['tl','bl'].map(p => (
           <div key={p} className={`lp-corner-dec ${p}`}>
             <svg width="18" height="18" viewBox="0 0 18 18"><path d="M1 9L1 1L9 1" fill="none" stroke={tk.accent} strokeWidth="1"/></svg>

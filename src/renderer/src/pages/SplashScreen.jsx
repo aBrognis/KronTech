@@ -308,10 +308,15 @@ export default function SplashScreen({ onDone }) {
 
         {/* versão */}
         <div style={{
-          marginTop:54, fontSize:'8.5px', letterSpacing:'3px', color:tk.verColor,
+          marginTop:54, fontSize:'8.5px', letterSpacing:'2px', color:tk.verColor,
           opacity:verIn?1:0, transition:'opacity .5s ease',
+          display:'flex', gap:8, alignItems:'center',
         }}>
-          v1.0 · 2026
+          <span>v{__APP_VERSION__}</span>
+          <span style={{opacity:.4}}>·</span>
+          <span>{__BUILD_DATE__}</span>
+          <span style={{opacity:.4}}>·</span>
+          <span>{__BUILD_TIME__}</span>
         </div>
       </div>
     </div>
