@@ -8,7 +8,7 @@ export function setupAutoUpdater() {
   // Só verifica atualizações no app empacotado
   if (!app.isPackaged) return
 
-  autoUpdater.autoDownload = false
+  autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = false
 
