@@ -26,7 +26,7 @@ export function setupAutoUpdater() {
   log('setupAutoUpdater iniciado — versao ' + app.getVersion())
   log('token presente: ' + (UPDATER_TOKEN ? 'sim (' + UPDATER_TOKEN.slice(0, 8) + '...)' : 'NAO'))
 
-  autoUpdater.autoDownload = false
+  autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = false
   autoUpdater.logger = null
