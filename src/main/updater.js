@@ -72,6 +72,7 @@ export function checkForUpdates() {
 
 export function downloadUpdate() {
   log('downloadUpdate chamado')
+  autoUpdater.addAuthHeader(`token ${UPDATER_TOKEN}`)
   return autoUpdater.downloadUpdate().catch(e => { log('downloadUpdate ERRO: ' + e.message); throw e })
 }
 
