@@ -16,8 +16,7 @@ function log(msg) {
       mkdirSync(dir, { recursive: true })
       logPath = join(dir, 'updater.log')
     }
-    const line = `[${new Date().toISOString()}] ${msg}\n`
-    writeFileSync(logPath, line, { flag: 'a' })
+    writeFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`, { flag: 'a' })
   } catch {}
 }
 
@@ -25,11 +24,12 @@ export function setupAutoUpdater() {
   if (!app.isPackaged) return
 
   log('setupAutoUpdater iniciado — versao ' + app.getVersion())
-  log('token presente: ' + (UPDATER_TOKEN ? 'sim (' + UPDATER_TOKEN.slice(0,8) + '...)' : 'NAO'))
+  log('token presente: ' + (UPDATER_TOKEN ? 'sim (' + UPDATER_TOKEN.slice(0, 8) + '...)' : 'NAO'))
 
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = false
+  autoUpdater.logger = null  // desativa verificação automática interna
 
   autoUpdater.setFeedURL({
     provider: 'github',
@@ -53,13 +53,13 @@ export function setupAutoUpdater() {
   autoUpdater.on('error',                (err)  => { log('ERRO: ' + err.stack); save('error', err.message) })
 
   ipcMain.handle('update:getLastState', () => ({ event: lastEvent, data: lastData }))
-  ipcMain.handle('update:getLogPath',   () => logPath)
 
+  // Aguarda 10s para garantir que o renderer já montou o UpdateBanner
   app.whenReady().then(() => {
     setTimeout(() => {
       log('chamando checkForUpdates...')
       autoUpdater.checkForUpdates().catch(e => log('checkForUpdates CATCH: ' + e.message))
-    }, 5000)
+    }, 10000)
   })
 }
 

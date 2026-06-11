@@ -10,8 +10,10 @@ export default function UpdateBanner() {
   useEffect(() => {
     // Busca estado já existente (evento pode ter disparado antes do renderer montar)
     window.api.update.getLastState?.().then(({ event, data }) => {
+      console.log('[UpdateBanner] getLastState:', event, data)
       if (!event || event === 'checking' || event === 'not-available') return
-      applyEvent(event, data)
+      if (event === 'available') { setInfo(data); setStatus('available'); setDismissed(false) }
+      if (event === 'downloaded') { setInfo(data); setStatus('ready') }
     })
 
     const unsub = window.api.update.onStatus((event, data) => applyEvent(event, data))
