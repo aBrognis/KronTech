@@ -1,0 +1,52 @@
+/* ============================================================
+   KRONTECH — Design Tokens v1.0
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  /* Laranja */
+  --or:  #FF6B2B;
+  --or2: #E85A1A;
+  --or3: rgba(255, 107, 43, 0.12);
+  --or4: rgba(255, 107, 43, 0.06);
+
+  /* Superfícies dark */
+  --bg:  #0A0A0A;
+  --s1:  #111111;
+  --s2:  #161616;
+  --s3:  #1C1C1C;
+
+  /* Bordas */
+  --bd:  #222222;
+  --bd2: #2C2C2C;
+
+  /* Texto */
+  --t1:  #F2F2F2;
+  --t2:  #888888;
+  --t3:  #444444;
+
+  /* Semânticas */
+  --blue:   #60A5FA;
+  --green:  #4ADE80;
+  --yellow: #FBD24C;
+  --red:    #F87171;
+  --purple: #A78BFA;
+
+  /* Tipografia */
+  --ft: 'Syne', sans-serif;
+  --fb: 'DM Sans', sans-serif;
+
+  /* Bordas arredondadas */
+  --r:  14px;
+  --r2: 10px;
+  --r3: 8px;
+  --r4: 6px;
+
+  /* Transição padrão */
+  --tr: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Sidebar */
+  --sb-w:   220px;
+  --sb-w-c: 64px;
+}

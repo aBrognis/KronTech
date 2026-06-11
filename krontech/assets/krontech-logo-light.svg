@@ -1,0 +1,27 @@
+<svg width="320" height="100" viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .orb { animation: orbpulse 3s ease-in-out infinite; }
+      @keyframes orbpulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
+    </style>
+  </defs>
+
+  <!-- Símbolo -->
+  <circle cx="50" cy="50" r="40" fill="none" stroke="#DCDCDC" stroke-width="0.8" stroke-dasharray="5 6"/>
+  <circle cx="50" cy="50" r="24" fill="#ECECEC" stroke="#E85A1A" stroke-width="0.9"/>
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <line x1="37" y1="36" x2="37" y2="64" stroke="#111111" stroke-width="1.6"/>
+    <line x1="37" y1="50" x2="49" y2="36" stroke="#111111" stroke-width="1.6"/>
+    <line x1="37" y1="50" x2="50" y2="64" stroke="#111111" stroke-width="1.6"/>
+    <line x1="55" y1="36" x2="68" y2="36" stroke="#E85A1A" stroke-width="1.6"/>
+    <line x1="61.5" y1="36" x2="61.5" y2="64" stroke="#E85A1A" stroke-width="1.6"/>
+  </g>
+  <circle class="orb" cx="50" cy="3"  r="2.5" fill="#E85A1A" style="animation-delay:0s"/>
+  <circle class="orb" cx="97" cy="50" r="2.5" fill="#999999" style="animation-delay:1s"/>
+  <circle class="orb" cx="50" cy="97" r="2.5" fill="#E85A1A" style="animation-delay:2s"/>
+
+  <!-- Wordmark -->
+  <text x="112" y="57" font-family="system-ui, -apple-system, sans-serif" font-size="38" font-weight="700" fill="#111111" letter-spacing="-1">Kron</text>
+  <text x="195" y="57" font-family="system-ui, -apple-system, sans-serif" font-size="38" font-weight="200" fill="#E85A1A" letter-spacing="-1">Tech</text>
+  <text x="113" y="74" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="400" fill="#999999" letter-spacing="3">v1.0  ·  2026</text>
+</svg>

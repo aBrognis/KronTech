@@ -1,0 +1,78 @@
+{
+  "name": "krontech",
+  "version": "1.1.0",
+  "description": "KronTech — Ordem no caos do dia a dia.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "node scripts/build.js"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "better-sqlite3": "^12.10.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
+    "electron-updater": "^6.3.9",
+    "lucide-react": "^1.17.0",
+    "pg": "^8.11.0",
+    "react-grid-layout": "^2.2.3",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@electron/rebuild": "^4.0.4",
+    "@resvg/resvg-js": "^2.6.2",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.5.0",
+    "cross-env": "^10.1.0",
+    "electron": "^30.5.1",
+    "electron-builder": "^24.9.1",
+    "electron-vite": "^2.1.0",
+    "playwright-core": "^1.60.0",
+    "postcss": "^8.5.15",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.19",
+    "to-ico": "^1.1.5",
+    "vite": "^5.2.0"
+  },
+  "build": {
+    "appId": "com.anderson.krontech",
+    "productName": "KronTech",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico",
+      "sign": null,
+      "certificateFile": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "SEU_USUARIO_GITHUB",
+        "repo": "krontech"
+      }
+    ]
+  }
+}

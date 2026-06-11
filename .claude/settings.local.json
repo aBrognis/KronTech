@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\ander\\\\OneDrive\\\\Desktop\\\\KronTech\\\\src\\\\renderer\\\\src\\\\pages\\\\Scripts.jsx\")",
+      "Bash(node -e \"require\\('react-grid-layout'\\); console.log\\('ok'\\)\")",
+      "PowerShell(node -e \"const G = require\\('react-grid-layout'\\); console.log\\(typeof G.default, typeof G\\)\")",
+      "PowerShell(node -e \"const L = require\\('lucide-react'\\); console.log\\('Gauge:', typeof L.Gauge, 'BarChart2:', typeof L.BarChart2, 'TableIcon:', typeof L.TableIcon\\)\")",
+      "Bash(npm run *)",
+      "Bash(python3 -c ' *)",
+      "PowerShell($content = Get-Content \"c:\\\\Users\\\\ander\\\\OneDrive\\\\Desktop\\\\KronTech\\\\src\\\\renderer\\\\src\\\\pages\\\\FormBuilderView.jsx\" -Raw -Encoding UTF8; $lines = $content -split \"`n\"; $lines[571..582] | ForEach-Object { $_ })",
+      "Bash(node -e ' *)",
+      "Bash(xargs grep -l \"Logo\\\\|logo\")",
+      "Bash(node -e \"try{require\\('sharp'\\);console.log\\('sharp ok'\\)}catch\\(e\\){console.log\\('no sharp'\\)}\")",
+      "Bash(node -e \"try{require\\('canvas'\\);console.log\\('canvas ok'\\)}catch\\(e\\){console.log\\('no canvas'\\)}\")"
+    ]
+  }
+}

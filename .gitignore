@@ -1,0 +1,39 @@
+# Dependências
+node_modules/
+
+# Build outputs
+dist/
+out/
+release/
+
+# Electron build cache
+.vite/
+
+# Dados locais do sistema
+C:/KronTech/
+*.db
+*.sqlite
+
+# Logs
+*.log
+npm-debug.log*
+
+# Ambiente
+.env
+.env.local
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Arquivos de build temporários
+builder-debug.yml
+*.blockmap
+
+# Launcher compilado (gerado localmente)
+scripts/launcher/KronTechLauncher.exe

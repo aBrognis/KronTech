@@ -1,0 +1,9 @@
+﻿node_modules/
+*.log
+*.lock
+dist/
+build/
+.git/
+*.png
+*.jpg
+*.pdf

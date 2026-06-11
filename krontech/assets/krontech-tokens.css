@@ -1,0 +1,225 @@
+/* ============================================================
+   KRONTECH — Design Tokens
+   Ordem no caos do dia a dia. · v1.0 · 2026
+   ============================================================ */
+
+:root {
+  /* --- CORES PRINCIPAIS --- */
+  --kt-orange:        #FF6B2B;   /* laranja principal     */
+  --kt-orange-dark:   #E85A1A;   /* laranja escuro        */
+  --kt-orange-deeper: #CC4A10;   /* laranja mais profundo */
+  --kt-orange-muted:  #FF8C55;   /* laranja suave         */
+
+  /* --- NEUTROS DARK --- */
+  --kt-bg-dark:       #0E0E0E;   /* fundo dark            */
+  --kt-surface-dark:  #141414;   /* superfície dark       */
+  --kt-card-dark:     #1E1E1E;   /* card dark             */
+  --kt-border-dark:   #2A2A2A;   /* borda dark            */
+  --kt-gray-dark:     #3A3A3A;   /* cinza dark            */
+
+  /* --- NEUTROS LIGHT --- */
+  --kt-bg-light:      #F4F4F4;   /* fundo light           */
+  --kt-surface-light: #ECECEC;   /* superfície light      */
+  --kt-card-light:    #E4E4E4;   /* card light            */
+  --kt-border-light:  #DCDCDC;   /* borda light           */
+
+  /* --- TEXTO --- */
+  --kt-text-white:    #FFFFFF;
+  --kt-text-dark:     #111111;
+  --kt-text-muted:    #666666;
+  --kt-text-subtle:   #444444;
+  --kt-text-ghost:    #888888;
+
+  /* --- TIPOGRAFIA --- */
+  --kt-font:          system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --kt-font-weight-bold:  700;
+  --kt-font-weight-light: 200;
+  --kt-font-weight-body:  400;
+
+  --kt-size-xs:    10px;
+  --kt-size-sm:    12px;
+  --kt-size-base:  14px;
+  --kt-size-md:    16px;
+  --kt-size-lg:    20px;
+  --kt-size-xl:    28px;
+  --kt-size-2xl:   36px;
+  --kt-size-3xl:   48px;
+  --kt-size-hero:  54px;
+
+  /* --- ESPAÇAMENTO --- */
+  --kt-space-xs:   4px;
+  --kt-space-sm:   8px;
+  --kt-space-md:   16px;
+  --kt-space-lg:   24px;
+  --kt-space-xl:   32px;
+  --kt-space-2xl:  48px;
+
+  /* --- BORDAS --- */
+  --kt-radius-sm:  6px;
+  --kt-radius-md:  10px;
+  --kt-radius-lg:  14px;
+  --kt-radius-xl:  20px;
+  --kt-radius-full: 9999px;
+
+  /* --- SOMBRAS --- */
+  --kt-shadow-sm:  0 1px 4px rgba(0,0,0,0.3);
+  --kt-shadow-md:  0 4px 16px rgba(0,0,0,0.4);
+  --kt-shadow-lg:  0 8px 32px rgba(0,0,0,0.5);
+  --kt-shadow-orange: 0 4px 20px rgba(255,107,43,0.25);
+
+  /* --- TRANSIÇÕES --- */
+  --kt-transition: all 0.25s ease;
+  --kt-transition-slow: all 0.4s ease;
+
+  /* --- Z-INDEX --- */
+  --kt-z-base:    1;
+  --kt-z-overlay: 10;
+  --kt-z-modal:   100;
+  --kt-z-toast:   1000;
+}
+
+/* === MODO DARK (padrão) === */
+[data-theme="dark"],
+:root {
+  --kt-bg:       var(--kt-bg-dark);
+  --kt-surface:  var(--kt-surface-dark);
+  --kt-card:     var(--kt-card-dark);
+  --kt-border:   var(--kt-border-dark);
+  --kt-text:     var(--kt-text-white);
+  --kt-text-sec: var(--kt-text-ghost);
+}
+
+/* === MODO LIGHT === */
+[data-theme="light"] {
+  --kt-bg:       var(--kt-bg-light);
+  --kt-surface:  var(--kt-surface-light);
+  --kt-card:     var(--kt-card-light);
+  --kt-border:   var(--kt-border-light);
+  --kt-text:     var(--kt-text-dark);
+  --kt-text-sec: var(--kt-text-muted);
+}
+
+/* ============================================================
+   CLASSES UTILITÁRIAS BASE
+   ============================================================ */
+
+.kt-orange        { color: var(--kt-orange); }
+.kt-bg-orange     { background-color: var(--kt-orange); }
+.kt-border-orange { border-color: var(--kt-orange); }
+
+.kt-title {
+  font-family: var(--kt-font);
+  font-weight: var(--kt-font-weight-bold);
+  color: var(--kt-text);
+}
+
+.kt-title span {
+  font-weight: var(--kt-font-weight-light);
+  color: var(--kt-orange);
+}
+
+.kt-btn {
+  background: var(--kt-orange);
+  color: #fff;
+  border: none;
+  border-radius: var(--kt-radius-md);
+  padding: var(--kt-space-sm) var(--kt-space-lg);
+  font-family: var(--kt-font);
+  font-size: var(--kt-size-base);
+  font-weight: var(--kt-font-weight-bold);
+  cursor: pointer;
+  transition: var(--kt-transition);
+  letter-spacing: 0.5px;
+}
+
+.kt-btn:hover {
+  background: var(--kt-orange-dark);
+  box-shadow: var(--kt-shadow-orange);
+}
+
+.kt-btn-ghost {
+  background: transparent;
+  color: var(--kt-orange);
+  border: 0.5px solid var(--kt-orange);
+  border-radius: var(--kt-radius-md);
+  padding: var(--kt-space-sm) var(--kt-space-lg);
+  font-family: var(--kt-font);
+  font-size: var(--kt-size-base);
+  cursor: pointer;
+  transition: var(--kt-transition);
+}
+
+.kt-btn-ghost:hover {
+  background: var(--kt-orange);
+  color: #fff;
+}
+
+.kt-card {
+  background: var(--kt-card);
+  border: 0.5px solid var(--kt-border);
+  border-radius: var(--kt-radius-lg);
+  padding: var(--kt-space-lg);
+  transition: var(--kt-transition);
+}
+
+.kt-card:hover {
+  border-color: var(--kt-orange);
+  box-shadow: var(--kt-shadow-orange);
+}
+
+.kt-tag {
+  font-size: var(--kt-size-xs);
+  letter-spacing: 3px;
+  color: var(--kt-text-sec);
+  text-transform: uppercase;
+}
+
+.kt-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--kt-border), transparent);
+  border: none;
+  margin: var(--kt-space-md) 0;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.kt-sidebar {
+  width: 220px;
+  background: var(--kt-surface);
+  border-right: 0.5px solid var(--kt-border);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--kt-space-lg) 0;
+}
+
+.kt-sidebar-logo {
+  padding: 0 var(--kt-space-lg) var(--kt-space-lg);
+  border-bottom: 0.5px solid var(--kt-border);
+}
+
+.kt-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--kt-space-sm);
+  padding: var(--kt-space-sm) var(--kt-space-lg);
+  color: var(--kt-text-sec);
+  font-size: var(--kt-size-sm);
+  font-family: var(--kt-font);
+  cursor: pointer;
+  transition: var(--kt-transition);
+  border-radius: 0;
+  border-left: 2px solid transparent;
+}
+
+.kt-nav-item:hover {
+  color: var(--kt-text);
+  background: var(--kt-card);
+}
+
+.kt-nav-item.active {
+  color: var(--kt-orange);
+  background: rgba(255, 107, 43, 0.08);
+  border-left-color: var(--kt-orange);
+}

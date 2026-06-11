@@ -1,0 +1,692 @@
+/* ============================================================
+   EDITOR SQL
+   ============================================================ */
+
+.sql-layout {
+  display: flex;
+  flex: 1;
+  gap: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar ────────────────────────────────────────────── */
+
+.sql-schema {
+  width: 210px;
+  min-width: 190px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-right: 10px;
+  box-shadow: var(--sh-xs), var(--hi);
+}
+
+/* Painel superior — lista de tabelas */
+.sql-schema-top {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-bottom: 2px solid var(--bd);
+}
+
+.sql-schema-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--t2);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.sql-icon-btn {
+  background: none;
+  border: none;
+  color: var(--t3);
+  cursor: pointer;
+  display: flex;
+  padding: 3px;
+  border-radius: 3px;
+  transition: var(--tr);
+}
+.sql-icon-btn:hover { color: var(--t1); background: var(--s3); }
+
+/* Busca */
+.sql-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+}
+.sql-search-icon { color: var(--t3); flex-shrink: 0; }
+.sql-search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 11px;
+  color: var(--t1);
+  font-family: var(--fb);
+}
+.sql-search-input::placeholder { color: var(--t3); }
+
+/* Lista de tabelas */
+.sql-table-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 3px 0;
+}
+.sql-table-list::-webkit-scrollbar { width: 3px; }
+.sql-table-list::-webkit-scrollbar-thumb { background: var(--bd2); }
+
+.sql-table-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 11px;
+  color: var(--t2);
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sql-table-row span { overflow: hidden; text-overflow: ellipsis; }
+.sql-table-row:hover { background: var(--s3); color: var(--t1); }
+.sql-table-row.active {
+  background: var(--or3);
+  color: var(--or);
+  font-weight: 500;
+}
+.sql-table-row.active svg { color: var(--or); }
+
+/* Painel inferior — detalhe da tabela */
+.sql-schema-bottom {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sql-detail-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+}
+
+.sql-detail-tab {
+  flex: 1;
+  padding: 7px 0;
+  background: none;
+  border: none;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--t3);
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 0.12s, border-bottom 0.12s;
+  border-bottom: 2px solid transparent;
+}
+.sql-detail-tab.active {
+  color: var(--or);
+  border-bottom-color: var(--or);
+}
+.sql-detail-tab:hover:not(.active) { color: var(--t2); }
+
+.sql-detail-empty {
+  font-size: 10px;
+  color: var(--t3);
+  text-align: center;
+  padding: 16px 8px;
+  font-style: italic;
+}
+
+.sql-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+.sql-detail-scroll::-webkit-scrollbar { width: 3px; }
+.sql-detail-scroll::-webkit-scrollbar-thumb { background: var(--bd2); }
+
+.sql-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.sql-detail-table thead tr {
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sql-detail-table th {
+  padding: 4px 8px;
+  text-align: left;
+  color: var(--t3);
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--bd);
+  white-space: nowrap;
+}
+
+.sql-detail-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.sql-detail-table tbody tr:hover { background: var(--s3); }
+.sql-detail-table tbody tr:hover .sql-col-pk { color: var(--or); }
+
+.sql-detail-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.sql-col-pk { color: var(--t1); font-weight: 500; }
+
+/* ── Editor Principal ───────────────────────────────────── */
+
+.sql-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r);
+  box-shadow: var(--sh-xs), var(--hi);
+}
+
+/* Toolbar */
+.sql-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 10px;
+  background: var(--s1);
+  border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.sql-flat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r3);
+  color: var(--t2);
+  font-size: 12px;
+  font-family: var(--fb);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.1s;
+  white-space: nowrap;
+}
+.sql-flat-btn:hover:not(:disabled) {
+  background: var(--s3);
+  color: var(--t1);
+}
+.sql-flat-btn:active:not(:disabled) { background: var(--bd); }
+.sql-flat-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+/* Consultar — laranja (F9, primário) */
+.sql-flat-btn.primary { color: var(--or); }
+.sql-flat-btn.primary:hover:not(:disabled) { background: var(--or3); color: var(--or); }
+.sql-flat-btn.primary.running { color: #888; pointer-events: none; }
+
+/* Executar — azul suave (F6, DML) */
+.sql-flat-btn.execute { color: var(--blue); }
+.sql-flat-btn.execute:hover:not(:disabled) {
+  background: rgba(96,165,250,.12);
+  color: var(--blue);
+}
+.sql-flat-btn.execute:disabled { opacity: 0.28; }
+
+/* Limpar — fica vermelho no hover */
+.sql-flat-btn.danger:hover:not(:disabled) { color: var(--red); }
+
+/* Badge da tecla de atalho */
+.sql-flat-kbd {
+  font-size: 9px;
+  color: var(--t3);
+  background: var(--s3);
+  border: 1px solid var(--bd);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: monospace;
+  margin-left: 2px;
+}
+.sql-flat-btn:hover .sql-flat-kbd {
+  color: var(--t2);
+  background: var(--bd);
+  border-color: var(--bd2);
+}
+
+.sql-sep { width: 1px; height: 18px; background: var(--bd2); flex-shrink: 0; margin: 0 2px; }
+
+.sql-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+.sql-status.ok { color: var(--green); }
+.sql-status.err { color: var(--red); }
+.sql-ms { display: flex; align-items: center; gap: 3px; font-size: 10px; color: var(--t3); margin-left: 6px; font-weight: 400; }
+
+/* ── Editor overlay ─────────────────────────────────────── */
+
+.sql-editor-wrap {
+  position: relative;
+  flex: 0 0 240px;
+  border-bottom: 1px solid var(--bd);
+  background: #141414;
+  overflow: hidden;
+}
+html.light .sql-editor-wrap { background: var(--s2); }
+
+.sql-highlight,
+.sql-textarea {
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 14px 16px;
+  margin: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  white-space: pre;
+  overflow: auto;
+  word-break: normal;
+  word-wrap: normal;
+  tab-size: 2;
+  letter-spacing: 0.02em;
+}
+
+.sql-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #d4d4d4;
+  background: transparent;
+  overflow: hidden;
+  z-index: 0;
+  border: none;
+  border-radius: 0;
+}
+html.light .sql-highlight { color: #1f1f1f; }
+
+.sql-textarea {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--or);
+  border: none;
+  outline: none;
+  resize: none;
+  display: block;
+}
+.sql-textarea::placeholder { color: #383838; }
+html.light .sql-textarea::placeholder { color: #aaa; }
+.sql-textarea::-webkit-scrollbar { width: 6px; height: 6px; }
+.sql-textarea::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 3px; }
+
+/* ── Syntax highlight colors ────────────────────────────── */
+
+/* Dark — VS Code Dark+ */
+.hl-k { color: #569CD6; }
+.hl-f { color: #DCDCAA; }
+.hl-s { color: #CE9178; }
+.hl-c { color: #6A9955; font-style: italic; }
+.hl-n { color: #B5CEA8; }
+.hl-o { color: #D4D4D4; }
+
+/* Light — VS Code Light+ */
+html.light .hl-k { color: #0000FF; }
+html.light .hl-f { color: #795E26; }
+html.light .hl-s { color: #A31515; }
+html.light .hl-c { color: #008000; font-style: italic; }
+html.light .hl-n { color: #098658; }
+html.light .hl-o { color: #333333; }
+
+/* ── Resultados ─────────────────────────────────────────── */
+
+.sql-results { flex: 1; overflow: auto; min-height: 0; display: flex; flex-direction: column; }
+.sql-results::-webkit-scrollbar { width: 6px; height: 6px; }
+.sql-results::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 3px; }
+
+.sql-results-empty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; font-size: 12px; color: var(--t3); font-style: italic;
+}
+
+.sql-error {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 16px 18px; color: var(--red); font-size: 12px;
+}
+.sql-error svg { flex-shrink: 0; margin-top: 1px; }
+.sql-error pre { font-family: monospace; white-space: pre-wrap; margin: 0; line-height: 1.6; }
+
+.sql-success {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px; color: var(--green); font-size: 12px;
+}
+.sql-success strong { font-weight: 600; }
+
+.sql-table-wrap { overflow: auto; height: 100%; }
+.sql-table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.sql-table-wrap::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 3px; }
+
+.sql-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  white-space: nowrap;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+}
+
+.sql-th {
+  background: var(--s1);
+  color: var(--t2);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--bd);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+  font-family: var(--fb);
+}
+.sql-th-row { color: var(--t3); width: 36px; min-width: 36px; text-align: right; padding-right: 10px; }
+
+.sql-tr:hover .sql-td { background: var(--s3); }
+
+.sql-td {
+  padding: 5px 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--t2);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+.sql-td-row { color: var(--t3); text-align: right; padding-right: 10px; min-width: 36px; }
+.sql-null { color: var(--t3); font-style: italic; font-size: 10px; }
+
+/* ── Confirmação destrutiva ─────────────────────────────── */
+
+.sql-confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(3px);
+}
+
+.sql-confirm {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-top: 2px solid var(--red);
+  border-radius: var(--r);
+  padding: 20px 22px;
+  width: 420px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--sh-lg);
+  animation: slideUp 0.15s ease;
+}
+
+.sql-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sql-confirm-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.sql-confirm-desc {
+  font-size: 12px;
+  color: var(--t3);
+  line-height: 1.6;
+  margin: 0;
+}
+.sql-confirm-query {
+  background: var(--s2);
+  border: 1px solid var(--bd);
+  border-left: 3px solid rgba(248,113,113,.5);
+  border-radius: var(--r2);
+  padding: 10px 12px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 11.5px;
+  color: var(--t1);
+  white-space: pre-wrap;
+  margin: 0;
+  max-height: 120px;
+  overflow: auto;
+  line-height: 1.7;
+}
+.sql-confirm-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+/* F9 pulsando vermelho quando tenta executar não-SELECT */
+.sql-flat-btn.f9-warn {
+  color: var(--red) !important;
+  background: rgba(248,113,113,.08) !important;
+}
+
+/* ── Abas da área de resultados ─────────────────────────── */
+
+.sql-results-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.sql-result-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--bd);
+  background: var(--s1);
+  flex-shrink: 0;
+  padding: 0 8px;
+}
+
+.sql-result-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--t3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.sql-result-tab.active { color: var(--t1); border-bottom-color: var(--or); }
+.sql-result-tab:hover:not(.active) { color: var(--t2); }
+
+.sql-result-tab-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+.sql-result-tab-badge.ok      { background: rgba(52,211,153,.15);  color: var(--green); }
+.sql-result-tab-badge.err     { background: rgba(248,113,113,.15); color: var(--red); }
+.sql-result-tab-badge.neutral { background: var(--s3); color: var(--t3); }
+
+/* Barra de SQL fixado (Manter SQL) */
+.sql-pinned-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  max-width: 50%;
+  overflow: hidden;
+  padding: 0 4px;
+}
+.sql-pinned-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  flex-shrink: 0;
+}
+.sql-pinned-code {
+  font-family: monospace;
+  font-size: 10px;
+  color: var(--t2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Botão ativo de Manter SQL */
+.sql-flat-btn.pin-active { color: var(--or); }
+.sql-flat-btn.pin-active:hover:not(:disabled) { background: var(--or3); }
+
+/* ── Histórico no painel de resultados ──────────────────── */
+
+.sql-hist-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sql-hist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--bd);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  flex-shrink: 0;
+}
+
+.sql-hist-rows {
+  flex: 1;
+  overflow-y: auto;
+}
+.sql-hist-rows::-webkit-scrollbar { width: 4px; }
+.sql-hist-rows::-webkit-scrollbar-thumb { background: var(--bd2); }
+
+.sql-hist-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--bd);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.sql-hist-row:hover { background: var(--s3); }
+
+.sql-hist-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.sql-hist-badge {
+  font-size: 9px;
+  font-weight: 700;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sql-hist-badge.ok  { background: rgba(52,211,153,.15); color: var(--green); }
+.sql-hist-badge.err { background: rgba(248,113,113,.15); color: var(--red); }
+
+.sql-hist-cmd        { font-size: 10px; font-weight: 700; color: var(--t1); text-transform: uppercase; letter-spacing: .5px; }
+.sql-hist-rows-count { font-size: 10px; color: var(--t3); }
+.sql-hist-ms         { font-size: 10px; color: var(--t3); margin-left: auto; }
+.sql-hist-time       { font-size: 10px; color: var(--t3); font-family: monospace; }
+
+.sql-hist-preview {
+  font-size: 11px;
+  color: var(--t2);
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Aviso de cap de linhas ─────────────────────────────── */
+
+.sql-cap-warn {
+  background: rgba(251,191,36,.08);
+  border-bottom: 1px solid rgba(251,191,36,.25);
+  color: #FBBF24;
+  font-size: 10.5px;
+  padding: 5px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}

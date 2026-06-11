@@ -1,0 +1,53 @@
+/* ============================================================
+   KRONTECH — Global Styles
+   ============================================================ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--fb);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar global */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 4px; }
+
+/* Botões base */
+button { cursor: pointer; font-family: var(--fb); border: none; outline: none; }
+
+/* Inputs base */
+input, textarea {
+  font-family: var(--fb);
+  outline: none;
+  color: var(--t1);
+}
+
+/* Animação de entrada de página */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeUp 0.22s ease forwards;
+}
+
+/* Glow animado */
+@keyframes glow {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
