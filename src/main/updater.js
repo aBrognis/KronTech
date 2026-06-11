@@ -71,7 +71,8 @@ export function checkForUpdates() {
 }
 
 export function downloadUpdate() {
-  return autoUpdater.downloadUpdate()
+  log('downloadUpdate chamado')
+  return autoUpdater.downloadUpdate().catch(e => { log('downloadUpdate ERRO: ' + e.message); throw e })
 }
 
 export function installUpdate() {
