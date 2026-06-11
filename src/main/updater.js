@@ -1,5 +1,8 @@
 import { autoUpdater } from 'electron-updater'
 import { app, BrowserWindow } from 'electron'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+const { UPDATER_TOKEN } = require('./secrets')
 
 export function setupAutoUpdater() {
   // Só verifica atualizações no app empacotado
@@ -14,6 +17,7 @@ export function setupAutoUpdater() {
     provider: 'github',
     owner: 'aBrognis',
     repo: 'KronTech',
+    token: UPDATER_TOKEN,
   })
 
   autoUpdater.on('checking-for-update',  ()     => broadcast('update:checking'))

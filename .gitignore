@@ -21,6 +21,8 @@ npm-debug.log*
 # Ambiente
 .env
 .env.local
+secrets.js
+src/main/secrets.js
 
 # Sistema operacional
 .DS_Store
