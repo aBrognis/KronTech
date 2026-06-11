@@ -1,9 +1,9 @@
 import { autoUpdater } from 'electron-updater'
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 
 export function setupAutoUpdater() {
-  // Não roda em modo de desenvolvimento
-  if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') return
+  // Só verifica atualizações no app empacotado
+  if (!app.isPackaged) return
 
   autoUpdater.autoDownload = false       // usuário decide quando baixar
   autoUpdater.autoInstallOnAppQuit = true

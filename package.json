@@ -70,8 +70,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "SEU_USUARIO_GITHUB",
-        "repo": "krontech"
+        "owner": "aBrognis",
+        "repo": "KronTech"
       }
     ]
   }
