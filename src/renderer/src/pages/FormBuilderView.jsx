@@ -201,6 +201,28 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     setImportando(false)
   }
 
+  // Preenche campos satélites de arquivo: {nome}_nome, {nome}_ext, {nome}_tamanho, {nome}_path
+  function setArquivoComSatellites(nomeCampo, meta) {
+    setForm(f => {
+      const up = { ...f }
+      if (meta) {
+        up[nomeCampo] = JSON.stringify({ path: meta.path, nome: meta.nome, ext: meta.ext, tamanho: meta.tamanho })
+        // preenche campos satélites se existirem na tela
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_nome'))     up[nomeCampo + '_nome']     = meta.nome
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_ext'))      up[nomeCampo + '_ext']      = meta.ext || ''
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_tamanho'))  up[nomeCampo + '_tamanho']  = meta.tamanho || 0
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_path'))     up[nomeCampo + '_path']     = meta.path
+      } else {
+        up[nomeCampo] = ''
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_nome'))     up[nomeCampo + '_nome']     = ''
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_ext'))      up[nomeCampo + '_ext']      = ''
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_tamanho'))  up[nomeCampo + '_tamanho']  = 0
+        if (tela?.campos.find(c => c.nome_campo === nomeCampo + '_path'))     up[nomeCampo + '_path']     = ''
+      }
+      return up
+    })
+  }
+
   async function handleConfigurarPasta() {
     const nova = await window.api.config.selecionarPasta()
     if (nova) setPastaConfig(nova)
@@ -228,7 +250,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     }
   }
 
-  const TIPOS_SISTEMA = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar']
+  const TIPOS_SISTEMA = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar', 'calculo']
 
   function carregarForm(t, reg) {
     if (!t || !reg) return
@@ -502,6 +524,24 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     const inputStyle = {
       fontWeight: campo.input_negrito ? 700 : undefined,
       fontSize: campo.input_font_size ? `${campo.input_font_size}px` : undefined,
+    }
+
+    // Detecta se é campo satélite de arquivo (preenchido automaticamente)
+    const ARQ_SUFFIXES = ['_nome', '_ext', '_tamanho', '_path']
+    const arqSuffix = ARQ_SUFFIXES.find(s => campo.nome_campo.endsWith(s))
+    if (arqSuffix) {
+      const prefixo = campo.nome_campo.slice(0, -arqSuffix.length)
+      const campoArqPai = tela?.campos.find(c => c.nome_campo === prefixo && c.tipo === 'arquivo')
+      if (campoArqPai) {
+        const exibe = arqSuffix === '_tamanho' ? fmtSize(Number(val)) || '—' : (String(val || '') || '—')
+        return (
+          <div className="form-input" style={{ display: 'flex', alignItems: 'center', gap: 6, height: '100%', cursor: 'default', background: 'var(--s1)', color: val ? 'var(--t1)' : 'var(--t3)', fontStyle: val ? 'normal' : 'italic', fontSize: 12 }}>
+            <Paperclip size={11} style={{ color: 'var(--bd2)', flexShrink: 0 }} />
+            {exibe}
+            {!val && <span style={{ fontSize: 10 }}>preenchido ao selecionar arquivo</span>}
+          </div>
+        )
+      }
     }
 
     if (campo.tipo === 'favorito') {
@@ -983,7 +1023,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                 </button>
                 {!isRO && (
                   <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', padding: 4, flexShrink: 0 }}
-                    onClick={() => setField(campo.nome_campo, '')} title="Remover arquivo">
+                    onClick={() => setArquivoComSatellites(campo.nome_campo, null)} title="Remover arquivo">
                     <X size={13} />
                   </button>
                 )}
@@ -1010,7 +1050,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                 <button className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
                   onClick={async () => {
                     const res = await window.api.arquivos.selecionarECopiar({ subpasta })
-                    if (res?.ok) setField(campo.nome_campo, JSON.stringify({ path: res.path, nome: res.nome, ext: res.ext, tamanho: res.tamanho }))
+                    if (res?.ok) setArquivoComSatellites(campo.nome_campo, res)
                   }}
                   disabled={saving}>
                   <Paperclip size={13} /> Selecionar arquivo...
