@@ -315,12 +315,93 @@ function OpcoesList({ opcoes, tipo, salvando, onChange }) {
   )
 }
 
+// ── Templates prontos ────────────────────────────────────────────────────────
+const TEMPLATES = [
+  {
+    id: 'gestor_arquivos',
+    label: 'Gestor de Arquivos',
+    icone: 'paperclip',
+    descricao: 'Tela completa para gerenciar arquivos com upload, satélites, pasta e importação em massa.',
+    nomeTela: 'Gestor de Arquivos',
+    canvasW: 900,
+    canvasH: 620,
+    campos: [
+      { _key: 'k1',  nomeCampo: 'codigo',           label: 'Código',          tipo: 'codigo_auto', tamanho: 20,  obrigatorio: false, sequencial: true,  campoBusca: false, valorPadrao: '001', largura: 25,  opcoes: { seqChars: 3 }, x_pos: 14,  y_pos: 14,  w_px: 120, h_px: 60 },
+      { _key: 'k2',  nomeCampo: 'nome',              label: 'Nome',            tipo: 'texto',       tamanho: 200, obrigatorio: true,  sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 75,  opcoes: null,            x_pos: 148, y_pos: 14,  w_px: 492, h_px: 60 },
+      { _key: 'k3',  nomeCampo: 'categoria',         label: 'Categoria',       tipo: 'select',      tamanho: 100, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 33,  opcoes: [
+        { label: 'Contrato',      valor: 'contrato',      cor: '#60A5FA' },
+        { label: 'Manual',        valor: 'manual',        cor: '#34D399' },
+        { label: 'Financeiro',    valor: 'financeiro',    cor: '#4ADE80' },
+        { label: 'Relatório',     valor: 'relatorio',     cor: '#A78BFA' },
+        { label: 'Apresentação',  valor: 'apresentacao',  cor: '#FB923C' },
+        { label: 'Imagem',        valor: 'imagem',        cor: '#F472B6' },
+        { label: 'Script',        valor: 'script',        cor: '#94A3B8' },
+        { label: 'Outro',         valor: 'outro',         cor: '#E2E8F0' },
+      ], x_pos: 656, y_pos: 14,  w_px: 230, h_px: 60 },
+      { _key: 'k4',  nomeCampo: 'pasta',             label: 'Pasta',           tipo: 'pasta',       tamanho: 200, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 14,  y_pos: 90,  w_px: 360, h_px: 60 },
+      { _key: 'k5',  nomeCampo: 'tags',              label: 'Tags',            tipo: 'tags',        tamanho: 300, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 388, y_pos: 90,  w_px: 498, h_px: 60 },
+      { _key: 'k6',  nomeCampo: 'div1',              label: 'Arquivo',         tipo: 'divisor',     tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: 'horizontal', largura: 100, opcoes: null, x_pos: 14,  y_pos: 165, w_px: 872, h_px: 20 },
+      { _key: 'k7',  nomeCampo: 'arquivo',           label: 'Arquivo',         tipo: 'arquivo',     tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 100, opcoes: null,            x_pos: 14,  y_pos: 198, w_px: 872, h_px: 100 },
+      { _key: 'k8',  nomeCampo: 'arquivo_nome',      label: 'Nome do Arquivo', tipo: 'texto',       tamanho: 300, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 14,  y_pos: 314, w_px: 380, h_px: 60 },
+      { _key: 'k9',  nomeCampo: 'arquivo_ext',       label: 'Extensão',        tipo: 'texto',       tamanho: 10,  obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 25,  opcoes: null,            x_pos: 408, y_pos: 314, w_px: 120, h_px: 60 },
+      { _key: 'k10', nomeCampo: 'arquivo_tamanho',   label: 'Tamanho',         tipo: 'numero',      tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 25,  opcoes: null,            x_pos: 542, y_pos: 314, w_px: 160, h_px: 60 },
+      { _key: 'k11', nomeCampo: 'div2',              label: 'Observações',     tipo: 'divisor',     tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: 'horizontal', largura: 100, opcoes: null, x_pos: 14,  y_pos: 390, w_px: 872, h_px: 20 },
+      { _key: 'k12', nomeCampo: 'descricao',         label: 'Descrição',       tipo: 'texto_longo', tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 100, opcoes: null,            x_pos: 14,  y_pos: 424, w_px: 872, h_px: 120 },
+      { _key: 'k13', nomeCampo: '_fav',              label: 'Favorito',        tipo: 'favorito',    tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 14,  y_pos: 560, w_px: 220, h_px: 44 },
+      { _key: 'k14', nomeCampo: '_ts',               label: 'Datas',           tipo: 'timestamps',  tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 100, opcoes: null,            x_pos: 470, y_pos: 558, w_px: 416, h_px: 60 },
+    ],
+  },
+]
+
+function TemplateModal({ onSelecionar, onFechar }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(6px)' }}
+      onClick={e => e.target === e.currentTarget && onFechar()}>
+      <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 16, width: 600, maxWidth: '92vw', boxShadow: 'var(--sh-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--bd)', background: 'var(--s2)' }}>
+          <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>Escolher Template</span>
+          <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex' }}><X size={16} /></button>
+        </div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {TEMPLATES.map(t => (
+            <div key={t.id}
+              onClick={() => onSelecionar(t)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px', background: 'var(--s2)', border: '1.5px solid var(--bd)', borderRadius: 12, cursor: 'pointer', transition: 'border-color .15s, background .15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--or)'; e.currentTarget.style.background = 'rgba(255,107,43,.04)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--bd)'; e.currentTarget.style.background = 'var(--s2)' }}>
+              <div style={{ width: 40, height: 40, flexShrink: 0, background: 'rgba(255,107,43,.1)', border: '1.5px solid rgba(255,107,43,.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                📎
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)', marginBottom: 4 }}>{t.label}</div>
+                <div style={{ fontSize: 11.5, color: 'var(--t2)', lineHeight: 1.5 }}>{t.descricao}</div>
+                <div style={{ marginTop: 8, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                  {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).map(c => (
+                    <span key={c._key} style={{ fontSize: 9.5, fontFamily: 'monospace', background: 'var(--s3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '1px 6px', color: 'var(--t2)' }}>
+                      {c.nomeCampo}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--or)', fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>Usar →</div>
+            </div>
+          ))}
+          <div style={{ padding: '10px 14px', background: 'var(--s2)', border: '1.5px dashed var(--bd)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--t3)', fontSize: 12 }}>
+            <Plus size={14} /> Mais templates em breve...
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, inline = false }) {
   const editando = !!tela
 
-  const [aba,        setAba]        = useState('campos')
-  const [salvando,   setSalvando]   = useState(false)
-  const [erro,       setErro]       = useState(null)
+  const [aba,           setAba]           = useState('campos')
+  const [salvando,      setSalvando]      = useState(false)
+  const [erro,          setErro]          = useState(null)
+  const [showTemplates, setShowTemplates] = useState(false)
   const [tipInfoIdx,    setTipInfoIdx]    = useState(null)
   const [dragHandleIdx, setDragHandleIdx] = useState(null)
   const [expandedKeys,  setExpandedKeys]  = useState(new Set())
@@ -672,6 +753,18 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
       onSalvar()
     } catch(e) { setErro(e.message) }
     finally    { setSalvando(false) }
+  }
+
+  function aplicarTemplate(tmpl) {
+    setNomeTela(tmpl.nomeTela)
+    setNomeTabela(slugify(tmpl.nomeTela) + '_001')
+    setIcone(tmpl.icone || 'paperclip')
+    setCanvasW(tmpl.canvasW || 900)
+    setCanvasH(tmpl.canvasH || 620)
+    setCampos(tmpl.campos.map(c => ({ ...c, _key: Math.random().toString(36).slice(2) })))
+    setExpandedKeys(new Set())
+    setShowTemplates(false)
+    setAba('designer')
   }
 
   const secHead = { fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }
@@ -1369,6 +1462,11 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {!editando && (
+            <button className="btn btn-ghost" onClick={() => setShowTemplates(true)} style={{ height: 32, gap: 5, fontSize: 12 }}>
+              <Layout size={13} /> Templates
+            </button>
+          )}
           {erro && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--red)' }}>
               <AlertCircle size={13} /> {erro}
@@ -1521,6 +1619,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         {aba === 'preview' && renderPreview(false)}
 
       </div>
+      {showTemplates && <TemplateModal onSelecionar={aplicarTemplate} onFechar={() => setShowTemplates(false)} />}
     </div>
   )
 
@@ -1540,8 +1639,15 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 22px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-            {editando ? `Editar: ${tela.nome_tela}` : 'Nova Tela'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
+              {editando ? `Editar: ${tela.nome_tela}` : 'Nova Tela'}
+            </div>
+            {!editando && (
+              <button className="btn btn-ghost" onClick={() => setShowTemplates(true)} style={{ height: 30, gap: 5, fontSize: 11 }}>
+                <Layout size={12} /> Templates
+              </button>
+            )}
           </div>
           <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex' }}><X size={18} /></button>
         </div>
@@ -1671,6 +1777,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         </div>
 
       </div>
+      {showTemplates && <TemplateModal onSelecionar={aplicarTemplate} onFechar={() => setShowTemplates(false)} />}
     </div>
   )
 }
