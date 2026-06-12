@@ -3,8 +3,6 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
-const UPDATER_TOKEN = __UPDATER_TOKEN__
-
 let lastEvent = null
 let lastData  = null
 let logPath   = null
@@ -24,21 +22,15 @@ export function setupAutoUpdater() {
   if (!app.isPackaged) return
 
   log('setupAutoUpdater iniciado — versao ' + app.getVersion())
-  log('token presente: ' + (UPDATER_TOKEN ? 'sim (' + UPDATER_TOKEN.slice(0, 8) + '...)' : 'NAO'))
 
-  autoUpdater.autoDownload = true
+  autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = false
-  autoUpdater.logger = null
-
-  autoUpdater.addAuthHeader(`token ${UPDATER_TOKEN}`)
 
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'aBrognis',
     repo: 'KronTech',
-    token: UPDATER_TOKEN,
-    private: true,
   })
 
   const save = (ev, data) => {
@@ -53,11 +45,10 @@ export function setupAutoUpdater() {
   autoUpdater.on('update-not-available', ()     => save('not-available'))
   autoUpdater.on('download-progress',    (prog) => save('progress', prog))
   autoUpdater.on('update-downloaded',    (info) => save('downloaded', info))
-  autoUpdater.on('error',                (err)  => { log('ERRO: ' + err.stack); save('error', err.message) })
+  autoUpdater.on('error',                (err)  => { log('ERRO: ' + err.message); save('error', err.message) })
 
   ipcMain.handle('update:getLastState', () => ({ event: lastEvent, data: lastData }))
 
-  // Aguarda 10s para garantir que o renderer já montou o UpdateBanner
   app.whenReady().then(() => {
     setTimeout(() => {
       log('chamando checkForUpdates...')
@@ -72,7 +63,6 @@ export function checkForUpdates() {
 
 export function downloadUpdate() {
   log('downloadUpdate chamado')
-  autoUpdater.addAuthHeader(`token ${UPDATER_TOKEN}`)
   return autoUpdater.downloadUpdate().catch(e => { log('downloadUpdate ERRO: ' + e.message); throw e })
 }
 
