@@ -248,7 +248,7 @@ export async function listarRegistros(nomeTabela, opcoes = {}) {
   )
 
   const pagina    = Math.max(1, opcoes.pagina    || 1)
-  const porPagina = Math.min(200, opcoes.porPagina || 50)
+  const porPagina = Math.min(opcoes.semLimite ? 999999 : 200, opcoes.porPagina || 50)
   const offset    = (pagina - 1) * porPagina
   const params    = []
   let where = 'WHERE ativo=TRUE'
@@ -272,6 +272,11 @@ export async function listarRegistros(nomeTabela, opcoes = {}) {
     queryOne(`SELECT COUNT(*) AS n FROM ${tbl(nomeTabela)} ${where}`, params.slice(0, params.length - 2))
   ])
   return { registros, total: parseInt(total.n), pagina, porPagina, totalPaginas: Math.ceil(parseInt(total.n)/porPagina) }
+}
+
+export async function getAllRegistros(nomeTabela) {
+  const registros = await query(`SELECT * FROM ${tbl(nomeTabela)} WHERE ativo=TRUE ORDER BY id ASC`)
+  return { registros, total: registros.length }
 }
 
 export async function inserirRegistro(nomeTabela, dados) {

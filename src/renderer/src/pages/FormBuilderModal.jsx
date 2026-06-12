@@ -317,78 +317,375 @@ function OpcoesList({ opcoes, tipo, salvando, onChange }) {
 
 // ── Templates prontos ────────────────────────────────────────────────────────
 const TEMPLATES = [
+  // ── Documentos e Arquivos ──────────────────────────────────────────────────
   {
     id: 'gestor_arquivos',
-    label: 'Gestor de Arquivos',
-    icone: 'paperclip',
-    descricao: 'Tela completa para gerenciar arquivos com upload, satélites, pasta e importação em massa.',
-    nomeTela: 'Gestor de Arquivos',
-    canvasW: 900,
-    canvasH: 620,
+    emoji: '📎', label: 'Gestor de Arquivos', categoria: 'Documentos',
+    descricao: 'Upload, satélites (_nome, _ext, _tamanho), pasta com autocomplete e importação em massa.',
+    nomeTela: 'Gestor de Arquivos', nomeTabela: 'arquivo_001', icone: 'paperclip', canvasW: 900, canvasH: 620,
     campos: [
-      { _key: 'k1',  nomeCampo: 'codigo',           label: 'Código',          tipo: 'codigo_auto', tamanho: 20,  obrigatorio: false, sequencial: true,  campoBusca: false, valorPadrao: '001', largura: 25,  opcoes: { seqChars: 3 }, x_pos: 14,  y_pos: 14,  w_px: 120, h_px: 60 },
-      { _key: 'k2',  nomeCampo: 'nome',              label: 'Nome',            tipo: 'texto',       tamanho: 200, obrigatorio: true,  sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 75,  opcoes: null,            x_pos: 148, y_pos: 14,  w_px: 492, h_px: 60 },
-      { _key: 'k3',  nomeCampo: 'categoria',         label: 'Categoria',       tipo: 'select',      tamanho: 100, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 33,  opcoes: [
-        { label: 'Contrato',      valor: 'contrato',      cor: '#60A5FA' },
-        { label: 'Manual',        valor: 'manual',        cor: '#34D399' },
-        { label: 'Financeiro',    valor: 'financeiro',    cor: '#4ADE80' },
-        { label: 'Relatório',     valor: 'relatorio',     cor: '#A78BFA' },
-        { label: 'Apresentação',  valor: 'apresentacao',  cor: '#FB923C' },
-        { label: 'Imagem',        valor: 'imagem',        cor: '#F472B6' },
-        { label: 'Script',        valor: 'script',        cor: '#94A3B8' },
-        { label: 'Outro',         valor: 'outro',         cor: '#E2E8F0' },
-      ], x_pos: 656, y_pos: 14,  w_px: 230, h_px: 60 },
-      { _key: 'k4',  nomeCampo: 'pasta',             label: 'Pasta',           tipo: 'pasta',       tamanho: 200, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 14,  y_pos: 90,  w_px: 360, h_px: 60 },
-      { _key: 'k5',  nomeCampo: 'tags',              label: 'Tags',            tipo: 'tags',        tamanho: 300, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 388, y_pos: 90,  w_px: 498, h_px: 60 },
-      { _key: 'k6',  nomeCampo: 'div1',              label: 'Arquivo',         tipo: 'divisor',     tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: 'horizontal', largura: 100, opcoes: null, x_pos: 14,  y_pos: 165, w_px: 872, h_px: 20 },
-      { _key: 'k7',  nomeCampo: 'arquivo',           label: 'Arquivo',         tipo: 'arquivo',     tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 100, opcoes: null,            x_pos: 14,  y_pos: 198, w_px: 872, h_px: 100 },
-      { _key: 'k8',  nomeCampo: 'arquivo_nome',      label: 'Nome do Arquivo', tipo: 'texto',       tamanho: 300, obrigatorio: false, sequencial: false, campoBusca: true,  valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 14,  y_pos: 314, w_px: 380, h_px: 60 },
-      { _key: 'k9',  nomeCampo: 'arquivo_ext',       label: 'Extensão',        tipo: 'texto',       tamanho: 10,  obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 25,  opcoes: null,            x_pos: 408, y_pos: 314, w_px: 120, h_px: 60 },
-      { _key: 'k10', nomeCampo: 'arquivo_tamanho',   label: 'Tamanho',         tipo: 'numero',      tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 25,  opcoes: null,            x_pos: 542, y_pos: 314, w_px: 160, h_px: 60 },
-      { _key: 'k11', nomeCampo: 'div2',              label: 'Observações',     tipo: 'divisor',     tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: 'horizontal', largura: 100, opcoes: null, x_pos: 14,  y_pos: 390, w_px: 872, h_px: 20 },
-      { _key: 'k12', nomeCampo: 'descricao',         label: 'Descrição',       tipo: 'texto_longo', tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 100, opcoes: null,            x_pos: 14,  y_pos: 424, w_px: 872, h_px: 120 },
-      { _key: 'k13', nomeCampo: '_fav',              label: 'Favorito',        tipo: 'favorito',    tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 50,  opcoes: null,            x_pos: 14,  y_pos: 560, w_px: 220, h_px: 44 },
-      { _key: 'k14', nomeCampo: '_ts',               label: 'Datas',           tipo: 'timestamps',  tamanho: 0,   obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '',    largura: 100, opcoes: null,            x_pos: 470, y_pos: 558, w_px: 416, h_px: 60 },
+      { _key:'a1',  nomeCampo:'codigo',          label:'Código',           tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:25,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:120, h_px:60 },
+      { _key:'a2',  nomeCampo:'nome',             label:'Nome',             tipo:'texto',       tamanho:500, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:75,  opcoes:null,           x_pos:148, y_pos:14,  w_px:492, h_px:60 },
+      { _key:'a3',  nomeCampo:'categoria',        label:'Categoria',        tipo:'select',      tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:[
+        {label:'Contrato',valor:'contrato',cor:'#60A5FA'},{label:'Manual',valor:'manual',cor:'#34D399'},
+        {label:'Financeiro',valor:'financeiro',cor:'#4ADE80'},{label:'Relatório',valor:'relatorio',cor:'#A78BFA'},
+        {label:'Apresentação',valor:'apresentacao',cor:'#FB923C'},{label:'Imagem',valor:'imagem',cor:'#F472B6'},
+        {label:'Script',valor:'script',cor:'#94A3B8'},{label:'Outro',valor:'outro',cor:'#E2E8F0'},
+      ], x_pos:656, y_pos:14,  w_px:230, h_px:60 },
+      { _key:'a4',  nomeCampo:'pasta',            label:'Pasta',            tipo:'pasta',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:90,  w_px:360, h_px:60 },
+      { _key:'a5',  nomeCampo:'tags',             label:'Tags',             tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:388, y_pos:90,  w_px:498, h_px:60 },
+      { _key:'a6',  nomeCampo:'div1',             label:'Arquivo',          tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:165, w_px:872, h_px:20 },
+      { _key:'a7',  nomeCampo:'arquivo',          label:'Arquivo',          tipo:'arquivo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:198, w_px:872, h_px:100 },
+      { _key:'a8',  nomeCampo:'arquivo_nome',     label:'Nome do Arquivo',  tipo:'texto',       tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:314, w_px:380, h_px:60 },
+      { _key:'a9',  nomeCampo:'arquivo_ext',      label:'Extensão',         tipo:'texto',       tamanho:10,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:408, y_pos:314, w_px:120, h_px:60 },
+      { _key:'a10', nomeCampo:'arquivo_tamanho',  label:'Tamanho',          tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:542, y_pos:314, w_px:160, h_px:60 },
+      { _key:'a11', nomeCampo:'div2',             label:'Observações',      tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:390, w_px:872, h_px:20 },
+      { _key:'a12', nomeCampo:'descricao',        label:'Descrição',        tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:424, w_px:872, h_px:120 },
+      { _key:'a13', nomeCampo:'_fav',             label:'Favorito',         tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:560, w_px:220, h_px:44 },
+      { _key:'a14', nomeCampo:'_ts',              label:'Datas',            tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:470, y_pos:558, w_px:416, h_px:60 },
+    ],
+  },
+
+  // ── Cadastros ──────────────────────────────────────────────────────────────
+  {
+    id: 'cadastro_pessoas',
+    emoji: '👤', label: 'Cadastro de Pessoas', categoria: 'Cadastros',
+    descricao: 'Nome, CPF/CNPJ unificado, telefone, e-mail, endereço com busca automática de CEP, foto e observações.',
+    nomeTela: 'Cadastro de Pessoas', icone: 'users', canvasW: 900, canvasH: 700,
+    campos: [
+      { _key:'p1',  nomeCampo:'codigo',      label:'Código',       tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:25,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:110, h_px:60 },
+      { _key:'p2',  nomeCampo:'nome',        label:'Nome',         tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:75,  opcoes:null,           x_pos:138, y_pos:14,  w_px:430, h_px:60 },
+      { _key:'p3',  nomeCampo:'tipo_pessoa', label:'Tipo',         tipo:'radio',       tamanho:1,   obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'F',   largura:25,  opcoes:[
+        {label:'Física',valor:'F',cor:'#60A5FA'},{label:'Jurídica',valor:'J',cor:'#34D399'},
+      ], x_pos:582, y_pos:14,  w_px:304, h_px:60 },
+      { _key:'p4',  nomeCampo:'documento',   label:'CPF / CNPJ',   tipo:'documento',   tamanho:18,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:{tipoRef:'tipo_pessoa'}, x_pos:14, y_pos:90, w_px:280, h_px:60 },
+      { _key:'p5',  nomeCampo:'telefone',    label:'Telefone',     tipo:'telefone',    tamanho:30,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:308, y_pos:90,  w_px:200, h_px:60 },
+      { _key:'p6',  nomeCampo:'email',       label:'E-mail',       tipo:'email',       tamanho:150, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:522, y_pos:90,  w_px:364, h_px:60 },
+      { _key:'p7',  nomeCampo:'div1',        label:'Endereço',     tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:165, w_px:872, h_px:20 },
+      { _key:'p8',  nomeCampo:'cep',         label:'CEP',          tipo:'cep',         tamanho:9,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:198, w_px:180, h_px:60 },
+      { _key:'p9',  nomeCampo:'logradouro',  label:'Logradouro',   tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:208, y_pos:198, w_px:400, h_px:60 },
+      { _key:'p10', nomeCampo:'numero',      label:'Número',       tipo:'texto',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:622, y_pos:198, w_px:130, h_px:60 },
+      { _key:'p11', nomeCampo:'complemento', label:'Complemento',  tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:766, y_pos:198, w_px:120, h_px:60 },
+      { _key:'p12', nomeCampo:'bairro',      label:'Bairro',       tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:33,  opcoes:null,           x_pos:14,  y_pos:274, w_px:260, h_px:60 },
+      { _key:'p13', nomeCampo:'cidade',      label:'Cidade',       tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:288, y_pos:274, w_px:360, h_px:60 },
+      { _key:'p14', nomeCampo:'uf',          label:'UF',           tipo:'texto',       tamanho:2,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:10,  opcoes:null,           x_pos:662, y_pos:274, w_px:80,  h_px:60 },
+      { _key:'p15', nomeCampo:'div2',        label:'Outros',       tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:350, w_px:872, h_px:20 },
+      { _key:'p16', nomeCampo:'foto',        label:'Foto',         tipo:'imagem',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:384, w_px:200, h_px:180 },
+      { _key:'p17', nomeCampo:'status',      label:'Status',       tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'ativo',largura:50, opcoes:[
+        {label:'Ativo',valor:'ativo',cor:'#4ADE80'},{label:'Inativo',valor:'inativo',cor:'#F87171'},{label:'Bloqueado',valor:'bloqueado',cor:'#FBD24C'},
+      ], x_pos:228, y_pos:384, w_px:658, h_px:60 },
+      { _key:'p18', nomeCampo:'tags',        label:'Tags',         tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:228, y_pos:458, w_px:658, h_px:60 },
+      { _key:'p19', nomeCampo:'observacoes', label:'Observações',  tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:534, w_px:872, h_px:100 },
+      { _key:'p20', nomeCampo:'_fav',        label:'Favorito',     tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:648, w_px:220, h_px:44 },
+      { _key:'p21', nomeCampo:'_ts',         label:'Datas',        tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:646, w_px:432, h_px:60 },
+    ],
+  },
+
+  {
+    id: 'cadastro_empresas',
+    emoji: '🏢', label: 'Cadastro de Empresas', categoria: 'Cadastros',
+    descricao: 'Razão social, CNPJ com busca automática na Receita Federal, endereço, contatos e status.',
+    nomeTela: 'Cadastro de Empresas', icone: 'building-2', canvasW: 900, canvasH: 660,
+    campos: [
+      { _key:'e1',  nomeCampo:'codigo',       label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:25,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:110, h_px:60 },
+      { _key:'e2',  nomeCampo:'razao_social', label:'Razão Social',  tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:75,  opcoes:null,           x_pos:138, y_pos:14,  w_px:748, h_px:60 },
+      { _key:'e3',  nomeCampo:'nome_fantasia',label:'Nome Fantasia', tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:90,  w_px:430, h_px:60 },
+      { _key:'e4',  nomeCampo:'cnpj',         label:'CNPJ',          tipo:'cnpj',        tamanho:18,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:458, y_pos:90,  w_px:280, h_px:60 },
+      { _key:'e5',  nomeCampo:'ie',           label:'Inscrição Est.',tipo:'texto',       tamanho:30,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:752, y_pos:90,  w_px:134, h_px:60 },
+      { _key:'e6',  nomeCampo:'div1',         label:'Endereço',      tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:165, w_px:872, h_px:20 },
+      { _key:'e7',  nomeCampo:'cep',          label:'CEP',           tipo:'cep',         tamanho:9,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:198, w_px:160, h_px:60 },
+      { _key:'e8',  nomeCampo:'logradouro',   label:'Logradouro',    tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:188, y_pos:198, w_px:440, h_px:60 },
+      { _key:'e9',  nomeCampo:'numero',       label:'Nº',            tipo:'texto',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:10,  opcoes:null,           x_pos:642, y_pos:198, w_px:100, h_px:60 },
+      { _key:'e10', nomeCampo:'complemento',  label:'Complemento',   tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:756, y_pos:198, w_px:130, h_px:60 },
+      { _key:'e11', nomeCampo:'bairro',       label:'Bairro',        tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:274, w_px:240, h_px:60 },
+      { _key:'e12', nomeCampo:'cidade',       label:'Cidade',        tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:268, y_pos:274, w_px:380, h_px:60 },
+      { _key:'e13', nomeCampo:'uf',           label:'UF',            tipo:'texto',       tamanho:2,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:10,  opcoes:null,           x_pos:662, y_pos:274, w_px:80,  h_px:60 },
+      { _key:'e14', nomeCampo:'div2',         label:'Contato',       tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:350, w_px:872, h_px:20 },
+      { _key:'e15', nomeCampo:'telefone',     label:'Telefone',      tipo:'telefone',    tamanho:30,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:384, w_px:220, h_px:60 },
+      { _key:'e16', nomeCampo:'email',        label:'E-mail',        tipo:'email',       tamanho:150, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:248, y_pos:384, w_px:380, h_px:60 },
+      { _key:'e17', nomeCampo:'site',         label:'Site',          tipo:'url',         tamanho:300, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:33,  opcoes:null,           x_pos:642, y_pos:384, w_px:244, h_px:60 },
+      { _key:'e18', nomeCampo:'status',       label:'Status',        tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'ativo',largura:50, opcoes:[
+        {label:'Ativo',valor:'ativo',cor:'#4ADE80'},{label:'Inativo',valor:'inativo',cor:'#F87171'},{label:'Prospecto',valor:'prospecto',cor:'#FBD24C'},{label:'Bloqueado',valor:'bloqueado',cor:'#F87171'},
+      ], x_pos:14,  y_pos:460, w_px:560, h_px:60 },
+      { _key:'e19', nomeCampo:'observacoes',  label:'Observações',   tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:536, w_px:872, h_px:90 },
+      { _key:'e20', nomeCampo:'_fav',         label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:640, w_px:220, h_px:44 },
+      { _key:'e21', nomeCampo:'_ts',          label:'Datas',         tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:638, w_px:432, h_px:60 },
+    ],
+  },
+
+  {
+    id: 'cadastro_produtos',
+    emoji: '📦', label: 'Cadastro de Produtos', categoria: 'Cadastros',
+    descricao: 'Código, nome, categoria, preço de custo e venda com cálculo de margem, estoque, foto e status.',
+    nomeTela: 'Cadastro de Produtos', icone: 'package', canvasW: 900, canvasH: 620,
+    campos: [
+      { _key:'pr1',  nomeCampo:'codigo',       label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:25,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:110, h_px:60 },
+      { _key:'pr2',  nomeCampo:'nome',          label:'Nome',          tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:75,  opcoes:null,           x_pos:138, y_pos:14,  w_px:580, h_px:60 },
+      { _key:'pr3',  nomeCampo:'ativo',         label:'Ativo',         tipo:'booleano',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'true',largura:10,  opcoes:null,           x_pos:732, y_pos:14,  w_px:154, h_px:60 },
+      { _key:'pr4',  nomeCampo:'categoria',     label:'Categoria',     tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:14,  y_pos:90,  w_px:280, h_px:60 },
+      { _key:'pr5',  nomeCampo:'unidade',       label:'Unidade',       tipo:'select',      tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'un',  largura:25,  opcoes:[
+        {label:'Unidade',valor:'un',cor:'#60A5FA'},{label:'Kg',valor:'kg',cor:'#34D399'},{label:'Litro',valor:'lt',cor:'#A78BFA'},
+        {label:'Metro',valor:'mt',cor:'#FB923C'},{label:'Caixa',valor:'cx',cor:'#F472B6'},{label:'Par',valor:'pr',cor:'#FBD24C'},
+      ], x_pos:308, y_pos:90,  w_px:200, h_px:60 },
+      { _key:'pr6',  nomeCampo:'estoque',       label:'Estoque',       tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:25,  opcoes:null,           x_pos:522, y_pos:90,  w_px:180, h_px:60 },
+      { _key:'pr7',  nomeCampo:'estoque_min',   label:'Estoque Mín.',  tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:25,  opcoes:null,           x_pos:716, y_pos:90,  w_px:170, h_px:60 },
+      { _key:'pr8',  nomeCampo:'div1',          label:'Preços',        tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:165, w_px:872, h_px:20 },
+      { _key:'pr9',  nomeCampo:'preco_custo',   label:'Preço de Custo',tipo:'moeda',       tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:33,  opcoes:null,           x_pos:14,  y_pos:198, w_px:240, h_px:60 },
+      { _key:'pr10', nomeCampo:'preco_venda',   label:'Preço de Venda',tipo:'moeda',       tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:33,  opcoes:null,           x_pos:268, y_pos:198, w_px:240, h_px:60 },
+      { _key:'pr11', nomeCampo:'margem',        label:'Margem %',      tipo:'calculo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:33,  opcoes:{formula:'({preco_venda} - {preco_custo}) / {preco_custo} * 100'}, x_pos:522, y_pos:198, w_px:240, h_px:60 },
+      { _key:'pr12', nomeCampo:'foto',          label:'Foto',          tipo:'imagem',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:274, w_px:200, h_px:180 },
+      { _key:'pr13', nomeCampo:'descricao',     label:'Descrição',     tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:75,  opcoes:null,           x_pos:228, y_pos:274, w_px:658, h_px:180 },
+      { _key:'pr14', nomeCampo:'tags',          label:'Tags',          tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:470, w_px:872, h_px:60 },
+      { _key:'pr15', nomeCampo:'_fav',          label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:546, w_px:220, h_px:44 },
+      { _key:'pr16', nomeCampo:'_ts',           label:'Datas',         tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:544, w_px:432, h_px:60 },
+    ],
+  },
+
+  // ── Operacional ────────────────────────────────────────────────────────────
+  {
+    id: 'controle_tarefas',
+    emoji: '✅', label: 'Controle de Tarefas', categoria: 'Operacional',
+    descricao: 'Título, responsável, prioridade com radio colorido, prazo, progresso visual e checklist de flags.',
+    nomeTela: 'Controle de Tarefas', icone: 'check-circle-2', canvasW: 900, canvasH: 580,
+    campos: [
+      { _key:'t1',  nomeCampo:'codigo',       label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:15,  opcoes:{seqChars:4},   x_pos:14,  y_pos:14,  w_px:100, h_px:60 },
+      { _key:'t2',  nomeCampo:'titulo',       label:'Título',        tipo:'texto',       tamanho:300, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:85,  opcoes:null,           x_pos:128, y_pos:14,  w_px:758, h_px:60 },
+      { _key:'t3',  nomeCampo:'responsavel',  label:'Responsável',   tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:14,  y_pos:90,  w_px:280, h_px:60 },
+      { _key:'t4',  nomeCampo:'prazo',        label:'Prazo',         tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:308, y_pos:90,  w_px:200, h_px:60 },
+      { _key:'t5',  nomeCampo:'prioridade',   label:'Prioridade',    tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'media',largura:50, opcoes:[
+        {label:'Baixa',valor:'baixa',cor:'#4ADE80'},{label:'Média',valor:'media',cor:'#FBD24C'},{label:'Alta',valor:'alta',cor:'#FB923C'},{label:'Urgente',valor:'urgente',cor:'#F87171'},
+      ], x_pos:522, y_pos:90,  w_px:364, h_px:60 },
+      { _key:'t6',  nomeCampo:'status',       label:'Status',        tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'pendente',largura:100, opcoes:[
+        {label:'Pendente',valor:'pendente',cor:'#94A3B8'},{label:'Em andamento',valor:'andamento',cor:'#60A5FA'},{label:'Aguardando',valor:'aguardando',cor:'#FBD24C'},{label:'Concluída',valor:'concluida',cor:'#4ADE80'},
+      ], x_pos:14,  y_pos:166, w_px:872, h_px:60 },
+      { _key:'t7',  nomeCampo:'progresso',    label:'Progresso',     tipo:'progresso',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:100, opcoes:null,           x_pos:14,  y_pos:242, w_px:872, h_px:60 },
+      { _key:'t8',  nomeCampo:'checklist',    label:'Checklist',     tipo:'flags',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:[
+        {label:'Iniciado',valor:'I'},{label:'Revisado',valor:'R'},{label:'Aprovado',valor:'A'},{label:'Entregue',valor:'E'},
+      ], x_pos:14,  y_pos:318, w_px:420, h_px:120 },
+      { _key:'t9',  nomeCampo:'tags',         label:'Tags',          tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:448, y_pos:318, w_px:438, h_px:60 },
+      { _key:'t10', nomeCampo:'descricao',    label:'Descrição',     tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:454, w_px:872, h_px:90 },
+      { _key:'t11', nomeCampo:'_fav',         label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:558, w_px:220, h_px:44 },
+      { _key:'t12', nomeCampo:'_ts',          label:'Datas',         tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:556, w_px:432, h_px:60 },
+    ],
+  },
+
+  {
+    id: 'ordem_servico',
+    emoji: '🔧', label: 'Ordem de Serviço', categoria: 'Operacional',
+    descricao: 'OS completa com cliente, equipamento, defeito, técnico, datas, status e valor total calculado.',
+    nomeTela: 'Ordem de Serviço', icone: 'wrench', canvasW: 900, canvasH: 680,
+    campos: [
+      { _key:'os1',  nomeCampo:'numero',       label:'Número OS',     tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:25,  opcoes:{seqChars:5},   x_pos:14,  y_pos:14,  w_px:140, h_px:60 },
+      { _key:'os2',  nomeCampo:'status',       label:'Status',        tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'aberta',largura:75, opcoes:[
+        {label:'Aberta',valor:'aberta',cor:'#60A5FA'},{label:'Em execução',valor:'execucao',cor:'#FBD24C'},{label:'Aguardando peça',valor:'aguardando',cor:'#FB923C'},{label:'Concluída',valor:'concluida',cor:'#4ADE80'},{label:'Cancelada',valor:'cancelada',cor:'#F87171'},
+      ], x_pos:168, y_pos:14,  w_px:718, h_px:60 },
+      { _key:'os3',  nomeCampo:'cliente',      label:'Cliente',       tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:90,  w_px:440, h_px:60 },
+      { _key:'os4',  nomeCampo:'telefone',     label:'Telefone',      tipo:'telefone',    tamanho:30,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:468, y_pos:90,  w_px:200, h_px:60 },
+      { _key:'os5',  nomeCampo:'tecnico',      label:'Técnico',       tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:25,  opcoes:null,           x_pos:682, y_pos:90,  w_px:204, h_px:60 },
+      { _key:'os6',  nomeCampo:'div1',         label:'Equipamento',   tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:165, w_px:872, h_px:20 },
+      { _key:'os7',  nomeCampo:'equipamento',  label:'Equipamento',   tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:198, w_px:430, h_px:60 },
+      { _key:'os8',  nomeCampo:'marca',        label:'Marca/Modelo',  tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:25,  opcoes:null,           x_pos:458, y_pos:198, w_px:220, h_px:60 },
+      { _key:'os9',  nomeCampo:'serie',        label:'Nº de Série',   tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:692, y_pos:198, w_px:194, h_px:60 },
+      { _key:'os10', nomeCampo:'defeito',      label:'Defeito Relatado',tipo:'texto_longo',tamanho:0,  obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:274, w_px:430, h_px:90 },
+      { _key:'os11', nomeCampo:'servico',      label:'Serviço Executado',tipo:'texto_longo',tamanho:0, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:458, y_pos:274, w_px:428, h_px:90 },
+      { _key:'os12', nomeCampo:'div2',         label:'Valores',       tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:378, w_px:872, h_px:20 },
+      { _key:'os13', nomeCampo:'dt_entrada',   label:'Entrada',       tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:412, w_px:180, h_px:60 },
+      { _key:'os14', nomeCampo:'dt_entrega',   label:'Previsão Entrega',tipo:'data',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:208, y_pos:412, w_px:180, h_px:60 },
+      { _key:'os15', nomeCampo:'vl_pecas',     label:'Valor Peças',   tipo:'moeda',       tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:402, y_pos:412, w_px:200, h_px:60 },
+      { _key:'os16', nomeCampo:'vl_servico',   label:'Valor Serviço', tipo:'moeda',       tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:616, y_pos:412, w_px:200, h_px:60 },
+      { _key:'os17', nomeCampo:'vl_total',     label:'Total',         tipo:'calculo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:{formula:'{vl_pecas} + {vl_servico}'}, x_pos:14, y_pos:488, w_px:280, h_px:60 },
+      { _key:'os18', nomeCampo:'garantia',     label:'Garantia',      tipo:'select',      tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:[
+        {label:'Sem garantia',valor:'0',cor:'#94A3B8'},{label:'30 dias',valor:'30',cor:'#60A5FA'},{label:'90 dias',valor:'90',cor:'#34D399'},{label:'6 meses',valor:'180',cor:'#4ADE80'},{label:'1 ano',valor:'365',cor:'#A78BFA'},
+      ], x_pos:308, y_pos:488, w_px:200, h_px:60 },
+      { _key:'os19', nomeCampo:'_fav',         label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:568, w_px:220, h_px:44 },
+      { _key:'os20', nomeCampo:'_ts',          label:'Datas',         tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:566, w_px:432, h_px:60 },
+    ],
+  },
+
+  {
+    id: 'controle_financeiro',
+    emoji: '💰', label: 'Controle Financeiro', categoria: 'Operacional',
+    descricao: 'Lançamentos de receitas e despesas com categoria, conta, data de vencimento e pagamento, valor e status.',
+    nomeTela: 'Controle Financeiro', icone: 'dollar-sign', canvasW: 900, canvasH: 540,
+    campos: [
+      { _key:'f1',  nomeCampo:'codigo',        label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:15,  opcoes:{seqChars:5},   x_pos:14,  y_pos:14,  w_px:120, h_px:60 },
+      { _key:'f2',  nomeCampo:'descricao',     label:'Descrição',     tipo:'texto',       tamanho:300, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:85,  opcoes:null,           x_pos:148, y_pos:14,  w_px:738, h_px:60 },
+      { _key:'f3',  nomeCampo:'tipo',          label:'Tipo',          tipo:'radio',       tamanho:10,  obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'despesa',largura:25, opcoes:[
+        {label:'Receita',valor:'receita',cor:'#4ADE80'},{label:'Despesa',valor:'despesa',cor:'#F87171'},
+      ], x_pos:14,  y_pos:90,  w_px:220, h_px:60 },
+      { _key:'f4',  nomeCampo:'categoria',     label:'Categoria',     tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:248, y_pos:90,  w_px:280, h_px:60 },
+      { _key:'f5',  nomeCampo:'conta',         label:'Conta',         tipo:'select',      tamanho:50,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:25,  opcoes:[
+        {label:'Caixa',valor:'caixa',cor:'#FBD24C'},{label:'Banco',valor:'banco',cor:'#60A5FA'},{label:'Cartão',valor:'cartao',cor:'#A78BFA'},{label:'PIX',valor:'pix',cor:'#34D399'},
+      ], x_pos:542, y_pos:90,  w_px:200, h_px:60 },
+      { _key:'f6',  nomeCampo:'valor',         label:'Valor',         tipo:'moeda',       tamanho:0,   obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:756, y_pos:90,  w_px:130, h_px:60 },
+      { _key:'f7',  nomeCampo:'dt_vencimento', label:'Vencimento',    tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:14,  y_pos:166, w_px:200, h_px:60 },
+      { _key:'f8',  nomeCampo:'dt_pagamento',  label:'Pagamento',     tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:228, y_pos:166, w_px:200, h_px:60 },
+      { _key:'f9',  nomeCampo:'status',        label:'Status',        tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'pendente',largura:50, opcoes:[
+        {label:'Pendente',valor:'pendente',cor:'#94A3B8'},{label:'Pago',valor:'pago',cor:'#4ADE80'},{label:'Atrasado',valor:'atrasado',cor:'#F87171'},{label:'Cancelado',valor:'cancelado',cor:'#FB923C'},
+      ], x_pos:442, y_pos:166, w_px:444, h_px:60 },
+      { _key:'f10', nomeCampo:'recorrente',    label:'Recorrente',    tipo:'booleano',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'false',largura:25,  opcoes:null,           x_pos:14,  y_pos:242, w_px:200, h_px:44 },
+      { _key:'f11', nomeCampo:'comprovante',   label:'Comprovante',   tipo:'arquivo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:75,  opcoes:null,           x_pos:228, y_pos:242, w_px:658, h_px:90 },
+      { _key:'f12', nomeCampo:'observacoes',   label:'Observações',   tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:348, w_px:872, h_px:80 },
+      { _key:'f13', nomeCampo:'_fav',          label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:444, w_px:220, h_px:44 },
+      { _key:'f14', nomeCampo:'_ts',           label:'Datas',         tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:442, w_px:432, h_px:60 },
+    ],
+  },
+
+  // ── Avaliação e Qualidade ──────────────────────────────────────────────────
+  {
+    id: 'avaliacao_fornecedores',
+    emoji: '⭐', label: 'Avaliação de Fornecedores', categoria: 'Qualidade',
+    descricao: 'Fornecedor, critérios de avaliação em estrelas, nota geral calculada, prazo de entrega e flags de qualidade.',
+    nomeTela: 'Avaliação de Fornecedores', icone: 'star', canvasW: 900, canvasH: 600,
+    campos: [
+      { _key:'av1',  nomeCampo:'codigo',        label:'Código',         tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:15,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:100, h_px:60 },
+      { _key:'av2',  nomeCampo:'fornecedor',    label:'Fornecedor',     tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:60,  opcoes:null,           x_pos:128, y_pos:14,  w_px:550, h_px:60 },
+      { _key:'av3',  nomeCampo:'dt_avaliacao',  label:'Data',           tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:692, y_pos:14,  w_px:194, h_px:60 },
+      { _key:'av4',  nomeCampo:'div1',          label:'Critérios',      tipo:'divisor',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'horizontal', largura:100, opcoes:null, x_pos:14,  y_pos:90,  w_px:872, h_px:20 },
+      { _key:'av5',  nomeCampo:'qualidade',     label:'Qualidade',      tipo:'avaliacao',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:50,  opcoes:{max:5},        x_pos:14,  y_pos:124, w_px:420, h_px:48 },
+      { _key:'av6',  nomeCampo:'prazo',         label:'Prazo de Entrega',tipo:'avaliacao',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:50,  opcoes:{max:5},        x_pos:448, y_pos:124, w_px:438, h_px:48 },
+      { _key:'av7',  nomeCampo:'atendimento',   label:'Atendimento',    tipo:'avaliacao',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:50,  opcoes:{max:5},        x_pos:14,  y_pos:184, w_px:420, h_px:48 },
+      { _key:'av8',  nomeCampo:'preco',         label:'Preço',          tipo:'avaliacao',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:50,  opcoes:{max:5},        x_pos:448, y_pos:184, w_px:438, h_px:48 },
+      { _key:'av9',  nomeCampo:'nota_geral',    label:'Nota Geral',     tipo:'calculo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:{formula:'({qualidade} + {prazo} + {atendimento} + {preco}) / 4'}, x_pos:14, y_pos:248, w_px:420, h_px:60 },
+      { _key:'av10', nomeCampo:'recomenda',     label:'Recomenda?',     tipo:'radio',       tamanho:10,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:[
+        {label:'Sim',valor:'sim',cor:'#4ADE80'},{label:'Não',valor:'nao',cor:'#F87171'},{label:'Talvez',valor:'talvez',cor:'#FBD24C'},
+      ], x_pos:448, y_pos:248, w_px:438, h_px:60 },
+      { _key:'av11', nomeCampo:'flags',         label:'Observações',    tipo:'flags',       tamanho:10,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:[
+        {label:'Entrega no prazo',valor:'P'},{label:'Nota fiscal correta',valor:'N'},{label:'Produto conforme',valor:'C'},{label:'Fácil negociação',valor:'F'},
+      ], x_pos:14,  y_pos:324, w_px:872, h_px:110 },
+      { _key:'av12', nomeCampo:'observacoes',   label:'Observações',    tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:450, w_px:872, h_px:90 },
+      { _key:'av13', nomeCampo:'_ts',           label:'Datas',          tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:556, w_px:432, h_px:60 },
+    ],
+  },
+
+  // ── Galeria / Mídia ────────────────────────────────────────────────────────
+  {
+    id: 'galeria_imagens',
+    emoji: '🖼️', label: 'Galeria de Imagens', categoria: 'Mídia',
+    descricao: 'Título, imagem com preview inline, categoria, tags, cor de destaque, avaliação e descrição.',
+    nomeTela: 'Galeria de Imagens', icone: 'image', canvasW: 900, canvasH: 560,
+    campos: [
+      { _key:'gi1', nomeCampo:'codigo',      label:'Código',       tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:15,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:100, h_px:60 },
+      { _key:'gi2', nomeCampo:'titulo',      label:'Título',       tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:85,  opcoes:null,           x_pos:128, y_pos:14,  w_px:758, h_px:60 },
+      { _key:'gi3', nomeCampo:'imagem',      label:'Imagem',       tipo:'imagem',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:90,  w_px:340, h_px:300 },
+      { _key:'gi4', nomeCampo:'categoria',   label:'Categoria',    tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:368, y_pos:90,  w_px:518, h_px:60 },
+      { _key:'gi5', nomeCampo:'tags',        label:'Tags',         tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:368, y_pos:164, w_px:518, h_px:60 },
+      { _key:'gi6', nomeCampo:'cor',         label:'Cor de destaque',tipo:'cor',       tamanho:7,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'#3B82F6',largura:25,opcoes:null,         x_pos:368, y_pos:238, w_px:240, h_px:48 },
+      { _key:'gi7', nomeCampo:'avaliacao',   label:'Avaliação',    tipo:'avaliacao',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:25,  opcoes:{max:5},        x_pos:622, y_pos:238, w_px:264, h_px:48 },
+      { _key:'gi8', nomeCampo:'url_origem',  label:'URL de Origem',tipo:'url',         tamanho:500, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:368, y_pos:300, w_px:518, h_px:60 },
+      { _key:'gi9', nomeCampo:'descricao',   label:'Descrição',    tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:406, w_px:872, h_px:90 },
+      { _key:'gi10',nomeCampo:'_fav',        label:'Favorito',     tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:512, w_px:220, h_px:44 },
+      { _key:'gi11',nomeCampo:'_ts',         label:'Datas',        tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:510, w_px:432, h_px:60 },
+    ],
+  },
+
+  // ── Links e Referências ────────────────────────────────────────────────────
+  {
+    id: 'base_conhecimento',
+    emoji: '📚', label: 'Base de Conhecimento', categoria: 'Referências',
+    descricao: 'Links e artigos organizados por categoria e tags, com avaliação de utilidade e cor de destaque.',
+    nomeTela: 'Base de Conhecimento', icone: 'book-open', canvasW: 900, canvasH: 520,
+    campos: [
+      { _key:'bc1', nomeCampo:'codigo',      label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:15,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:100, h_px:60 },
+      { _key:'bc2', nomeCampo:'titulo',      label:'Título',        tipo:'texto',       tamanho:300, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:85,  opcoes:null,           x_pos:128, y_pos:14,  w_px:758, h_px:60 },
+      { _key:'bc3', nomeCampo:'url',         label:'URL / Link',    tipo:'url',         tamanho:500, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:90,  w_px:872, h_px:60 },
+      { _key:'bc4', nomeCampo:'categoria',   label:'Categoria',     tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:33,  opcoes:null,           x_pos:14,  y_pos:166, w_px:280, h_px:60 },
+      { _key:'bc5', nomeCampo:'tags',        label:'Tags',          tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:67,  opcoes:null,           x_pos:308, y_pos:166, w_px:578, h_px:60 },
+      { _key:'bc6', nomeCampo:'avaliacao',   label:'Utilidade',     tipo:'avaliacao',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:33,  opcoes:{max:5},        x_pos:14,  y_pos:242, w_px:280, h_px:48 },
+      { _key:'bc7', nomeCampo:'cor',         label:'Cor',           tipo:'cor',         tamanho:7,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'#3B82F6',largura:25,opcoes:null,         x_pos:308, y_pos:242, w_px:200, h_px:48 },
+      { _key:'bc8', nomeCampo:'lido',        label:'Lido',          tipo:'booleano',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'false',largura:25,  opcoes:null,           x_pos:522, y_pos:242, w_px:160, h_px:48 },
+      { _key:'bc9', nomeCampo:'resumo',      label:'Resumo',        tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:306, w_px:872, h_px:150 },
+      { _key:'bc10',nomeCampo:'_fav',        label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:472, w_px:220, h_px:44 },
+      { _key:'bc11',nomeCampo:'_ts',         label:'Datas',         tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:454, y_pos:470, w_px:432, h_px:60 },
+    ],
+  },
+
+  // ── Controle de Acesso / Senhas ────────────────────────────────────────────
+  {
+    id: 'cofre_senhas',
+    emoji: '🔐', label: 'Cofre de Senhas', categoria: 'Segurança',
+    descricao: 'Sistema, usuário, senha, URL de acesso, categoria, data de validade e nível de segurança.',
+    nomeTela: 'Cofre de Senhas', icone: 'lock', canvasW: 900, canvasH: 520,
+    campos: [
+      { _key:'cs1', nomeCampo:'codigo',      label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:15,  opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:100, h_px:60 },
+      { _key:'cs2', nomeCampo:'sistema',     label:'Sistema',       tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:60,  opcoes:null,           x_pos:128, y_pos:14,  w_px:550, h_px:60 },
+      { _key:'cs3', nomeCampo:'categoria',   label:'Categoria',     tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:25,  opcoes:null,           x_pos:692, y_pos:14,  w_px:194, h_px:60 },
+      { _key:'cs4', nomeCampo:'url',         label:'URL de Acesso', tipo:'url',         tamanho:500, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:90,  w_px:872, h_px:60 },
+      { _key:'cs5', nomeCampo:'usuario',     label:'Usuário / E-mail',tipo:'texto',     tamanho:200, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:166, w_px:430, h_px:60 },
+      { _key:'cs6', nomeCampo:'senha',       label:'Senha',         tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:458, y_pos:166, w_px:428, h_px:60 },
+      { _key:'cs7', nomeCampo:'cpy_senha',   label:'Copiar Senha',  tipo:'copiar',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'senha',largura:25, opcoes:null,           x_pos:14,  y_pos:242, w_px:180, h_px:44 },
+      { _key:'cs8', nomeCampo:'cpy_usuario', label:'Copiar Usuário',tipo:'copiar',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'usuario',largura:25,opcoes:null,          x_pos:208, y_pos:242, w_px:180, h_px:44 },
+      { _key:'cs9', nomeCampo:'dt_validade', label:'Válido até',    tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:25,  opcoes:null,           x_pos:402, y_pos:242, w_px:180, h_px:44 },
+      { _key:'cs10',nomeCampo:'seguranca',   label:'Nível Segurança',tipo:'progresso',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:25,  opcoes:null,           x_pos:596, y_pos:242, w_px:290, h_px:60 },
+      { _key:'cs11',nomeCampo:'observacoes', label:'Observações',   tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:316, w_px:872, h_px:80 },
+      { _key:'cs12',nomeCampo:'tags',        label:'Tags',          tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:412, w_px:872, h_px:60 },
+      { _key:'cs13',nomeCampo:'_fav',        label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:488, w_px:220, h_px:44 },
     ],
   },
 ]
 
 function TemplateModal({ onSelecionar, onFechar }) {
+  const categorias = [...new Set(TEMPLATES.map(t => t.categoria))]
+  const [catAtiva, setCatAtiva] = useState(null)
+  const lista = catAtiva ? TEMPLATES.filter(t => t.categoria === catAtiva) : TEMPLATES
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(6px)' }}
       onClick={e => e.target === e.currentTarget && onFechar()}>
-      <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 16, width: 600, maxWidth: '92vw', boxShadow: 'var(--sh-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--bd)', background: 'var(--s2)' }}>
+      <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 16, width: 700, maxWidth: '95vw', maxHeight: '88vh', boxShadow: 'var(--sh-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--bd)', background: 'var(--s2)', flexShrink: 0 }}>
           <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>Escolher Template</span>
           <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex' }}><X size={16} /></button>
         </div>
-        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {TEMPLATES.map(t => (
+        {/* filtro por categoria */}
+        <div style={{ padding: '10px 20px 0', display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+          <button onClick={() => setCatAtiva(null)}
+            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
+              borderColor: catAtiva === null ? 'var(--or)' : 'var(--bd)',
+              background: catAtiva === null ? 'rgba(255,107,43,.12)' : 'var(--s2)',
+              color: catAtiva === null ? 'var(--or)' : 'var(--t2)', fontWeight: catAtiva === null ? 700 : 400 }}>
+            Todos
+          </button>
+          {categorias.map(cat => (
+            <button key={cat} onClick={() => setCatAtiva(cat === catAtiva ? null : cat)}
+              style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1.5px solid', cursor: 'pointer',
+                borderColor: catAtiva === cat ? 'var(--or)' : 'var(--bd)',
+                background: catAtiva === cat ? 'rgba(255,107,43,.12)' : 'var(--s2)',
+                color: catAtiva === cat ? 'var(--or)' : 'var(--t2)', fontWeight: catAtiva === cat ? 700 : 400 }}>
+              {cat}
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto' }}>
+          {lista.map(t => (
             <div key={t.id}
               onClick={() => onSelecionar(t)}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px', background: 'var(--s2)', border: '1.5px solid var(--bd)', borderRadius: 12, cursor: 'pointer', transition: 'border-color .15s, background .15s' }}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '12px 16px', background: 'var(--s2)', border: '1.5px solid var(--bd)', borderRadius: 12, cursor: 'pointer', transition: 'border-color .15s, background .15s' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--or)'; e.currentTarget.style.background = 'rgba(255,107,43,.04)' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--bd)'; e.currentTarget.style.background = 'var(--s2)' }}>
-              <div style={{ width: 40, height: 40, flexShrink: 0, background: 'rgba(255,107,43,.1)', border: '1.5px solid rgba(255,107,43,.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                📎
+              <div style={{ width: 40, height: 40, flexShrink: 0, background: 'rgba(255,107,43,.1)', border: '1.5px solid rgba(255,107,43,.25)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                {t.emoji || '📋'}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)', marginBottom: 4 }}>{t.label}</div>
-                <div style={{ fontSize: 11.5, color: 'var(--t2)', lineHeight: 1.5 }}>{t.descricao}</div>
-                <div style={{ marginTop: 8, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                  {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).map(c => (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>{t.label}</span>
+                  <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: 'var(--s3)', color: 'var(--t3)', border: '1px solid var(--bd)' }}>{t.categoria}</span>
+                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t.campos.length} campos</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: 'var(--t2)', lineHeight: 1.5, marginBottom: 6 }}>{t.descricao}</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).slice(0, 8).map(c => (
                     <span key={c._key} style={{ fontSize: 9.5, fontFamily: 'monospace', background: 'var(--s3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '1px 6px', color: 'var(--t2)' }}>
-                      {c.nomeCampo}
+                      {c.tipo === 'calculo' ? '⚡' : ''}{c.nomeCampo}
                     </span>
                   ))}
+                  {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).length > 8 && (
+                    <span style={{ fontSize: 9.5, color: 'var(--t3)', padding: '1px 4px' }}>+{t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).length - 8}</span>
+                  )}
                 </div>
               </div>
               <div style={{ fontSize: 11, color: 'var(--or)', fontWeight: 600, flexShrink: 0, alignSelf: 'center' }}>Usar →</div>
             </div>
           ))}
-          <div style={{ padding: '10px 14px', background: 'var(--s2)', border: '1.5px dashed var(--bd)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--t3)', fontSize: 12 }}>
-            <Plus size={14} /> Mais templates em breve...
-          </div>
         </div>
       </div>
     </div>
@@ -757,7 +1054,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
 
   function aplicarTemplate(tmpl) {
     setNomeTela(tmpl.nomeTela)
-    setNomeTabela(slugify(tmpl.nomeTela) + '_001')
+    setNomeTabela(tmpl.nomeTabela || slugify(tmpl.nomeTela) + '_001')
     setIcone(tmpl.icone || 'paperclip')
     setCanvasW(tmpl.canvasW || 900)
     setCanvasH(tmpl.canvasH || 620)

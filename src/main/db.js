@@ -312,7 +312,7 @@ async function migration1() {
     RETURNS TEXT LANGUAGE plpgsql AS $$
     BEGIN
       RETURN CASE p_tipo
-        WHEN 'texto'       THEN 'VARCHAR(' || COALESCE(p_tamanho,100) || ')'
+        WHEN 'texto'       THEN 'VARCHAR(' || COALESCE(NULLIF(p_tamanho,0),100) || ')'
         WHEN 'email'       THEN 'VARCHAR(150)'
         WHEN 'telefone'    THEN 'VARCHAR(30)'
         WHEN 'numero'      THEN 'NUMERIC(15,4)'
@@ -320,9 +320,11 @@ async function migration1() {
         WHEN 'data'        THEN 'DATE'
         WHEN 'booleano'    THEN 'BOOLEAN'
         WHEN 'texto_longo' THEN 'TEXT'
-        WHEN 'select'      THEN 'VARCHAR(100)'
-        WHEN 'radio'       THEN 'VARCHAR(100)'
+        WHEN 'arquivo'     THEN 'TEXT'
+        WHEN 'select'      THEN 'VARCHAR(200)'
+        WHEN 'radio'       THEN 'VARCHAR(200)'
         WHEN 'tags'        THEN 'TEXT'
+        WHEN 'avaliacao'   THEN 'SMALLINT'
         WHEN 'codigo_auto' THEN 'VARCHAR(50)'
         WHEN 'lookup'      THEN 'INTEGER'
         ELSE 'VARCHAR(100)'

@@ -1,7 +1,14 @@
 import { ipcMain, BrowserWindow, dialog, app, shell, clipboard } from 'electron'
 import { getConfig, saveConfig, saveSectionConfig, getConfigForFrontend, INI_PATH, getDecryptedBancoConfig } from './config'
-import { readFileSync, writeFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, appendFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync, readdirSync } from 'fs'
 import { join, extname, basename, dirname, relative } from 'path'
+
+function importLog(msg) {
+  try {
+    const logPath = join(app.getPath('userData'), 'import_debug.log')
+    appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`)
+  } catch {}
+}
 
 import { query, queryOne, getPool } from './db'
 import { checkForUpdates, downloadUpdate, installUpdate } from './updater'
@@ -328,18 +335,22 @@ export function registerHandlers() {
     return map[ext.toLowerCase()] || 'Outro'
   }
 
-  function scanDir(dir) {
+  function scanDir(rootDir) {
     const files = []
-    try {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        if (entry.name.startsWith('.')) continue
-        const full = join(dir, entry.name)
-        try {
-          if (entry.isDirectory()) files.push(...scanDir(full))
-          else if (entry.isFile()) files.push(full)
-        } catch { /* sem permissão — pula */ }
-      }
-    } catch { /* sem permissão — pula */ }
+    const queue = [rootDir]
+    while (queue.length) {
+      const dir = queue.pop()
+      try {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          if (entry.name.startsWith('.')) continue
+          const full = join(dir, entry.name)
+          try {
+            if (entry.isDirectory()) queue.push(full)
+            else if (entry.isFile()) files.push(full)
+          } catch {}
+        }
+      } catch {}
+    }
     return files
   }
 
@@ -466,6 +477,7 @@ export function registerHandlers() {
   ipcMain.handle('fb:inativarTela',     (_, id)         => fb.inativarTela(id))
   ipcMain.handle('fb:reativarTela',     (_, id)         => fb.reativarTela(id))
   ipcMain.handle('fb:listarRegistros',  (_, tbl, opts)  => fb.listarRegistros(tbl, opts))
+  ipcMain.handle('fb:getAllRegistros',   (_, tbl)        => fb.getAllRegistros(tbl))
   ipcMain.handle('fb:inserirRegistro',  (_, tbl, dados) => fb.inserirRegistro(tbl, dados))
   ipcMain.handle('fb:atualizarRegistro',(_, tbl, id, d, hasTs) => fb.atualizarRegistro(tbl, id, d, hasTs))
   ipcMain.handle('fb:reordenarTelas',   (_, items)      => fb.reordenarTelas(items))
@@ -479,9 +491,7 @@ export function registerHandlers() {
     return rows.map(r => r[coluna])
   })
 
-  // Importação em massa para tabela do FormBuilder
-  // mapeamento: { arquivo: 'arquivo', nome: 'arquivo_nome', ext: 'arquivo_ext', tamanho: 'arquivo_tamanho', path: 'arquivo_path', pasta: 'pasta', codigo: 'codigo' }
-  // hasTs: se a tabela tem criado_em/alterado_em
+  // Importação em massa para tabela do FormBuilder — sem cópia de arquivo, INSERT em lote
   ipcMain.handle('fb:importarPasta', async (e, { tbl, mapeamento, hasTs = false, seqChars = 3 }) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -500,6 +510,7 @@ export function registerHandlers() {
 
       const allFiles = scanDir(pastaRaiz)
       const total    = allFiles.length
+      importLog(`scanDir encontrou ${total} arquivos em: ${pastaRaiz}`)
 
       send({ fase: 'escaneando', atual: total, total, arquivo: `${total.toLocaleString('pt-BR')} arquivos encontrados`, inseridos: 0, ignorados: 0 })
       if (total === 0) {
@@ -507,27 +518,36 @@ export function registerHandlers() {
         return { ok: true, inseridos: 0, ignorados: 0 }
       }
 
-      const cfg     = getConfig()
-      const baseDir = cfg.Caminhos?.arquivos || join(app.getPath('userData'), 'arquivos')
-      const destDir = join(baseDir, tbl)
-      if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
-
-      // Descobre colunas reais existentes na tabela para montar INSERT dinâmico
-      const colInfos = await query(`SELECT column_name FROM information_schema.columns WHERE table_name=$1 ORDER BY ordinal_position`, [tbl])
+      // Descobre colunas reais da tabela uma única vez
+      const colInfos   = await query(`SELECT column_name FROM information_schema.columns WHERE table_name=$1 ORDER BY ordinal_position`, [tbl])
       const colsTabela = new Set(colInfos.map(r => r.column_name))
 
-      const BATCH     = 100
+      const colArquivo      = mapeamento.arquivo       || null
+      const colNome         = mapeamento.nome          || null
+      const colNomeGenerico = mapeamento.nomeGenerico  || null  // campo "nome" título — recebe basename sem ext
+      const colExt          = mapeamento.ext           || null
+      const colTamanho      = mapeamento.tamanho       || null
+      const colPath         = mapeamento.path          || null
+      const colPasta        = mapeamento.pasta         || null
+      const colCodigo       = mapeamento.codigo        || null
+
+      // Colunas que serão inseridas (filtradas pelas que existem na tabela)
+      const colsUsar = [colArquivo, colNome, colNomeGenerico, colExt, colTamanho, colPath, colPasta, colCodigo]
+        .filter(c => c && colsTabela.has(c))
+      const tsColsUsar = hasTs ? [...colsUsar, 'criado_em', 'alterado_em'] : colsUsar
+
+      // Sequência de código: pega o último número uma vez antes do loop
+      let ultimoCodigo = 0
+      if (colCodigo && colsTabela.has(colCodigo)) {
+        try {
+          const r = await query(`SELECT ${colCodigo} FROM ${tbl} WHERE ${colCodigo} IS NOT NULL ORDER BY id DESC LIMIT 1`)
+          ultimoCodigo = r.length ? (parseInt(r[0][colCodigo]) || 0) : 0
+        } catch {}
+      }
+
+      const BATCH    = 500
       let   inseridos = 0
       let   ignorados = 0
-
-      // Campo que guarda o JSON do arquivo (obrigatório)
-      const colArquivo  = mapeamento.arquivo  || null
-      const colNome     = mapeamento.nome     || null  // arquivo_nome
-      const colExt      = mapeamento.ext      || null  // arquivo_ext
-      const colTamanho  = mapeamento.tamanho  || null  // arquivo_tamanho
-      const colPath     = mapeamento.path     || null  // arquivo_path
-      const colPasta    = mapeamento.pasta    || null  // pasta (subdiretório relativo)
-      const colCodigo   = mapeamento.codigo   || null  // codigo auto
 
       for (let i = 0; i < allFiles.length; i += BATCH) {
         if (importCancelFlags.get(winId)) {
@@ -537,86 +557,111 @@ export function registerHandlers() {
 
         const batch = allFiles.slice(i, i + BATCH)
 
-        // Verifica duplicatas pelo caminho destino (coluna que armazena o path)
-        const pathColCheck = colPath || colArquivo
+        // Deduplicação por nome+pasta — mesmo arquivo na mesma pasta = duplicata
+        // arquivos com mesmo nome em pastas diferentes = registros distintos
         let existSet = new Set()
-        if (pathColCheck && colsTabela.has(pathColCheck)) {
-          const paths = batch.map(f => {
-            const origExt  = extname(f).toLowerCase().replace('.', '')
-            const origName = basename(f)
-            const ts       = Date.now()
-            return join(destDir, `${ts}_${origName}`) // estimativa — checamos o path original
-          })
-          // Busca por arquivo_nome para evitar reimportar mesmo arquivo
-          const nomes = batch.map(f => basename(f))
-          const colNomeCheck = colNome || pathColCheck
-          if (colsTabela.has(colNomeCheck)) {
-            const rows = await query(`SELECT ${colNomeCheck} FROM ${tbl} WHERE ${colNomeCheck} = ANY($1) AND ativo = true`, [nomes])
-            existSet = new Set(rows.map(r => r[colNomeCheck]))
-          }
+        if (colNome && colsTabela.has(colNome) && colPasta && colsTabela.has(colPasta)) {
+          const pares = batch.map(f => `${basename(f)}||${relative(pastaRaiz, dirname(f)).replace(/\\/g, '/')}`)
+          const rows  = await query(
+            `SELECT ${colNome} || '||' || COALESCE(${colPasta},'') AS chave FROM ${tbl} WHERE ${colNome} = ANY($1)`,
+            [batch.map(f => basename(f))]
+          )
+          existSet = new Set(rows.map(r => r.chave))
+          var novos = batch.filter(f => !existSet.has(`${basename(f)}||${relative(pastaRaiz, dirname(f)).replace(/\\/g, '/')}`))
+        } else if (colPath && colsTabela.has(colPath)) {
+          const rows = await query(`SELECT ${colPath} FROM ${tbl} WHERE ${colPath} = ANY($1)`, [batch])
+          existSet = new Set(rows.map(r => r[colPath]))
+          var novos = batch.filter(f => !existSet.has(f))
+        } else {
+          var novos = batch
+        }
+        ignorados += batch.length - novos.length
+        if (!novos.length) {
+          send({ fase: 'importando', atual: Math.min(i + BATCH, total), total, arquivo: basename(batch[batch.length - 1]), inseridos, ignorados })
+          continue
         }
 
-        const novos = batch.filter(f => !existSet.has(basename(f)))
-        ignorados += batch.length - novos.length
+        // Monta INSERT em lote (sem copiar arquivos — salva o path original)
+        // Colunas fixas determinadas uma vez por batch
+        const insertCols = [
+          colArquivo      && colsTabela.has(colArquivo)      ? colArquivo      : null,
+          colNome         && colsTabela.has(colNome)         ? colNome         : null,
+          colNomeGenerico && colsTabela.has(colNomeGenerico) ? colNomeGenerico : null,
+          colExt          && colsTabela.has(colExt)          ? colExt          : null,
+          colTamanho      && colsTabela.has(colTamanho)      ? colTamanho      : null,
+          colPath         && colsTabela.has(colPath)         ? colPath         : null,
+          colPasta        && colsTabela.has(colPasta)        ? colPasta        : null,
+          colCodigo       && colsTabela.has(colCodigo)       ? colCodigo       : null,
+        ].filter(Boolean)
+        const nCols = insertCols.length
+        if (!nCols) { ignorados += novos.length; continue }
+
+        const placeholders = []
+        const params       = []
 
         for (const filePath of novos) {
-          if (importCancelFlags.get(winId)) break
+          const origName    = basename(filePath)
+          const origNameNoExt = origName.replace(/\.[^/.]+$/, '')  // sem extensão para campo título
+          const origExt     = extname(origName).toLowerCase().replace('.', '')
+          const relDir      = relative(pastaRaiz, dirname(filePath)).replace(/\\/g, '/') || ''
+          let   tam         = 0
+          try { tam = statSync(filePath).size } catch {}
+          if (colCodigo && colsTabela.has(colCodigo)) ultimoCodigo++
+
+          const vals = []
+          if (colArquivo      && colsTabela.has(colArquivo))      vals.push(JSON.stringify({ path: filePath, nome: origName, ext: origExt, tamanho: tam }))
+          if (colNome         && colsTabela.has(colNome))         vals.push(origName)
+          if (colNomeGenerico && colsTabela.has(colNomeGenerico)) vals.push(origNameNoExt)
+          if (colExt          && colsTabela.has(colExt))          vals.push(origExt)
+          if (colTamanho      && colsTabela.has(colTamanho))      vals.push(tam)
+          if (colPath         && colsTabela.has(colPath))         vals.push(filePath)
+          if (colPasta        && colsTabela.has(colPasta))        vals.push(relDir)
+          if (colCodigo       && colsTabela.has(colCodigo))       vals.push(String(ultimoCodigo).padStart(seqChars, '0'))
+
+          const base = params.length
+          placeholders.push(`(${vals.map((_, k) => `$${base + k + 1}`).join(', ')})`)
+          params.push(...vals)
+        }
+
+        if (placeholders.length) {
           try {
-            const origName = basename(filePath)
-            const origExt  = extname(origName).toLowerCase().replace('.', '')
-            const relDir   = relative(pastaRaiz, dirname(filePath)).replace(/\\/g, '/') || ''
-            let   tam      = 0
-            try { tam = statSync(filePath).size } catch {}
-
-            // Copia o arquivo para a pasta de destino
-            const ts      = Date.now()
-            const destName = `${ts}_${origName}`
-            const destPath = join(destDir, destName)
-            try { copyFileSync(filePath, destPath) } catch { ignorados++; continue }
-
-            // Monta o registro
-            const dados = {}
-
-            if (colArquivo && colsTabela.has(colArquivo)) {
-              dados[colArquivo] = JSON.stringify({ path: destPath, nome: origName, ext: origExt, tamanho: tam })
-            }
-            if (colNome    && colsTabela.has(colNome))    dados[colNome]    = origName
-            if (colExt     && colsTabela.has(colExt))     dados[colExt]     = origExt
-            if (colTamanho && colsTabela.has(colTamanho)) dados[colTamanho] = tam
-            if (colPath    && colsTabela.has(colPath))    dados[colPath]    = destPath
-            if (colPasta   && colsTabela.has(colPasta))   dados[colPasta]   = relDir
-
-            if (colCodigo && colsTabela.has(colCodigo)) {
-              try {
-                const lastRow = await query(`SELECT ${colCodigo} FROM ${tbl} WHERE ${colCodigo} IS NOT NULL ORDER BY id DESC LIMIT 1`)
-                const lastNum = lastRow.length ? parseInt(lastRow[0][colCodigo]) || 0 : 0
-                dados[colCodigo] = String(lastNum + 1).padStart(seqChars, '0')
-              } catch { /* sem sequencial */ }
-            }
-
-            // Colunas que existem na tabela
-            const cols = Object.keys(dados).filter(k => colsTabela.has(k))
-            if (!cols.length) { ignorados++; continue }
-
-            const placeholders = cols.map((_, idx) => `$${idx + 1}`).join(', ')
-            const vals = cols.map(k => dados[k])
-
-            const tsExtra = hasTs ? `, criado_em = NOW(), alterado_em = NOW()` : ''
             await query(
-              `INSERT INTO ${tbl} (${cols.join(', ')}) VALUES (${placeholders}) ON CONFLICT DO NOTHING`,
-              vals
+              `INSERT INTO ${tbl} (${insertCols.join(', ')}) VALUES ${placeholders.join(', ')}
+               ON CONFLICT DO NOTHING`,
+              params
             )
-            inseridos++
-          } catch { ignorados++ }
+            inseridos += placeholders.length
+          } catch (batchErr) {
+            importLog(`BATCH ERRO em i=${i}: ${batchErr.message}`)
+            importLog(`  insertCols: ${insertCols.join(', ')}`)
+            importLog(`  primeiro arquivo do batch: ${novos[0]}`)
+            // batch falhou — tenta arquivo por arquivo para salvar o máximo
+            for (let j = 0; j < novos.length; j++) {
+              try {
+                const singleParams  = params.slice(j * nCols, (j + 1) * nCols)
+                const singlePh      = `(${singleParams.map((_, k) => `$${k + 1}`).join(', ')})`
+                await query(
+                  `INSERT INTO ${tbl} (${insertCols.join(', ')}) VALUES ${singlePh} ON CONFLICT DO NOTHING`,
+                  singleParams
+                )
+                inseridos++
+              } catch (singleErr) {
+                importLog(`  ARQUIVO ERRO: ${novos[j]} — ${singleErr.message}`)
+                ignorados++
+              }
+            }
+          }
         }
 
         send({ fase: 'importando', atual: Math.min(i + BATCH, total), total, arquivo: basename(batch[batch.length - 1]), inseridos, ignorados })
       }
 
+      importLog(`CONCLUIDO: inseridos=${inseridos} ignorados=${ignorados} total=${total}`)
       send({ fase: 'concluido', atual: total, total, inseridos, ignorados })
       return { ok: true, inseridos, ignorados }
 
     } catch (err) {
+      importLog(`ERRO GERAL: ${err.message}\n${err.stack}`)
       send({ fase: 'erro', erro: err.message })
       return { ok: false, erro: err.message }
     } finally {

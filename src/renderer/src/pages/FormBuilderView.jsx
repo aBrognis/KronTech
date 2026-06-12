@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   Plus, Save, X, Trash2, Edit2, Search,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  Download, Copy, Check, Star, ExternalLink,
+  Download, Copy, Check, Star, ExternalLink, RotateCcw,
   CheckCircle2, XCircle, Loader2, Building2, MapPin, CheckSquare, Square, ScanSearch,
   Paperclip, ImageIcon, Palette, Link, Timer, Calculator, CalendarClock, Gauge, Percent,
   FolderInput, Settings, Clipboard,
@@ -109,6 +109,13 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   const [lkpModalSelId,   setLkpModalSelId]   = useState(null)
   const [lkpPopover,      setLkpPopover]      = useState(null) // { label, x, y }
 
+  // Filtros aba Acesso
+  const [fFiltros,    setFFiltros]    = useState({})   // { nome_campo: valor_selecionado }
+  const [fBusca,      setFBusca]      = useState('')
+  const [fResultados, setFResultados] = useState(null) // null = aguardando, [] = consultado
+  const [allItems,    setAllItems]    = useState([])   // todos os registros, carregado uma vez
+  const [allLoading,  setAllLoading]  = useState(false)
+
   // Modal Pesquisa Padrão
   const [showConsulta,  setShowConsulta]  = useState(false)
   const [mTodos,        setMTodos]        = useState([])
@@ -125,7 +132,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   useEffect(() => { init() }, [nomeTabela])
 
   async function init() {
-    setLoading(true); setErro(null)
+    setLoading(true); setErro(null); setImportando(false)
     try {
       const todas = await window.api.formBuilder.listarTelas(true)
       const found = todas.find(t => t.nome_tabela === nomeTabela)
@@ -192,41 +199,50 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   async function handleImportarPasta() {
     setImportando(true)
     setImportProg({ fase: 'escaneando', atual: 0, total: 0, arquivo: 'Iniciando...', inseridos: 0, ignorados: 0 })
-    const unsub = window.api.arquivos.onProgresso(prog => {
+
+    let unsubFn = null
+    function finalizar(prog) {
+      if (unsubFn) { unsubFn(); unsubFn = null }
+      setImportando(false)
+      if (prog?.fase === 'concluido') { carregar(tela, pagina, busca, null); setAllItems([]) }
+      if (prog?.erro) setErro(prog.erro)
+    }
+
+    unsubFn = window.api.arquivos.onProgresso(prog => {
       setImportProg(prog)
-      if (['concluido','cancelado','erro'].includes(prog.fase)) {
-        unsub()
-        setImportando(false)
-        if (prog.fase === 'concluido') carregar(tela, pagina, busca, null)
-      }
+      if (['concluido', 'cancelado', 'erro'].includes(prog.fase)) finalizar(prog)
     })
 
-    // Monta mapeamento a partir dos campos da tela
-    const camposAtivos = tela?.campos?.filter(c => c.ativo) || []
-    const campoArq = camposAtivos.find(c => c.tipo === 'arquivo')
-    const hasTs    = tela?.col_timestamps !== false
+    try {
+      const camposAtivos = tela?.campos?.filter(c => c.ativo) || []
+      const campoArq = camposAtivos.find(c => c.tipo === 'arquivo')
+      const hasTs    = tela?.col_timestamps !== false
 
-    if (campoArq) {
-      const prefixo = campoArq.nome_campo
-      const mapeamento = { arquivo: prefixo }
-      // Satélites opcionais
-      if (camposAtivos.find(c => c.nome_campo === prefixo + '_nome'))    mapeamento.nome    = prefixo + '_nome'
-      if (camposAtivos.find(c => c.nome_campo === prefixo + '_ext'))     mapeamento.ext     = prefixo + '_ext'
-      if (camposAtivos.find(c => c.nome_campo === prefixo + '_tamanho')) mapeamento.tamanho = prefixo + '_tamanho'
-      if (camposAtivos.find(c => c.nome_campo === prefixo + '_path'))    mapeamento.path    = prefixo + '_path'
-      // Pasta e código se existirem
+      if (!campoArq) { finalizar({ fase: 'erro', erro: 'Nenhum campo do tipo arquivo nesta tela.' }); return }
+
+      const pref = campoArq.nome_campo
+      const mapeamento = { arquivo: pref }
+      if (camposAtivos.find(c => c.nome_campo === pref + '_nome'))    mapeamento.nome    = pref + '_nome'
+      if (camposAtivos.find(c => c.nome_campo === pref + '_ext'))     mapeamento.ext     = pref + '_ext'
+      if (camposAtivos.find(c => c.nome_campo === pref + '_tamanho')) mapeamento.tamanho = pref + '_tamanho'
+      if (camposAtivos.find(c => c.nome_campo === pref + '_path'))    mapeamento.path    = pref + '_path'
+      // campo "nome" genérico — recebe o nome do arquivo (sem extensão) como título
+      if (!mapeamento.nome && camposAtivos.find(c => c.nome_campo === 'nome' && c.tipo === 'texto'))
+        mapeamento.nomeGenerico = 'nome'
       const campoPasta = camposAtivos.find(c => c.tipo === 'pasta')
       if (campoPasta) mapeamento.pasta = campoPasta.nome_campo
       const campoCod = camposAtivos.find(c => c.tipo === 'codigo_auto' || c.sequencial)
       const seqChars = campoCod?.opcoes?.seqChars || 3
       if (campoCod) mapeamento.codigo = campoCod.nome_campo
 
+      if (typeof window.api.formBuilder.importarPasta !== 'function') {
+        finalizar({ fase: 'erro', erro: 'Função não disponível — reinicie o aplicativo.' })
+        return
+      }
       const res = await window.api.formBuilder.importarPasta({ tbl: nomeTabela, mapeamento, hasTs, seqChars })
-      if (!res?.ok && !res?.cancelado) { unsub(); if (res?.erro) setErro(res.erro); setImportando(false) }
-    } else {
-      // Fallback: importação nativa (tabela arq_001)
-      const res = await window.api.arquivos.importarPasta()
-      if (!res?.ok) { unsub(); if (res?.erro) setErro(res.erro); setImportando(false) }
+      if (!res?.ok || res?.cancelado) finalizar(res?.cancelado ? { fase: 'cancelado' } : { fase: 'erro', erro: res?.erro })
+    } catch (e) {
+      finalizar({ fase: 'erro', erro: e.message })
     }
   }
 
@@ -365,6 +381,61 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   }
 
 
+  // ── Aba Acesso — filtros dinâmicos ────────────────────────────────────────
+  const [fConsultando, setFConsultando] = useState(false)
+
+  async function loadAllAcesso() {
+    setAllLoading(true)
+    try {
+      const res = await window.api.formBuilder.getAllRegistros(nomeTabela)
+      setAllItems(res.registros)
+      return res.registros
+    } catch {
+      return []
+    } finally {
+      setAllLoading(false)
+    }
+  }
+
+  function executarConsultaAcesso(srcItems) {
+    const src = Array.isArray(srcItems) ? srcItems : allItems
+    const q = fBusca.toLowerCase().trim()
+    const camposBusca = camposData.filter(c => c.campo_busca).map(c => c.nome_campo)
+    let list = [...src]
+    if (q) {
+      if (camposBusca.length) {
+        list = list.filter(r => camposBusca.some(nc => filtrarStr(String(r[nc] ?? ''), q, 'contendo')))
+      } else {
+        list = list.filter(r => Object.values(r).some(v => filtrarStr(String(v ?? ''), q, 'contendo')))
+      }
+    }
+    for (const [nomeCampo, val] of Object.entries(fFiltros)) {
+      if (val && val !== '__todos__') list = list.filter(r => String(r[nomeCampo] ?? '') === val)
+    }
+    setFResultados(list)
+  }
+
+  async function handleConsultarAcesso() {
+    let src = allItems
+    if (!src.length) {
+      setFConsultando(true)
+      src = await loadAllAcesso()
+      setFConsultando(false)
+    }
+    executarConsultaAcesso(src)
+  }
+
+  function limparFiltrosAcesso() {
+    setFFiltros({}); setFBusca(''); setFResultados(null)
+  }
+
+  function selecionarDaAcesso(r) {
+    const idx = registros.findIndex(reg => reg.id === r.id)
+    if (idx >= 0) { setCurrentIdx(idx); carregarForm(tela, registros[idx]) }
+    else { carregar(tela, 1, '').then(() => {}) }
+    setMode('view'); setActiveTab('cadastro')
+  }
+
   // ── Pesquisa Padrão ────────────────────────────────────────────────────────
 
   function rodarModal(campo, ordem, modo, busca, todos) {
@@ -388,9 +459,14 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     setShowConsulta(true)
     setMLoading(true)
     try {
-      const res = await window.api.formBuilder.listarRegistros(nomeTabela, { pagina: 1, porPagina: 500 })
-      setMTodos(res.registros)
-      rodarModal(campoInicial, 'asc', 'contendo', '', res.registros)
+      let src = allItems
+      if (!src.length) {
+        const res = await window.api.formBuilder.getAllRegistros(nomeTabela)
+        src = res.registros
+        setAllItems(src)
+      }
+      setMTodos(src)
+      rodarModal(campoInicial, 'asc', 'contendo', '', src)
     } catch { setMTodos([]); setMResultados([]) }
     finally { setMLoading(false); setTimeout(() => mBuscaRef.current?.focus(), 60) }
   }
@@ -547,6 +623,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
   // ── Renderiza input ────────────────────────────────────────────────────────
   function renderInput(campo) {
+    if (!campo.nome_campo) return null
     const val  = form[campo.nome_campo] ?? ''
     const isRO = mode === 'view' || campo.sequencial
     const ops  = campo.opcoes || []
@@ -564,10 +641,11 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       if (campoArqPai) {
         const exibe = arqSuffix === '_tamanho' ? fmtSize(Number(val)) || '—' : (String(val || '') || '—')
         return (
-          <div className="form-input" style={{ display: 'flex', alignItems: 'center', gap: 6, height: '100%', cursor: 'default', background: 'var(--s1)', color: val ? 'var(--t1)' : 'var(--t3)', fontStyle: val ? 'normal' : 'italic', fontSize: 12 }}>
+          <div className="form-input" style={{ display: 'flex', alignItems: 'center', gap: 6, height: '100%', cursor: 'default', background: 'var(--s1)', color: val ? 'var(--t1)' : 'var(--t3)', fontStyle: val ? 'normal' : 'italic', fontSize: 12, overflow: 'hidden' }}>
             <Paperclip size={11} style={{ color: 'var(--bd2)', flexShrink: 0 }} />
-            {exibe}
-            {!val && <span style={{ fontSize: 10 }}>preenchido ao selecionar arquivo</span>}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: val ? 12 : 10 }}>
+              {val ? exibe : 'preenchido ao selecionar arquivo'}
+            </span>
           </div>
         )
       }
@@ -1131,7 +1209,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     }
 
     if (campo.tipo === 'avaliacao') {
-      const max = Number(campo.valor_padrao) || 5
+      const max = Number(campo.opcoes?.max || campo.valor_padrao) || 5
       const nota = Number(val) || 0
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: '100%', padding: '0 4px' }}>
@@ -1195,8 +1273,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     )
 
     if (campo.tipo === 'calculo') {
-      let formula = ''
-      try { formula = JSON.parse(campo.valor_padrao || '{}').formula || '' } catch {}
+      const opcCalc = campo.opcoes && !Array.isArray(campo.opcoes) ? campo.opcoes : {}
+      const formula = opcCalc.formula || ''
       let resultado = ''
       if (formula) {
         try {
@@ -1286,24 +1364,13 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         {tabLabel && activeTab === 'cadastro' && (
           <span className="page-tab-info">{tabLabel}</span>
         )}
-        {/* Botões contextuais de arquivo — aparecem quando a tela tem campo arquivo */}
+        {/* Botões contextuais de arquivo */}
         {campos.some(c => c.tipo === 'arquivo') && (
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {importando && (
-              <span style={{ fontSize: 10, color: 'var(--t3)', fontStyle: 'italic' }}>
-                {importProg.fase === 'escaneando' ? 'Escaneando...' : `${importProg.atual}/${importProg.total} — ${importProg.arquivo}`}
-              </span>
-            )}
             <button className="btn btn-ghost" style={{ height: 28, fontSize: 11, gap: 5 }}
               onClick={handleImportarPasta} disabled={importando} title="Importar todos os arquivos de uma pasta">
-              <FolderInput size={13} /> {importando ? 'Importando...' : 'Importar Pasta'}
+              <FolderInput size={13} /> Importar Pasta
             </button>
-            {importando && (
-              <button className="btn btn-danger" style={{ height: 28, fontSize: 11, gap: 5 }}
-                onClick={() => window.api.arquivos.cancelarImport()} title="Cancelar importação">
-                <X size={13} /> Cancelar
-              </button>
-            )}
             <button className="btn btn-ghost" style={{ height: 28, fontSize: 11, gap: 5, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={handleConfigurarPasta} title="Clique para alterar a pasta de arquivos">
               <Settings size={13} />
@@ -1319,143 +1386,149 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         {erro && <div style={{ background: 'rgba(248,113,113,.1)', border: '1px solid rgba(239,68,68,.4)', borderRadius: 8, padding: '10px 14px', fontSize: 11, color: 'var(--red)', marginBottom: 4 }}>{erro}</div>}
 
         {/* ── Aba Acesso ── */}
-        {activeTab === 'acesso' && (
-          <>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '0 12px', height: 36, flex: 1, maxWidth: 360, boxShadow: 'var(--sh-xs)' }}>
-                <Search size={13} color="var(--t3)" />
-                <input value={busca} onChange={e => setBusca(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && carregar(tela, 1, busca)}
-                  placeholder="Buscar..." style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 12, color: 'var(--t1)', width: '100%', fontFamily: 'var(--fb)' }} />
+        {activeTab === 'acesso' && (() => {
+          const camposFiltro = camposData.filter(c => ['select','radio','pasta'].includes(c.tipo))
+          const listaExibir  = fResultados ?? []
+          const renderCell   = (c, reg) => {
+            const v   = reg[c.nome_campo]
+            const ops = Array.isArray(c.opcoes) ? c.opcoes : []
+            if (c.tipo === 'booleano') return v ? '✓' : '—'
+            if (c.tipo === 'radio' || c.tipo === 'select') {
+              const op = ops.find(o => o.valor === v)
+              return op ? <span style={{ color: op.cor||'var(--t2)', fontWeight: 600 }}>{op.label}</span> : String(v ?? '—')
+            }
+            if (c.tipo === 'lookup') {
+              const lbl = (lookupOpcoes[c.nome_campo] || []).find(o => o.id === Number(v))?.label
+              return lbl || (v ? `#${v}` : '—')
+            }
+            if (c.tipo === 'arquivo') {
+              let meta = null; try { meta = v ? JSON.parse(v) : null } catch {}
+              if (!meta) return '—'
+              return <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ExtIcon ext={meta.ext} size={12} /><span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{meta.nome}</span><span style={{ fontSize:9.5, color:'var(--t3)', flexShrink:0 }}>{fmtSize(meta.tamanho)}</span></span>
+            }
+            if (c.tipo === 'avaliacao') {
+              const nota = Number(v)||0, max = Number(c.opcoes?.max)||5
+              return nota ? <span style={{ color:'#FBBF24' }}>{'★'.repeat(nota)}{'☆'.repeat(Math.max(0,max-nota))}</span> : '—'
+            }
+            if (c.tipo === 'cor') return v ? <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><span style={{ width:11, height:11, borderRadius:3, background:v, border:'1px solid var(--bd)', display:'inline-block' }}/>{v}</span> : '—'
+            if (c.tipo === 'progresso') {
+              const pct = Math.max(0,Math.min(100,Number(v)||0))
+              return <span style={{ display:'flex', alignItems:'center', gap:4 }}><span style={{ width:50, height:5, background:'var(--s3)', borderRadius:3, overflow:'hidden', display:'inline-block' }}><span style={{ display:'block', height:'100%', width:`${pct}%`, background: pct<40?'#22c55e':pct<70?'#eab308':'#ef4444', borderRadius:3 }}/></span>{pct}%</span>
+            }
+            return String(v ?? '—')
+          }
+          return (
+            <>
+              {/* Barra de filtros */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
+                  <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)', pointerEvents: 'none' }} />
+                  <input className="form-input" style={{ paddingLeft: 30, height: 34 }}
+                    placeholder={`Buscar${camposData.filter(c=>c.campo_busca).length ? ' (' + camposData.filter(c=>c.campo_busca).map(c=>c.label).join(', ') + ')' : '...'}...`}
+                    value={fBusca} onChange={e => setFBusca(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleConsultarAcesso()} autoFocus />
+                </div>
+                {camposFiltro.map(c => {
+                  const vals = pastasSugest[c.nome_campo] || []
+                  const ops  = Array.isArray(c.opcoes) ? c.opcoes : []
+                  return (
+                    <select key={c.id} className="form-select" style={{ height: 34, minWidth: 130, maxWidth: 180 }}
+                      value={fFiltros[c.nome_campo] || '__todos__'}
+                      onChange={e => setFFiltros(f => ({ ...f, [c.nome_campo]: e.target.value }))}>
+                      <option value="__todos__">Todos — {c.label}</option>
+                      {ops.length
+                        ? ops.map(o => <option key={o.valor} value={o.valor}>{o.label}</option>)
+                        : vals.map(v => <option key={v} value={v}>{v || '(vazio)'}</option>)
+                      }
+                    </select>
+                  )
+                })}
+                <button className="btn btn-primary" style={{ height: 34, padding: '0 14px', flexShrink: 0 }} onClick={handleConsultarAcesso} disabled={fConsultando || allLoading}>
+                  {(fConsultando || allLoading) ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={13} />} {(fConsultando || allLoading) ? 'Carregando...' : 'Consultar'}
+                </button>
+                <button className="btn btn-ghost" style={{ height: 34, padding: '0 10px', flexShrink: 0 }} onClick={limparFiltrosAcesso} title="Limpar filtros">
+                  <RotateCcw size={13} />
+                </button>
+                <button className="btn btn-ghost" style={{ height: 34, padding: '0 10px', flexShrink: 0, marginLeft: 'auto' }}
+                  disabled={!fResultados?.length}
+                  onClick={() => {
+                    const dados = listaExibir.map(reg => {
+                      const obj = {}
+                      camposData.forEach(c => { obj[c.label] = reg[c.nome_campo] ?? '' })
+                      return obj
+                    })
+                    exportarCSV(dados, `${tela?.nome_tela || 'dados'}.csv`)
+                  }}>
+                  <Download size={13} /> Exportar CSV
+                </button>
               </div>
-              <button className="btn btn-ghost" style={{ height: 36 }} onClick={() => carregar(tela, 1, busca)}><Search size={13} /> Buscar</button>
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>{total} registro{total !== 1 ? 's' : ''}</span>
-              <button className="btn btn-ghost" style={{ height: 36, marginLeft: 'auto' }} disabled={!registros.length}
-                onClick={() => {
-                  const dados = registros.map(reg => {
-                    const obj = {}
-                    camposData.forEach(c => { obj[c.label] = reg[c.nome_campo] ?? '' })
-                    return obj
-                  })
-                  exportarCSV(dados, `${tela?.nome_tela || 'dados'}.csv`)
-                }}>
-                <Download size={13} /> Exportar CSV
-              </button>
-            </div>
 
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--sh-xs)' }}>
-              <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 380px)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <tr>
-                      <th style={{ ...thS, width: 20, padding: '7px 4px' }}></th>
-                      <th style={{ ...thS, textAlign: 'center' }}>#</th>
-                      {camposData.map(c => <th key={c.id} style={thS}>{c.label}</th>)}
-                      {tela.col_favorito !== false && <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registros.map((reg, ri) => {
-                      const isCur = currentIdx === ri
-                      return (
-                        <tr key={reg.id}
-                          onClick={() => { setCurrentIdx(ri); carregarForm(tela, reg) }}
-                          onDoubleClick={() => { setCurrentIdx(ri); carregarForm(tela, reg); setMode('view'); setActiveTab('cadastro') }}
-                          style={{ cursor: 'pointer', background: ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--s3)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                        >
-                          <td style={{ padding: '7px 4px', width: 20, textAlign: 'center', color: 'var(--or)' }}>
-                            {isCur ? <ChevronRight size={12} strokeWidth={2.5} /> : null}
-                          </td>
-                          <td style={{ ...tdS, textAlign: 'center', fontWeight: 700, color: 'var(--t3)', fontFamily: 'monospace' }}>{reg.id}</td>
-                          {camposData.map(c => {
-                            const v   = reg[c.nome_campo]
-                            const ops = Array.isArray(c.opcoes) ? c.opcoes : []
-                            if (c.tipo === 'booleano') return <td key={c.id} style={tdS}>{v ? '✓' : '—'}</td>
-                            if (c.tipo === 'radio' || c.tipo === 'select') {
-                              const op = ops.find(o => o.valor === v)
-                              return <td key={c.id} style={tdS}>{op ? <span style={{ color: op.cor||'var(--t2)', fontWeight: 600, fontSize: 11 }}>{op.label}</span> : String(v ?? '—')}</td>
-                            }
-                            if (c.tipo === 'lookup') {
-                              const lkpOpts = lookupOpcoes[c.nome_campo] || []
-                              const lbl = lkpOpts.find(o => o.id === Number(v))?.label
-                              return <td key={c.id} style={{ ...tdS, color: lbl ? 'var(--t1)' : 'var(--t3)' }}>{lbl || (v ? `#${v}` : '—')}</td>
-                            }
-                            if (c.tipo === 'arquivo') {
-                              let meta = null
-                              try { meta = v ? JSON.parse(v) : null } catch {}
-                              if (!meta) return <td key={c.id} style={{ ...tdS, color: 'var(--t3)' }}>—</td>
-                              return (
-                                <td key={c.id} style={{ ...tdS, display: 'flex', alignItems: 'center', gap: 5 }}>
-                                  <ExtIcon ext={meta.ext} />
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.nome}</span>
-                                  <span style={{ fontSize: 9.5, color: 'var(--t3)', flexShrink: 0 }}>{fmtSize(meta.tamanho)}</span>
-                                </td>
-                              )
-                            }
-                            if (c.tipo === 'avaliacao') {
-                              const nota = Number(v) || 0
-                              const max  = Number(c.opcoes?.max) || 5
-                              if (!nota) return <td key={c.id} style={{ ...tdS, color: 'var(--t3)' }}>—</td>
-                              return <td key={c.id} style={tdS}><span style={{ color: '#FBBF24', letterSpacing: 1 }}>{'★'.repeat(nota)}{'☆'.repeat(Math.max(0,max-nota))}</span></td>
-                            }
-                            if (c.tipo === 'progresso') {
-                              const pct = Math.max(0, Math.min(100, Number(v) || 0))
-                              return (
-                                <td key={c.id} style={tdS}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                                    <div style={{ flex: 1, height: 5, background: 'var(--s3)', borderRadius: 3, overflow: 'hidden', minWidth: 40 }}>
-                                      <div style={{ height: '100%', width: `${pct}%`, background: pct < 40 ? '#22c55e' : pct < 70 ? '#eab308' : '#ef4444', borderRadius: 3 }} />
-                                    </div>
-                                    <span style={{ fontSize: 10, flexShrink: 0 }}>{pct}%</span>
-                                  </div>
-                                </td>
-                              )
-                            }
-                            if (c.tipo === 'cor') {
-                              return (
-                                <td key={c.id} style={tdS}>
-                                  {v ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                                    <span style={{ width: 12, height: 12, borderRadius: 3, background: v, border: '1px solid var(--bd)', display: 'inline-block', flexShrink: 0 }} />
-                                    {v}
-                                  </span> : '—'}
-                                </td>
-                              )
-                            }
-                            return <td key={c.id} style={tdS}>{String(v ?? '—')}</td>
-                          })}
-                          {tela.col_favorito !== false && (
-                            <td style={{ ...tdS, textAlign: 'center' }}>
-                              {reg.favorito
-                                ? <Star size={12} fill="var(--or)" color="var(--or)" />
-                                : <span style={{ color: 'var(--bd2)' }}>—</span>}
-                            </td>
-                          )}
+              {/* Estado inicial */}
+              {fResultados === null && (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)' }}>
+                  <Search size={32} strokeWidth={1.25} style={{ marginBottom: 10, opacity: .4 }} />
+                  <div style={{ fontSize: 13 }}>Configure os filtros e clique em Consultar</div>
+                  <div style={{ fontSize: 11, marginTop: 4 }}>{total.toLocaleString('pt-BR')} registro{total !== 1 ? 's' : ''} no total</div>
+                </div>
+              )}
+
+              {/* Tabela de resultados */}
+              {fResultados !== null && (
+                <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--sh-xs)' }}>
+                  <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 270px)', minHeight: 100 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                        <tr>
+                          <th style={{ ...thS, width: 18, padding: '7px 0 7px 8px' }}></th>
+                          <th style={{ ...thS, textAlign: 'center', width: 36 }}>#</th>
+                          {camposData.map(c => <th key={c.id} style={thS}>{c.label}</th>)}
+                          {tela.col_favorito !== false && <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>}
                         </tr>
-                      )
-                    })}
-                    {registros.length === 0 && (
-                      <tr><td colSpan={camposData.length + 2} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ padding: '6px 12px', borderTop: '1px solid var(--bd)', background: 'var(--s1)', fontSize: 10, color: 'var(--t3)' }}>
-                Total: <strong style={{ color: 'var(--t2)' }}>{total}</strong>
-              </div>
-            </div>
-          </>
-        )}
+                      </thead>
+                      <tbody>
+                        {listaExibir.map((reg, ri) => {
+                          const isCur = registros[currentIdx]?.id === reg.id
+                          return (
+                            <tr key={reg.id}
+                              onClick={() => { const idx = registros.findIndex(r => r.id === reg.id); if (idx >= 0) { setCurrentIdx(idx); carregarForm(tela, registros[idx]) } }}
+                              onDoubleClick={() => selecionarDaAcesso(reg)}
+                              style={{ cursor: 'pointer', background: isCur ? 'rgba(255,107,43,.06)' : ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
+                              onMouseEnter={e => { if (!isCur) e.currentTarget.style.background = 'var(--s3)' }}
+                              onMouseLeave={e => { if (!isCur) e.currentTarget.style.background = ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
+                            >
+                              <td style={{ padding: '7px 0 7px 8px', width: 18, color: 'var(--or)', fontSize: 13, fontWeight: 700 }}>{isCur ? '›' : ''}</td>
+                              <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10 }}>{ri + 1}</td>
+                              {camposData.map(c => (
+                                <td key={c.id} style={tdS}>{renderCell(c, reg)}</td>
+                              ))}
+                              {tela.col_favorito !== false && (
+                                <td style={{ ...tdS, textAlign: 'center' }}>
+                                  {reg.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
+                                </td>
+                              )}
+                            </tr>
+                          )
+                        })}
+                        {listaExibir.length === 0 && (
+                          <tr><td colSpan={camposData.length + 2} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ padding: '6px 12px', borderTop: '1px solid var(--bd)', background: 'var(--s1)', fontSize: 10, color: 'var(--t3)' }}>
+                    Total: <strong style={{ color: 'var(--t2)' }}>{listaExibir.length}</strong>
+                    {listaExibir.length !== total && <span> (de {total.toLocaleString('pt-BR')} carregados)</span>}
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* ── Aba Cadastro ── */}
         {activeTab === 'cadastro' && (
           <>
-            {registros.length === 0 && isRO ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', fontSize: 13 }}>
-                Nenhum registro. Clique em Incluir para adicionar.
-              </div>
-            ) : temLayout ? (
+            {temLayout ? (
               /* Layout Designer (posicionamento absoluto) */
               <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <div style={{ position: 'relative', width: cfgW, minWidth: cfgW, minHeight: canvasH, flex: 1 }}>
@@ -1474,7 +1547,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                             ? <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 1, transform: 'translateX(-50%)', background: 'var(--bd2)' }} />
                             : <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, transform: 'translateY(-50%)', background: 'var(--bd2)' }} />}
                           {campo.label && (
-                            <span style={{ position: 'absolute', top: isVert ? 4 : '50%', left: isVert ? '50%' : 6, transform: isVert ? 'translateX(-50%)' : 'translateY(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--t3)', background: 'var(--s1)', padding: '0 4px', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap', zIndex: 1 }}>
+                            <span style={{ position: 'absolute', top: isVert ? 4 : '50%', left: isVert ? '50%' : 6, transform: isVert ? 'translateX(-50%)' : 'translateY(-50%)', fontSize: 9, fontWeight: 700, color: 'var(--t3)', background: 'var(--bg)', padding: '0 4px', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap', zIndex: 1 }}>
                               {campo.label}
                             </span>
                           )}
@@ -1492,9 +1565,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                       )
                     }
                     return (
-                      <div key={campo.id} className="form-group" style={{ position: 'absolute', left: x, top: y, width: w, height: h, boxSizing: 'border-box', padding: '0 2px' }}>
+                      <div key={campo.id} className="form-group" style={{ position: 'absolute', left: x, top: y, width: w, height: h, boxSizing: 'border-box', padding: '0 2px', display: 'flex', flexDirection: 'column', overflow: 'hidden', marginBottom: 0 }}>
                         {!SKIP_LABEL.includes(campo.tipo) && renderLabel(campo)}
-                        <div style={{ flex: 1, minHeight: 0 }}>
+                        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                           {renderInput(campo)}
                         </div>
                       </div>
@@ -1729,6 +1802,77 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
               <button className="btn btn-primary" onClick={confirmarLookupModal} disabled={!lkpModalSelId}>✓ Confirmar</button>
               <button className="btn btn-ghost"   onClick={() => setLkpModalOpen(false)}>✕ Fechar</button>
               {lkpModalSelId && <button className="btn btn-ghost" onClick={() => { setField(lkpModalCampo?.nome_campo, null); setLkpModalOpen(false) }}>Limpar seleção</button>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Importação em Massa ── */}
+      {importando && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 520, maxWidth: '94vw', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {importProg.fase === 'concluido'
+                ? <CheckCircle2 size={22} color="var(--green, #22c55e)" />
+                : (importProg.fase === 'cancelado' || importProg.fase === 'erro')
+                  ? <XCircle size={22} color="var(--red, #ef4444)" />
+                  : <Loader2 size={22} color="var(--or)" style={{ animation: 'spin 1s linear infinite' }} />}
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
+                  {importProg.fase === 'escaneando' && 'Escaneando arquivos...'}
+                  {importProg.fase === 'importando' && 'Importando arquivos...'}
+                  {importProg.fase === 'concluido'  && 'Importação concluída!'}
+                  {importProg.fase === 'cancelado'  && 'Importação cancelada'}
+                  {importProg.fase === 'erro'       && 'Erro na importação'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>
+                  {importProg.total > 0 ? `${importProg.total.toLocaleString('pt-BR')} arquivos encontrados` : 'Aguarde...'}
+                </div>
+              </div>
+            </div>
+            {importProg.total > 0 && (
+              <div>
+                <div style={{ height: 8, background: 'var(--s3)', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(100, (importProg.atual / importProg.total) * 100)}%`,
+                    background: importProg.fase === 'concluido' ? 'var(--green, #22c55e)' : importProg.fase === 'cancelado' ? 'var(--red, #ef4444)' : 'var(--or)',
+                    borderRadius: 99, transition: 'width .2s ease',
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, color: 'var(--t3)' }}>
+                  <span>{importProg.atual.toLocaleString('pt-BR')} de {importProg.total.toLocaleString('pt-BR')}</span>
+                  <span>{Math.round((importProg.atual / importProg.total) * 100)}%</span>
+                </div>
+              </div>
+            )}
+            {importProg.arquivo && importProg.fase === 'importando' && (
+              <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {importProg.arquivo}
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {[
+                { label: 'Inseridos', val: importProg.inseridos, cor: 'var(--green, #22c55e)' },
+                { label: 'Ignorados', val: importProg.ignorados, cor: 'var(--t3)'             },
+              ].map(({ label, val, cor }) => (
+                <div key={label} style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: cor, fontVariantNumeric: 'tabular-nums' }}>{(val || 0).toLocaleString('pt-BR')}</div>
+                  <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2, textTransform: 'uppercase', letterSpacing: .8 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              {(importProg.fase === 'importando' || importProg.fase === 'escaneando') && (
+                <button className="btn btn-danger" onClick={() => window.api.arquivos.cancelarImport()}>
+                  <X size={13} /> Cancelar
+                </button>
+              )}
+              {(importProg.fase === 'concluido' || importProg.fase === 'cancelado' || importProg.fase === 'erro') && (
+                <button className="btn btn-primary" onClick={() => setImportando(false)}>
+                  <CheckCircle2 size={13} /> Fechar
+                </button>
+              )}
             </div>
           </div>
         </div>

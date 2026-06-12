@@ -65,6 +65,7 @@ const api = {
     inativarTela:      (id)            => ipcRenderer.invoke('fb:inativarTela', id),
     reativarTela:      (id)            => ipcRenderer.invoke('fb:reativarTela', id),
     listarRegistros:   (tbl, opts)     => ipcRenderer.invoke('fb:listarRegistros', tbl, opts),
+    getAllRegistros:    (tbl)           => ipcRenderer.invoke('fb:getAllRegistros', tbl),
     inserirRegistro:   (tbl, dados)    => ipcRenderer.invoke('fb:inserirRegistro', tbl, dados),
     atualizarRegistro: (tbl, id, d, hasTs) => ipcRenderer.invoke('fb:atualizarRegistro', tbl, id, d, hasTs),
     reordenarTelas:    (items)          => ipcRenderer.invoke('fb:reordenarTelas', items),
