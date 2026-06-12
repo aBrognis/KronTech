@@ -194,11 +194,40 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     setImportProg({ fase: 'escaneando', atual: 0, total: 0, arquivo: 'Iniciando...', inseridos: 0, ignorados: 0 })
     const unsub = window.api.arquivos.onProgresso(prog => {
       setImportProg(prog)
-      if (['concluido','cancelado','erro'].includes(prog.fase)) unsub()
+      if (['concluido','cancelado','erro'].includes(prog.fase)) {
+        unsub()
+        setImportando(false)
+        if (prog.fase === 'concluido') carregar(tela, pagina, busca, null)
+      }
     })
-    const res = await window.api.arquivos.importarPasta()
-    if (!res?.ok) { unsub(); if (res?.erro) setErro(res.erro) }
-    setImportando(false)
+
+    // Monta mapeamento a partir dos campos da tela
+    const camposAtivos = tela?.campos?.filter(c => c.ativo) || []
+    const campoArq = camposAtivos.find(c => c.tipo === 'arquivo')
+    const hasTs    = tela?.col_timestamps !== false
+
+    if (campoArq) {
+      const prefixo = campoArq.nome_campo
+      const mapeamento = { arquivo: prefixo }
+      // Satélites opcionais
+      if (camposAtivos.find(c => c.nome_campo === prefixo + '_nome'))    mapeamento.nome    = prefixo + '_nome'
+      if (camposAtivos.find(c => c.nome_campo === prefixo + '_ext'))     mapeamento.ext     = prefixo + '_ext'
+      if (camposAtivos.find(c => c.nome_campo === prefixo + '_tamanho')) mapeamento.tamanho = prefixo + '_tamanho'
+      if (camposAtivos.find(c => c.nome_campo === prefixo + '_path'))    mapeamento.path    = prefixo + '_path'
+      // Pasta e código se existirem
+      const campoPasta = camposAtivos.find(c => c.tipo === 'pasta')
+      if (campoPasta) mapeamento.pasta = campoPasta.nome_campo
+      const campoCod = camposAtivos.find(c => c.tipo === 'codigo_auto' || c.sequencial)
+      const seqChars = campoCod?.opcoes?.seqChars || 3
+      if (campoCod) mapeamento.codigo = campoCod.nome_campo
+
+      const res = await window.api.formBuilder.importarPasta({ tbl: nomeTabela, mapeamento, hasTs, seqChars })
+      if (!res?.ok && !res?.cancelado) { unsub(); if (res?.erro) setErro(res.erro); setImportando(false) }
+    } else {
+      // Fallback: importação nativa (tabela arq_001)
+      const res = await window.api.arquivos.importarPasta()
+      if (!res?.ok) { unsub(); if (res?.erro) setErro(res.erro); setImportando(false) }
+    }
   }
 
   // Preenche campos satélites de arquivo: {nome}_nome, {nome}_ext, {nome}_tamanho, {nome}_path

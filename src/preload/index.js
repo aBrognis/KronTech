@@ -74,6 +74,7 @@ const api = {
     listarOpcoesLookup:  (tbl, exibir, codigo)     => ipcRenderer.invoke('fb:listarOpcoesLookup', tbl, exibir, codigo),
     listarColunasTabela: (tbl)                      => ipcRenderer.invoke('fb:listarColunasTabela', tbl),
     valoresDistintos:    (tbl, coluna)              => ipcRenderer.invoke('fb:valoresDistintos', tbl, coluna),
+    importarPasta:       (opts)                     => ipcRenderer.invoke('fb:importarPasta', opts),
   },
   designer: {
     open: () => ipcRenderer.invoke('designer:open'),
