@@ -6,6 +6,7 @@ import {
   ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
   ChevronLeft, ChevronRight, Star, Clock, MousePointerClick,
   Eye, EyeOff, LayoutGrid, Search, Ruler, CreditCard, Building2, MapPin, CheckSquare,
+  Paperclip, ImageIcon, StarHalf, Percent, Palette, Link, Timer, Calculator, CalendarClock, Gauge,
 } from 'lucide-react'
 
 export const CANVAS_W    = 780
@@ -23,35 +24,49 @@ const TIPO_ICONS = {
   divisor:     Minus,   botao:       MousePointerClick,
   favorito:    Star,    timestamps:  Clock,    copiar: Copy,
   cpf:         CreditCard, cnpj:    Building2, cep: MapPin,
-  documento:   CreditCard,
-  flags:        CheckSquare,
+  documento:   CreditCard, flags:   CheckSquare,
+  arquivo:     Paperclip,  imagem:  ImageIcon,
+  avaliacao:   Star,       progresso: Gauge,
+  cor:         Palette,    url:     Link,
+  data_hora:   CalendarClock, hora: Timer,
+  percentual:  Percent,   calculo:  Calculator,
 }
 
-const TIPO_H_DEFAULT = { texto_longo: 120, booleano: 44, radio: 52, divisor: 24, timestamps: 80, favorito: 44, copiar: 44 }
+const TIPO_H_DEFAULT = { texto_longo: 120, booleano: 44, radio: 52, divisor: 24, timestamps: 80, favorito: 44, copiar: 44, imagem: 180, avaliacao: 48, progresso: 52, calculo: 48, cor: 48, url: 48 }
 
 const TIPOS_PANEL = [
-  { valor: 'texto',       label: 'Texto',     Icon: Type              },
-  { valor: 'numero',      label: 'Número',    Icon: Hash              },
-  { valor: 'moeda',       label: 'Moeda',     Icon: DollarSign        },
-  { valor: 'data',        label: 'Data',      Icon: Calendar          },
-  { valor: 'booleano',    label: 'Sim/Não',   Icon: ToggleLeft        },
-  { valor: 'texto_longo', label: 'T.Longo',   Icon: AlignLeft         },
-  { valor: 'select',      label: 'Select',    Icon: List              },
-  { valor: 'radio',       label: 'Radio',     Icon: CircleDot         },
-  { valor: 'email',       label: 'E-mail',    Icon: Mail              },
-  { valor: 'telefone',    label: 'Tel.',       Icon: Phone             },
-  { valor: 'codigo_auto', label: 'Cód.Auto',  Icon: Barcode           },
-  { valor: 'tags',        label: 'Tags',      Icon: Tag               },
-  { valor: 'divisor',     label: 'Divisor',   Icon: Minus             },
-  { valor: 'botao',       label: 'Botão',     Icon: MousePointerClick },
-  { valor: 'favorito',    label: 'Favorito',  Icon: Star              },
-  { valor: 'timestamps',  label: 'Datas',     Icon: Clock             },
-  { valor: 'copiar',      label: 'Copiar',    Icon: Copy              },
-  { valor: 'cpf',         label: 'CPF',       Icon: CreditCard        },
-  { valor: 'cnpj',        label: 'CNPJ',      Icon: Building2         },
-  { valor: 'cep',         label: 'CEP',       Icon: MapPin            },
-  { valor: 'documento',   label: 'CPF/CNPJ',  Icon: CreditCard        },
-  { valor: 'flags',       label: 'Flags',     Icon: CheckSquare       },
+  { valor: 'texto',       label: 'Texto',      Icon: Type              },
+  { valor: 'numero',      label: 'Número',     Icon: Hash              },
+  { valor: 'moeda',       label: 'Moeda',      Icon: DollarSign        },
+  { valor: 'data',        label: 'Data',       Icon: Calendar          },
+  { valor: 'booleano',    label: 'Sim/Não',    Icon: ToggleLeft        },
+  { valor: 'texto_longo', label: 'T.Longo',    Icon: AlignLeft         },
+  { valor: 'select',      label: 'Select',     Icon: List              },
+  { valor: 'radio',       label: 'Radio',      Icon: CircleDot         },
+  { valor: 'email',       label: 'E-mail',     Icon: Mail              },
+  { valor: 'telefone',    label: 'Tel.',        Icon: Phone             },
+  { valor: 'codigo_auto', label: 'Cód.Auto',   Icon: Barcode           },
+  { valor: 'tags',        label: 'Tags',       Icon: Tag               },
+  { valor: 'divisor',     label: 'Divisor',    Icon: Minus             },
+  { valor: 'botao',       label: 'Botão',      Icon: MousePointerClick },
+  { valor: 'favorito',    label: 'Favorito',   Icon: Star              },
+  { valor: 'timestamps',  label: 'Datas',      Icon: Clock             },
+  { valor: 'copiar',      label: 'Copiar',     Icon: Copy              },
+  { valor: 'cpf',         label: 'CPF',        Icon: CreditCard        },
+  { valor: 'cnpj',        label: 'CNPJ',       Icon: Building2         },
+  { valor: 'cep',         label: 'CEP',        Icon: MapPin            },
+  { valor: 'documento',   label: 'CPF/CNPJ',   Icon: CreditCard        },
+  { valor: 'flags',       label: 'Flags',      Icon: CheckSquare       },
+  { valor: 'arquivo',     label: 'Arquivo',    Icon: Paperclip         },
+  { valor: 'imagem',      label: 'Imagem',     Icon: ImageIcon         },
+  { valor: 'avaliacao',   label: 'Avaliação',  Icon: Star              },
+  { valor: 'progresso',   label: 'Progresso',  Icon: Gauge             },
+  { valor: 'cor',         label: 'Cor',        Icon: Palette           },
+  { valor: 'url',         label: 'URL',        Icon: Link              },
+  { valor: 'data_hora',   label: 'Data+Hora',  Icon: CalendarClock     },
+  { valor: 'hora',        label: 'Hora',       Icon: Timer             },
+  { valor: 'percentual',  label: 'Percentual', Icon: Percent           },
+  { valor: 'calculo',     label: 'Cálculo',    Icon: Calculator        },
 ]
 
 const TIPOS_DESIGNER = [
@@ -73,6 +88,16 @@ const TIPOS_DESIGNER = [
   { valor: 'cep',         label: 'CEP (busca automática)' },
   { valor: 'documento',   label: 'CPF / CNPJ (Física ou Jurídica)' },
   { valor: 'flags',       label: 'Flags (checkboxes com código)' },
+  { valor: 'arquivo',     label: 'Arquivo (upload)' },
+  { valor: 'imagem',      label: 'Imagem (upload)' },
+  { valor: 'avaliacao',   label: 'Avaliação (estrelas)' },
+  { valor: 'progresso',   label: 'Barra de Progresso' },
+  { valor: 'cor',         label: 'Seletor de Cor' },
+  { valor: 'url',         label: 'URL / Link' },
+  { valor: 'data_hora',   label: 'Data e Hora' },
+  { valor: 'hora',        label: 'Hora' },
+  { valor: 'percentual',  label: 'Percentual (%)' },
+  { valor: 'calculo',     label: 'Campo Calculado' },
 ]
 
 function s(v) { return Math.max(0, Math.round(v / SNAP) * SNAP) }
@@ -163,6 +188,7 @@ export default function FormDesigner({
   const [containerH,      setContainerH]      = useState(CANVAS_H_MIN)
   const [containerW,      setContainerW]      = useState(CANVAS_W)
   const [panelCollapsed,  setPanelCollapsed]  = useState(false)
+  const [panelTab,        setPanelTab]        = useState('campos') // 'campos' | 'canvas' | 'atalhos'
 
   // ── Refs ───────────────────────────────────────────────────────────────────
   const dragging   = useRef(null)
@@ -497,11 +523,11 @@ export default function FormDesigner({
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, height:'100%', alignContent:'center' }}>
           <div className="form-group" style={{ marginBottom:0 }}>
             <label className="form-label" style={{ fontSize:10 }}>Criado em</label>
-            <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, background:'var(--s2)', cursor:'default' }}>—</div>
+            <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, cursor:'default', background:'#fff', color:'#333', border:'1px solid #ddd' }}>—</div>
           </div>
           <div className="form-group" style={{ marginBottom:0 }}>
             <label className="form-label" style={{ fontSize:10 }}>Atualizado em</label>
-            <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, background:'var(--s2)', cursor:'default' }}>—</div>
+            <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, cursor:'default', background:'#fff', color:'#333', border:'1px solid #ddd' }}>—</div>
           </div>
         </div>
       )
@@ -527,7 +553,7 @@ export default function FormDesigner({
         </select>
       )
       if (campo.tipo === 'radio') return (
-        <div style={{ display:'flex', alignItems:'center', gap:14, height:'100%', padding:'0 12px', background:'var(--s2)', border:'1.5px solid var(--bd)', borderRadius:10, flexWrap:'wrap', boxSizing:'border-box', width:'100%' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14, height:'100%', padding:'0 12px', background:'#fff', border:'1.5px solid #ddd', borderRadius:10, flexWrap:'wrap', boxSizing:'border-box', width:'100%' }}>
           {ops.length ? ops.map((o, i) => (
             <label key={i} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11.5, color:o.cor||'var(--t2)', fontWeight:600, userSelect:'none' }}>
               <input type="radio" disabled style={{ accentColor:o.cor||'var(--or)', width:13, height:13 }}/>{o.label}
@@ -559,6 +585,80 @@ export default function FormDesigner({
       if (campo.tipo === 'data') return (
         <input className="form-input" type="date" disabled style={{ width:'100%', height:'100%' }}/>
       )
+      if (campo.tipo === 'data_hora') return (
+        <input className="form-input" type="datetime-local" disabled style={{ width:'100%', height:'100%' }}/>
+      )
+      if (campo.tipo === 'hora') return (
+        <input className="form-input" type="time" disabled style={{ width:'100%', height:'100%' }}/>
+      )
+      if (campo.tipo === 'url') return (
+        <div style={{ display:'flex', gap:4, height:'100%' }}>
+          <div className="form-input" style={{ flex:1, height:'100%', display:'flex', alignItems:'center', fontSize:12, color:'#3B82F6', fontStyle:'italic' }}>
+            <Link size={11} style={{ marginRight:4, flexShrink:0 }}/>{campo.valorPadrao || 'https://...'}
+          </div>
+        </div>
+      )
+      if (campo.tipo === 'arquivo') return (
+        <div style={{ display:'flex', alignItems:'center', gap:6, height:'100%', padding:'0 10px', background:'var(--s2)', border:'1.5px dashed var(--bd)', borderRadius:8, boxSizing:'border-box', width:'100%' }}>
+          <Paperclip size={13} style={{ color:'var(--t3)', flexShrink:0 }}/>
+          <span style={{ fontSize:11, color:'var(--t3)', fontStyle:'italic' }}>Clique para anexar arquivo...</span>
+        </div>
+      )
+      if (campo.tipo === 'imagem') return (
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', background:'var(--s2)', border:'1.5px dashed var(--bd)', borderRadius:8, boxSizing:'border-box', width:'100%', gap:6 }}>
+          <ImageIcon size={24} style={{ color:'var(--bd2)' }}/>
+          <span style={{ fontSize:10, color:'var(--t3)' }}>Clique para enviar imagem</span>
+        </div>
+      )
+      if (campo.tipo === 'avaliacao') {
+        const max = Number(campo.valorPadrao) || 5
+        return (
+          <div style={{ display:'flex', alignItems:'center', gap:4, height:'100%', padding:'0 8px' }}>
+            {Array.from({ length: max }, (_, i) => (
+              <Star key={i} size={16} style={{ color: i < 3 ? '#FBBF24' : 'var(--bd2)', fill: i < 3 ? '#FBBF24' : 'transparent' }}/>
+            ))}
+          </div>
+        )
+      }
+      if (campo.tipo === 'progresso') {
+        const pct = Number(campo.valorPadrao) || 60
+        return (
+          <div style={{ display:'flex', flexDirection:'column', justifyContent:'center', gap:4, height:'100%', padding:'0 8px', width:'100%', boxSizing:'border-box' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--t2)' }}>
+              <span>Progresso</span><span>{pct}%</span>
+            </div>
+            <div style={{ height:8, background:'var(--s3)', borderRadius:4, overflow:'hidden', width:'100%' }}>
+              <div style={{ height:'100%', width:`${pct}%`, background:'var(--or)', borderRadius:4, transition:'width .3s' }}/>
+            </div>
+          </div>
+        )
+      }
+      if (campo.tipo === 'cor') return (
+        <div style={{ display:'flex', alignItems:'center', gap:8, height:'100%', padding:'0 10px' }}>
+          <div style={{ width:28, height:28, borderRadius:6, background:campo.valorPadrao || '#3B82F6', border:'2px solid var(--bd)', flexShrink:0 }}/>
+          <div className="form-input" style={{ flex:1, height:32, display:'flex', alignItems:'center', fontSize:12, fontFamily:'monospace' }}>
+            {campo.valorPadrao || '#3B82F6'}
+          </div>
+          <Palette size={13} style={{ color:'var(--t3)', flexShrink:0 }}/>
+        </div>
+      )
+      if (campo.tipo === 'percentual') return (
+        <div style={{ display:'flex', alignItems:'center', gap:4, height:'100%' }}>
+          <input className="form-input" type="number" disabled placeholder="0" style={{ flex:1, height:'100%' }}/>
+          <div style={{ padding:'0 8px', height:'100%', display:'flex', alignItems:'center', background:'var(--s3)', border:'1px solid var(--bd)', borderRadius:'0 8px 8px 0', fontSize:13, fontWeight:700, color:'var(--t2)', marginLeft:-1 }}>%</div>
+        </div>
+      )
+      if (campo.tipo === 'calculo') {
+        let formula = '—'
+        try { formula = JSON.parse(campo.valorPadrao || '{}').formula || '—' } catch {}
+        return (
+          <div style={{ display:'flex', alignItems:'center', gap:6, height:'100%', padding:'0 10px', background:'rgba(255,107,43,.06)', border:'1.5px solid rgba(255,107,43,.25)', borderRadius:8, boxSizing:'border-box', width:'100%' }}>
+            <Calculator size={12} style={{ color:'var(--or)', flexShrink:0 }}/>
+            <span style={{ fontSize:11, color:'var(--or)', fontFamily:'monospace' }}>{formula}</span>
+            <span style={{ marginLeft:'auto', fontSize:11, fontWeight:700, color:'var(--t2)' }}>0,00</span>
+          </div>
+        )
+      }
       return (
         <input className="form-input" disabled placeholder={campo.valorPadrao || ''} style={{ width:'100%', height:'100%' }}/>
       )
@@ -850,36 +950,121 @@ export default function FormDesigner({
         </div>
 
         {/* ── Side panel ─────────────────────────────────────────────────── */}
-        <div style={{ width: panelCollapsed ? 28 : 230, flexShrink:0, display:'flex', flexDirection:'column', transition:'width .18s ease', overflow:'hidden', position:'relative' }}>
+        <div style={{ width: panelCollapsed ? 28 : 264, flexShrink:0, display:'flex', flexDirection:'column', transition:'width .18s ease', overflow:'hidden', position:'relative', background:'var(--s1)', border:'1px solid var(--bd)', borderRadius:12, boxShadow:'var(--sh-xs)' }}>
 
-          {/* Toggle button */}
-          <button
-            onClick={() => setPanelCollapsed(p => !p)}
-            title={panelCollapsed ? 'Expandir painel' : 'Recolher painel'}
-            style={{
-              position: 'absolute', top: 0, left: panelCollapsed ? 0 : 'auto', right: panelCollapsed ? 'auto' : 0,
-              width: 24, height: 24, borderRadius: 6,
-              background: 'var(--s2)', border: '1px solid var(--bd)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'var(--t3)', flexShrink: 0, zIndex: 2,
-              boxShadow: 'var(--sh-xs)',
-            }}
-          >
-            {panelCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-          </button>
+          {/* Expand button — shown only when collapsed */}
+          {panelCollapsed && (
+            <button
+              onClick={() => setPanelCollapsed(false)}
+              title="Expandir painel"
+              style={{
+                width:'100%', height:40, border:'none', background:'transparent',
+                cursor:'pointer', color:'var(--t3)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}
+            >
+              <ChevronLeft size={12} />
+            </button>
+          )}
 
           {/* Panel content — hidden when collapsed */}
           {!panelCollapsed && (
-          <div style={{ display:'flex', flexDirection:'column', gap:10, overflowY:'auto', paddingTop: 32 }}>
+          <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
 
-          <div style={{ fontSize:10, fontWeight:700, color:'var(--t3)', letterSpacing:1, textTransform:'uppercase' }}>
-            {selMulti ? `${selCampos.length} Selecionados` : selSingle ? 'Propriedades' : 'Canvas'}
-          </div>
+          {/* ── Panel header (context-sensitive title + tabs when no selection) */}
+          {!selSingle && !selMulti && (
+            <div style={{ flexShrink:0, borderBottom:'1px solid var(--bd)', display:'flex', alignItems:'stretch' }}>
+              <div style={{ display:'flex', flex:1, gap:0 }}>
+                {[
+                  { id:'campos', label:'Campos' },
+                  { id:'canvas', label:'Canvas' },
+                  { id:'atalhos', label:'Atalhos' },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setPanelTab(t.id)}
+                    style={{
+                      flex:1, border:'none', borderBottom:`2px solid ${panelTab===t.id?'var(--or)':'transparent'}`,
+                      background:'transparent', cursor:'pointer', padding:'9px 0', fontSize:11,
+                      fontWeight: panelTab===t.id ? 700 : 400,
+                      color: panelTab===t.id ? 'var(--or)' : 'var(--t3)',
+                      transition:'var(--tr)', fontFamily:'inherit',
+                    }}>{t.label}</button>
+                ))}
+              </div>
+              {/* Toggle button inline at the right of tabs */}
+              <button
+                onClick={() => setPanelCollapsed(true)}
+                title="Recolher painel"
+                style={{
+                  width: 30, border:'none', borderBottom:'2px solid transparent',
+                  background:'transparent', cursor:'pointer', color:'var(--t3)',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
+                }}
+              >
+                <ChevronRight size={12} />
+              </button>
+            </div>
+          )}
+
+          {(selSingle || selMulti) && (
+            <div style={{ padding:'10px 12px 8px', borderBottom:'1px solid var(--bd)', flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--t1)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {selMulti ? `${selCampos.length} selecionados` : selSingle.tipo==='divisor' ? '— Divisor' : (selSingle.label||selSingle.nomeCampo||'Campo')}
+                </div>
+                {selSingle && (
+                  <div style={{ fontSize:9, color:'var(--t3)', fontFamily:'monospace', marginTop:1 }}>
+                    {selSingle.nomeCampo||'?'} · {selSingle.tipo}
+                  </div>
+                )}
+              </div>
+              {selMulti && (
+                <button className="btn btn-ghost" style={{ height:22, padding:'0 7px', fontSize:10, flexShrink:0 }} onClick={()=>setSelected(new Set())}>✕</button>
+              )}
+              <button
+                onClick={() => setPanelCollapsed(true)}
+                title="Recolher painel"
+                style={{ border:'none', background:'transparent', cursor:'pointer', color:'var(--t3)', padding:2, display:'flex', alignItems:'center', flexShrink:0 }}
+              >
+                <ChevronRight size={12} />
+              </button>
+            </div>
+          )}
+
+          {/* ── Scrollable panel body */}
+          <div style={{ flex:1, overflowY:'auto', padding:'10px 10px 12px', display:'flex', flexDirection:'column', gap:8 }}>
 
           {/* ── Canvas panel ──────────────────────────────────────────────── */}
-          {!selSingle && !selMulti && (<>
+          {!selSingle && !selMulti && panelTab === 'campos' && (<>
+            {/* Quick add — full-width prominent buttons in 2 cols */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
+              {TIPOS_PANEL.map(({ valor, label, Icon }) => (
+                <button key={valor} onClick={() => addCampo(valor)} title={`Adicionar campo: ${label}`}
+                  style={{
+                    height:40, display:'flex', alignItems:'center', gap:7,
+                    border:'1px solid var(--bd)', borderRadius:9,
+                    background:'var(--s2)', cursor:'pointer',
+                    color:'var(--t2)', fontSize:11, fontWeight:600,
+                    padding:'0 10px', transition:'var(--tr)', textAlign:'left',
+                  }}
+                  onMouseEnter={e=>{ e.currentTarget.style.background='var(--or3)'; e.currentTarget.style.borderColor='rgba(255,107,43,.35)'; e.currentTarget.style.color='var(--or)' }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background='var(--s2)'; e.currentTarget.style.borderColor='var(--bd)'; e.currentTarget.style.color='var(--t2)' }}
+                >
+                  <Icon size={13} style={{ flexShrink:0 }}/>{label}
+                </button>
+              ))}
+            </div>
+
+            {/* Canvas stats footer */}
+            <div style={{ fontSize:10, color:'var(--t3)', padding:'6px 2px', borderTop:'1px solid var(--bd)', marginTop:2, display:'flex', gap:10 }}>
+              <span>{campos.length} campo{campos.length!==1?'s':''}</span>
+              <span>{canvasConfigW}×{canvasConfigH}px</span>
+              <span style={{ marginLeft:'auto' }}>{Math.round(zoom*100)}%</span>
+            </div>
+          </>)}
+
+          {!selSingle && !selMulti && panelTab === 'canvas' && (<>
             <div style={panelBox}>
-              <div style={panelTitle}>Dimensões do Canvas</div>
+              <div style={panelTitle}>Dimensões</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
                 <div className="form-group">
                   <label className="form-label" style={{ fontSize:9 }}>Largura (px)</label>
@@ -892,9 +1077,9 @@ export default function FormDesigner({
                     onChange={e=>onCanvasConfig?.(canvasConfigW,Math.max(200,Number(e.target.value)))} style={{ height:28, fontSize:11, padding:'0 6px' }}/>
                 </div>
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
-                {[{label:'HD',w:1280,h:720},{label:'4:3',w:1024,h:768},{label:'Padr',w:780,h:480}].map(p=>(
-                  <button key={p.label} className="btn btn-ghost" style={{ height:24, fontSize:10 }} onClick={()=>onCanvasConfig?.(p.w,p.h)}>{p.label}</button>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4, marginTop:2 }}>
+                {[{label:'HD',w:1280,h:720},{label:'4:3',w:1024,h:768},{label:'Padrão',w:780,h:480}].map(p=>(
+                  <button key={p.label} className={`btn ${canvasConfigW===p.w&&canvasConfigH===p.h?'btn-primary':'btn-ghost'}`} style={{ height:26, fontSize:10 }} onClick={()=>onCanvasConfig?.(p.w,p.h)}>{p.label}</button>
                 ))}
               </div>
             </div>
@@ -929,48 +1114,66 @@ export default function FormDesigner({
             </div>
 
             <div style={panelBox}>
-              <div style={panelTitle}>Adicionar Campo</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
-                {TIPOS_PANEL.map(({ valor, label, Icon }) => (
-                  <button key={valor} onClick={() => addCampo(valor)} title={label}
-                    style={{ height:34, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2, border:'1px solid var(--bd)', borderRadius:7, background:'var(--s2)', cursor:'pointer', color:'var(--t2)', fontSize:8.5, fontWeight:600, transition:'var(--tr)' }}
-                    onMouseEnter={e=>{ e.currentTarget.style.background='var(--s3)'; e.currentTarget.style.borderColor='var(--or)'; e.currentTarget.style.color='var(--or)' }}
-                    onMouseLeave={e=>{ e.currentTarget.style.background='var(--s2)'; e.currentTarget.style.borderColor='var(--bd)'; e.currentTarget.style.color='var(--t2)' }}
-                  >
-                    <Icon size={11}/>{label}
-                  </button>
-                ))}
+              <div style={panelTitle}>Grade &amp; Visualização</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                <label style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11, cursor:'pointer', userSelect:'none' }}>
+                  Mostrar grade
+                  <input type="checkbox" checked={showGrid} onChange={e=>onShowGrid(e.target.checked)} style={{ accentColor:'var(--or)', width:14, height:14 }}/>
+                </label>
+                <label style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11, cursor:'pointer', userSelect:'none' }}>
+                  Mostrar réguas
+                  <input type="checkbox" checked={showRulers} onChange={e=>onShowRulers(e.target.checked)} style={{ accentColor:'var(--or)', width:14, height:14 }}/>
+                </label>
+                <label style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11, cursor:'pointer', userSelect:'none' }}>
+                  Preview real
+                  <input type="checkbox" checked={livePreview} onChange={e=>onLivePreview(e.target.checked)} style={{ accentColor:'var(--or)', width:14, height:14 }}/>
+                </label>
               </div>
-            </div>
-
-            <div style={{ ...panelBox, fontSize:11, color:'var(--t3)', lineHeight:1.75 }}>
-              <div style={{ fontWeight:600, color:'var(--t2)', marginBottom:4 }}>Atalhos:</div>
-              <div>• <b>Arrastar</b> — mover campo</div>
-              <div>• <b>Ctrl+Clique</b> — multi-seleção</div>
-              <div>• <b>Arrastar canvas</b> — marquee</div>
-              <div>• <b>Delete</b> — excluir seleção</div>
-              <div>• <b>Ctrl+D</b> — duplicar</div>
-              <div>• <b>Ctrl+C/V</b> — copiar/colar</div>
-              <div>• <b>Ctrl+Z/Y</b> — desfazer/refazer</div>
-              <div>• <b>Setas</b> — mover 1px</div>
-              <div>• <b>Shift+Setas</b> — mover {snapSz}px</div>
-              <div>• <b>Ctrl+A</b> — selecionar tudo</div>
-              <div>• <b>Ctrl+Scroll</b> — zoom</div>
-              <div>• <b>Esc</b> — desmarcar</div>
-              <div>• <b>Clique direito</b> — menu</div>
-              <div style={{ marginTop:8, paddingTop:8, borderTop:'1px solid var(--bd)', fontSize:10 }}>
-                Snap: {snapSz}px · Zoom: {Math.round(zoom*100)}%
+              <div style={{ borderTop:'1px solid var(--bd)', paddingTop:6, marginTop:2 }}>
+                <div style={{ fontSize:9, color:'var(--t3)', marginBottom:4 }}>Snap (px)</div>
+                <div style={{ display:'flex', gap:4 }}>
+                  {[4,8,16].map(sz=>(
+                    <button key={sz} onClick={()=>onSnapSz(sz)}
+                      style={{ flex:1, height:26, borderRadius:6, border:`1px solid ${snapSz===sz?'var(--or)':'var(--bd)'}`, background:snapSz===sz?'rgba(255,107,43,.12)':'var(--s2)', color:snapSz===sz?'var(--or)':'var(--t3)', fontSize:11, cursor:'pointer', fontFamily:'monospace' }}>
+                      {sz}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </>)}
 
+          {!selSingle && !selMulti && panelTab === 'atalhos' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+              {[
+                ['Arrastar',         'Mover campo'],
+                ['Ctrl+Clique',      'Multi-seleção'],
+                ['Arrastar canvas',  'Marquee (caixa)'],
+                ['Delete',           'Excluir seleção'],
+                ['Ctrl+D',           'Duplicar'],
+                ['Ctrl+C / V',       'Copiar / Colar'],
+                ['Ctrl+Z / Y',       'Desfazer / Refazer'],
+                ['Ctrl+A',           'Selecionar tudo'],
+                ['Setas',            'Mover 1px'],
+                ['Shift+Setas',      `Mover ${snapSz}px`],
+                ['Ctrl+Scroll',      'Zoom'],
+                ['Esc',              'Desmarcar'],
+                ['Clique direito',   'Menu de contexto'],
+              ].map(([key, desc]) => (
+                <div key={key} style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+                  <span style={{ fontFamily:'monospace', fontSize:9.5, background:'var(--s3)', border:'1px solid var(--bd)', borderRadius:4, padding:'1px 5px', color:'var(--t2)', flexShrink:0, whiteSpace:'nowrap' }}>{key}</span>
+                  <span style={{ fontSize:10.5, color:'var(--t3)' }}>{desc}</span>
+                </div>
+              ))}
+              <div style={{ marginTop:8, paddingTop:8, borderTop:'1px solid var(--bd)', fontSize:10, color:'var(--t3)', display:'flex', gap:12 }}>
+                <span>Snap: {snapSz}px</span>
+                <span>Zoom: {Math.round(zoom*100)}%</span>
+              </div>
+            </div>
+          )}
+
           {/* ── Multi-select panel ────────────────────────────────────────── */}
           {selMulti && (<>
-            <div style={{ background:'rgba(255,107,43,.08)', border:'1px solid rgba(255,107,43,.3)', borderRadius:10, padding:10, fontSize:11, color:'var(--or)', fontWeight:600 }}>
-              {selCampos.length} campos selecionados
-              <div style={{ fontSize:9, fontWeight:400, color:'var(--t3)', marginTop:2 }}>Ctrl+Clique para ajustar</div>
-            </div>
-
             <div style={panelBox}>
               <div style={panelTitle}>Alinhar</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
@@ -1009,20 +1212,10 @@ export default function FormDesigner({
               </div>
             </div>
 
-            <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={()=>setSelected(new Set())}>Desmarcar todos</button>
           </>)}
 
           {/* ── Single field panel ────────────────────────────────────────── */}
           {selSingle && (<>
-            <div style={panelBox}>
-              <div style={{ fontSize:11, fontWeight:700, color:'var(--t1)', marginBottom:3 }}>
-                {selSingle.tipo==='divisor' ? '— Divisor' : (selSingle.label||selSingle.nomeCampo||'Campo')}
-              </div>
-              <div style={{ fontSize:9.5, color:'var(--t3)', fontFamily:'monospace' }}>
-                {selSingle.nomeCampo||'?'} · {selSingle.tipo}
-              </div>
-            </div>
-
             {/* Inline property editing */}
             <div style={panelBox}>
               <div style={panelTitle}>Propriedades</div>
@@ -1202,6 +1395,8 @@ export default function FormDesigner({
               </div>
             </div>
           </>)}
+
+          </div>
           </div>
           )}
         </div>

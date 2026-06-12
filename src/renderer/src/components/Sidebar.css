@@ -387,25 +387,18 @@ html.light .sb::before {
   50%       { opacity: 0; }
 }
 
-/* barra — tempo restante do dia */
+/* barra — tempo restante do dia (encolhe pela esquerda, ancorando à direita) */
 .sb-wel-bar-track {
   margin-top: 6px;
-  height: 2px;
-  background: var(--bd);
-  border-radius: 2px;
+  height: 4px;
+  background: rgba(0,0,0,.10);
+  border-radius: 4px;
   overflow: hidden;
 }
 .sb-wel-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--or2), var(--or), #FF9055);
-  background-size: 200% 100%;
+  height: 4px;
+  border-radius: 4px;
   transition: width 1s linear;
-  animation: sb-bar-flow 2.5s ease-in-out infinite alternate;
-}
-@keyframes sb-bar-flow {
-  0%   { background-position: 0% 0;   box-shadow: 0 0 5px rgba(255,107,43,.45); }
-  100% { background-position: 100% 0; box-shadow: 0 0 10px rgba(255,107,43,.75); }
 }
 .sb-wel-bar-label {
   margin-top: 3px;
@@ -415,7 +408,7 @@ html.light .sb::before {
   gap: 4px;
 }
 .sb-wel-bar-reset {
-  font-size: 7.5px;
+  font-size: 8px;
   color: var(--t3);
   letter-spacing: 0.2px;
   white-space: nowrap;
@@ -482,5 +475,5 @@ html.light .sb.collapsed .ni:hover::after {
 /* Welcome block light */
 html.light .sb-wel-greet  { color: var(--t3); }
 html.light .sb-wel-clock-hm { color: var(--t1); }
-html.light .sb-wel-bar-track { background: var(--bd); }
+html.light .sb-wel-bar-track { background: rgba(0,0,0,.10); }
 html.light .sb-wel-bar-reset { color: var(--t3); }

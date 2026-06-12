@@ -4,6 +4,8 @@ import {
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
   Download, Copy, Check, Star, ExternalLink,
   CheckCircle2, XCircle, Loader2, Building2, MapPin, CheckSquare, Square, ScanSearch,
+  Paperclip, ImageIcon, Palette, Link, Timer, Calculator, CalendarClock, Gauge, Percent,
+  FolderInput, Settings, Clipboard,
 } from 'lucide-react'
 import { CANVAS_W, CANVAS_H_MIN } from '../components/FormDesigner'
 import {
@@ -20,12 +22,49 @@ const MODOS_MODAL = [
   { val: 'igual',     label: 'Igual'      },
 ]
 
+function fmtSize(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024)        return `${bytes} B`
+  if (bytes < 1024 ** 2)   return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 ** 3)   return `${(bytes / 1024 ** 2).toFixed(1)} MB`
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
+}
+
 function fmtDate(ts) {
   if (!ts) return '—'
   return new Date(ts).toLocaleDateString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
+}
+
+const EXT_ICONS = {
+  pdf:  { bg: '#fee2e2', color: '#dc2626', label: 'PDF' },
+  doc:  { bg: '#dbeafe', color: '#2563eb', label: 'DOC' },
+  docx: { bg: '#dbeafe', color: '#2563eb', label: 'DOC' },
+  xls:  { bg: '#dcfce7', color: '#16a34a', label: 'XLS' },
+  xlsx: { bg: '#dcfce7', color: '#16a34a', label: 'XLS' },
+  csv:  { bg: '#dcfce7', color: '#16a34a', label: 'CSV' },
+  ppt:  { bg: '#ffedd5', color: '#ea580c', label: 'PPT' },
+  pptx: { bg: '#ffedd5', color: '#ea580c', label: 'PPT' },
+  zip:  { bg: '#fef9c3', color: '#ca8a04', label: 'ZIP' },
+  rar:  { bg: '#fef9c3', color: '#ca8a04', label: 'RAR' },
+  txt:  { bg: '#f1f5f9', color: '#64748b', label: 'TXT' },
+  jpg:  { bg: '#fdf4ff', color: '#a21caf', label: 'IMG' },
+  jpeg: { bg: '#fdf4ff', color: '#a21caf', label: 'IMG' },
+  png:  { bg: '#fdf4ff', color: '#a21caf', label: 'IMG' },
+  gif:  { bg: '#fdf4ff', color: '#a21caf', label: 'GIF' },
+  mp4:  { bg: '#ede9fe', color: '#7c3aed', label: 'MP4' },
+  mp3:  { bg: '#ede9fe', color: '#7c3aed', label: 'MP3' },
+}
+function ExtIcon({ ext }) {
+  const e = (ext || '').toLowerCase()
+  const cfg = EXT_ICONS[e] || { bg: 'var(--s3)', color: 'var(--t3)', label: e.toUpperCase().slice(0,4) || 'ARQ' }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: cfg.bg, color: cfg.color, borderRadius: 4, padding: '1px 5px', fontSize: 9, fontWeight: 800, fontFamily: 'monospace', letterSpacing: .5, flexShrink: 0 }}>
+      {cfg.label}
+    </span>
+  )
 }
 
 function filtrarStr(val = '', busca, modo) {
@@ -50,6 +89,11 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   const [saving,     setSaving]     = useState(false)
   const [erro,       setErro]       = useState(null)
   const [copied,     setCopied]     = useState(null)
+  const [copiado,    setCopiado]    = useState(null)   // 'local' | 'clip' | null
+  const [pastaConfig, setPastaConfig] = useState('')
+  const [importando,  setImportando]  = useState(false)
+  const [importProg,  setImportProg]  = useState({ fase: '', atual: 0, total: 0, arquivo: '', inseridos: 0, ignorados: 0 })
+  const [pastasSugest, setPastasSugest] = useState({}) // { nome_campo: ['val1','val2',...] }
 
   // CPF / CNPJ / CEP — busca automática
   const [docLoading, setDocLoading] = useState({}) // { nome_campo: true/false }
@@ -89,7 +133,25 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       const t = await window.api.formBuilder.buscarTela(found.id)
       setTela(t)
       onTituloChange?.(t.nome_tela, t.nome_tabela)
-      await carregar(t, 1, '')
+      // Carrega pasta configurada se a tela tiver campo arquivo
+      if ((t.campos || []).some(c => c.tipo === 'arquivo')) {
+        window.api.config.get().then(cfg => setPastaConfig(cfg?.Caminhos?.arquivos || ''))
+      }
+      // Pré-carrega sugestões para campos do tipo pasta
+      const camposPasta = (t.campos || []).filter(c => c.tipo === 'pasta' && c.nome_campo)
+      if (camposPasta.length) {
+        const map = {}
+        await Promise.all(camposPasta.map(async c => {
+          try { map[c.nome_campo] = await window.api.formBuilder.valoresDistintos(nomeTabela, c.nome_campo) }
+          catch { map[c.nome_campo] = [] }
+        }))
+        setPastasSugest(map)
+      }
+      // Carrega a última página para posicionar no último registro
+      const primeiros = await window.api.formBuilder.listarRegistros(nomeTabela, { pagina: 1, porPagina: POR_PAG })
+      const totalReg = primeiros.total
+      const ultimaPag = Math.max(1, Math.ceil(totalReg / POR_PAG))
+      await carregar(t, ultimaPag, '')
       // Carrega opções de campos lookup
       const lookupCampos = (t.campos || []).filter(c => c.tipo === 'lookup' && c.opcoes?.lookupTabela)
       if (lookupCampos.length) {
@@ -104,7 +166,47 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     finally    { setLoading(false) }
   }
 
-  async function carregar(t = tela, pag = pagina, buscaVal = busca) {
+  async function handleAbrirArquivo(meta) {
+    const r = await window.api.arquivos.abrir(meta.path)
+    if (!r.ok) setErro(r.erro || 'Não foi possível abrir o arquivo.')
+  }
+
+  async function handleCopiarLocal(meta) {
+    const r = await window.api.arquivos.copiarLocal(meta.path, meta.nome)
+    if (!r.ok) { setErro(r.erro || 'Não foi possível copiar.'); return }
+    setCopiado('local')
+    setTimeout(() => setCopiado(null), 2500)
+    if (confirm(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`)) {
+      const pasta = r.destino.substring(0, r.destino.lastIndexOf('\\'))
+      await window.api.arquivos.abrirPasta(pasta)
+    }
+  }
+
+  async function handleCopiarClipboard(meta) {
+    const r = await window.api.arquivos.copiarClipboard(meta.path)
+    if (!r.ok) { setErro(r.erro || 'Não foi possível copiar.'); return }
+    setCopiado('clip')
+    setTimeout(() => setCopiado(null), 2000)
+  }
+
+  async function handleImportarPasta() {
+    setImportando(true)
+    setImportProg({ fase: 'escaneando', atual: 0, total: 0, arquivo: 'Iniciando...', inseridos: 0, ignorados: 0 })
+    const unsub = window.api.arquivos.onProgresso(prog => {
+      setImportProg(prog)
+      if (['concluido','cancelado','erro'].includes(prog.fase)) unsub()
+    })
+    const res = await window.api.arquivos.importarPasta()
+    if (!res?.ok) { unsub(); if (res?.erro) setErro(res.erro) }
+    setImportando(false)
+  }
+
+  async function handleConfigurarPasta() {
+    const nova = await window.api.config.selecionarPasta()
+    if (nova) setPastaConfig(nova)
+  }
+
+  async function carregar(t = tela, pag = pagina, buscaVal = busca, manterIdReg = null) {
     if (!t) return
     const res = await window.api.formBuilder.listarRegistros(nomeTabela, {
       pagina: pag, porPagina: POR_PAG, busca: buscaVal || undefined
@@ -112,8 +214,18 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     setRegistros(res.registros)
     setTotal(res.total)
     setPagina(pag)
-    if (res.registros.length > 0) { setCurrentIdx(0); carregarForm(t, res.registros[0]) }
-    else { setCurrentIdx(0); setForm({}) }
+    if (res.registros.length > 0) {
+      let idx = res.registros.length - 1
+      if (manterIdReg != null) {
+        const found = res.registros.findIndex(r => r.id === manterIdReg)
+        if (found >= 0) idx = found
+      }
+      setCurrentIdx(idx)
+      carregarForm(t, res.registros[idx])
+    } else {
+      setCurrentIdx(0)
+      setForm({})
+    }
   }
 
   const TIPOS_SISTEMA = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar']
@@ -167,11 +279,14 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         for (const c of tela.campos.filter(c => c.ativo && c.sequencial)) {
           dados[c.nome_campo] = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars)
         }
-        await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
-        await carregar(tela, 1, busca)
+        const novoReg = await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
+        const totalPosInsercao = total + 1
+        const ultimaPag = Math.max(1, Math.ceil(totalPosInsercao / POR_PAG))
+        await carregar(tela, ultimaPag, busca, novoReg?.id ?? null)
       } else {
-        await window.api.formBuilder.atualizarRegistro(nomeTabela, registros[currentIdx].id, dados, tela.col_timestamps !== false)
-        await carregar(tela, pagina, busca)
+        const idAtual = registros[currentIdx]?.id
+        await window.api.formBuilder.atualizarRegistro(nomeTabela, idAtual, dados, tela.col_timestamps !== false)
+        await carregar(tela, pagina, busca, idAtual)
       }
       setMode('view')
     } catch(e) { setErro(e.message) }
@@ -182,7 +297,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     if (!registros.length) return
     if (!confirm('Excluir este registro?')) return
     await window.api.formBuilder.inativarRegistro(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
-    await carregar(tela, pagina, busca)
+    await carregar(tela, pagina, busca, null)
   }
 
   function handleDesistir() {
@@ -392,11 +507,17 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     if (campo.tipo === 'favorito') {
       const favVal = form.favorito ?? false
       return (
-        <label className="fav-check" style={{ height: '100%', display: 'flex', alignItems: 'center', pointerEvents: isRO ? 'none' : 'auto' }}>
-          <input type="checkbox" checked={!!favVal}
-            onChange={e => setField('favorito', e.target.checked)}
-            disabled={isRO || saving}
-            style={{ accentColor: 'var(--or)' }} />
+        <label className="fav-check" style={{ height: '100%', display: 'flex', alignItems: 'center', pointerEvents: isRO ? 'none' : 'auto', cursor: isRO ? 'default' : 'pointer' }}
+          onClick={() => !isRO && !saving && setField('favorito', !favVal)}>
+          <span style={{
+            width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+            border: `2px solid ${favVal ? 'var(--or)' : 'var(--bd2)'}`,
+            background: favVal ? 'var(--or)' : 'transparent',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all .15s',
+          }}>
+            {favVal && <span style={{ width: 7, height: 5, borderLeft: '2px solid #fff', borderBottom: '2px solid #fff', transform: 'rotate(-45deg) translateY(-1px)', display: 'block' }} />}
+          </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
             Marcar como favorito
             <Star size={13} fill={favVal ? 'var(--or)' : 'none'} color={favVal ? 'var(--or)' : 'currentColor'} />
@@ -506,12 +627,19 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: '100%', padding: '0 12px', background: 'var(--s1)', border: '1.5px solid var(--bd)', borderRadius: 10, boxShadow: 'var(--sh-xs)', flexWrap: 'wrap', boxSizing: 'border-box', width: '100%' }}>
         {ops.map((o, i) => {
           const checked = val != null && o.valor != null && String(val).trim().toLowerCase() === String(o.valor).trim().toLowerCase()
+          const cor = o.cor || 'var(--or)'
           return (
-            <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: isRO ? 'default' : 'pointer', fontSize: 11.5, color: checked ? (o.cor||'var(--or)') : 'var(--t3)', fontWeight: checked ? 600 : 400, userSelect: 'none', transition: 'color .15s' }}>
-              <input type="radio" name={`radio_${campo.nome_campo}`} value={o.valor}
-                checked={checked} onChange={() => !isRO && setField(campo.nome_campo, o.valor)}
-                disabled={isRO || saving}
-                style={{ accentColor: o.cor||'var(--or)', cursor: isRO ? 'default' : 'pointer', width: 13, height: 13 }} />
+            <label key={i} onClick={() => !isRO && !saving && setField(campo.nome_campo, o.valor)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: isRO ? 'default' : 'pointer', fontSize: 11.5, color: checked ? cor : 'var(--t3)', fontWeight: checked ? 600 : 400, userSelect: 'none', transition: 'color .15s' }}>
+              <span style={{
+                width: 13, height: 13, borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${checked ? cor : 'var(--bd2)'}`,
+                background: checked ? cor : 'transparent',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all .15s',
+              }}>
+                {checked && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff', display: 'block' }} />}
+              </span>
               {o.label}
             </label>
           )
@@ -762,6 +890,264 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       )
     }
 
+    if (campo.tipo === 'pasta') {
+      const listId = `datalist_${campo.nome_campo}`
+      const sugest = pastasSugest[campo.nome_campo] || []
+      return (
+        <div style={{ position: 'relative', height: '100%' }}>
+          <input
+            className="form-input"
+            list={listId}
+            value={val}
+            onChange={e => {
+              setField(campo.nome_campo, e.target.value)
+              // Recarrega sugestões ao digitar se ainda não carregado
+              if (!pastasSugest[campo.nome_campo]) {
+                window.api.formBuilder.valoresDistintos(nomeTabela, campo.nome_campo)
+                  .then(v => setPastasSugest(p => ({ ...p, [campo.nome_campo]: v })))
+                  .catch(() => {})
+              }
+            }}
+            disabled={isRO || saving}
+            placeholder={campo.valor_padrao || 'ex: Contratos'}
+            style={{ height: '100%', width: '100%', ...inputStyle }}
+          />
+          <datalist id={listId}>
+            {sugest.map((s, i) => <option key={i} value={s} />)}
+          </datalist>
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'data_hora') return (
+      <input className="form-input" value={val}
+        onChange={e => setField(campo.nome_campo, e.target.value)}
+        disabled={isRO || saving}
+        type="datetime-local"
+        style={{ height: '100%', ...inputStyle }} />
+    )
+
+    if (campo.tipo === 'hora') return (
+      <input className="form-input" value={val}
+        onChange={e => setField(campo.nome_campo, e.target.value)}
+        disabled={isRO || saving}
+        type="time"
+        style={{ height: '100%', ...inputStyle }} />
+    )
+
+    if (campo.tipo === 'url') return (
+      <div style={{ display: 'flex', gap: 4, height: '100%' }}>
+        <input className="form-input" value={val}
+          onChange={e => setField(campo.nome_campo, e.target.value)}
+          disabled={isRO || saving}
+          placeholder="https://"
+          type="url"
+          style={{ flex: 1, height: '100%', ...inputStyle }} />
+        {val && (
+          <button className="btn btn-ghost" style={{ flexShrink: 0, padding: '0 8px', height: '100%' }}
+            onClick={() => window.api?.shell?.openExternal?.(val)}
+            title="Abrir link">
+            <Link size={13} />
+          </button>
+        )}
+      </div>
+    )
+
+    if (campo.tipo === 'arquivo') {
+      let arqMeta = null
+      try { arqMeta = val ? JSON.parse(val) : null } catch { arqMeta = null }
+      const subpasta = tela?.nome_tabela || 'anexos'
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+          {arqMeta ? (
+            <>
+              {/* Linha principal — nome + botões */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 8, minHeight: 38 }}>
+                <Paperclip size={13} style={{ color: 'var(--or)', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{arqMeta.nome}</span>
+                <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>{fmtSize(arqMeta.tamanho)}</span>
+                <button className="btn btn-ghost" style={{ flexShrink: 0, height: 28, fontSize: 11, gap: 4 }}
+                  onClick={() => handleAbrirArquivo(arqMeta)}>
+                  <ExternalLink size={12} /> Abrir
+                </button>
+                <button className="btn btn-ghost" style={{ flexShrink: 0, height: 28, fontSize: 11, gap: 4 }}
+                  onClick={() => handleCopiarLocal(arqMeta)}
+                  title="Copiar para pasta temp e abrir">
+                  <Download size={12} /> {copiado === 'local' ? 'Copiado!' : 'Copiar Local'}
+                </button>
+                <button className="btn btn-ghost" style={{ flexShrink: 0, height: 28, fontSize: 11, gap: 4 }}
+                  onClick={() => handleCopiarClipboard(arqMeta)}
+                  title="Copiar arquivo para área de transferência">
+                  {copiado === 'clip' ? <Check size={12} /> : <Clipboard size={12} />}
+                  {copiado === 'clip' ? 'Copiado!' : 'Copiar'}
+                </button>
+                {!isRO && (
+                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', padding: 4, flexShrink: 0 }}
+                    onClick={() => setField(campo.nome_campo, '')} title="Remover arquivo">
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+              {/* Painel de informações */}
+              <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .8, marginBottom: 2 }}>Informações do Arquivo</div>
+                {[
+                  ['Nome original', arqMeta.nome],
+                  ['Extensão',      arqMeta.ext?.toUpperCase() || '—'],
+                  ['Tamanho',       fmtSize(arqMeta.tamanho)],
+                ].map(([label, val]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: 'var(--t3)' }}>{label}</span>
+                    <span style={{ color: 'var(--t1)', fontWeight: 500 }}>{val}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            isRO
+              ? <span style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>Sem arquivo</span>
+              : (
+                <button className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}
+                  onClick={async () => {
+                    const res = await window.api.arquivos.selecionarECopiar({ subpasta })
+                    if (res?.ok) setField(campo.nome_campo, JSON.stringify({ path: res.path, nome: res.nome, ext: res.ext, tamanho: res.tamanho }))
+                  }}
+                  disabled={saving}>
+                  <Paperclip size={13} /> Selecionar arquivo...
+                </button>
+              )
+          )}
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'imagem') {
+      // val é o path local da imagem copiada
+      const subpasta = tela?.nome_tabela || 'anexos'
+      const FILTROS_IMG = [{ name: 'Imagens', extensions: ['jpg','jpeg','png','gif','webp','svg','bmp'] }]
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', height: '100%' }}>
+          {val ? (
+            <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: 80 }}>
+              <img src={`file://${val}`} alt="imagem" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, border: '1px solid var(--bd)' }} />
+              {!isRO && (
+                <>
+                  <button style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.55)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer', padding: '2px 6px', fontSize: 10 }}
+                    onClick={() => setField(campo.nome_campo, '')}>
+                    <X size={11} />
+                  </button>
+                  <button style={{ position: 'absolute', top: 4, left: 4, background: 'rgba(0,0,0,.55)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer', padding: '2px 6px', fontSize: 10 }}
+                    onClick={async () => {
+                      const res = await window.api.arquivos.selecionarECopiar({ subpasta, filtros: FILTROS_IMG })
+                      if (res?.ok) setField(campo.nome_campo, res.path)
+                    }}>
+                    <ImageIcon size={11} />
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 80, background: 'var(--s2)', border: '1.5px dashed var(--bd)', borderRadius: 8, gap: 6, cursor: isRO ? 'default' : 'pointer' }}
+              onClick={async () => {
+                if (isRO || saving) return
+                const res = await window.api.arquivos.selecionarECopiar({ subpasta, filtros: FILTROS_IMG })
+                if (res?.ok) setField(campo.nome_campo, res.path)
+              }}>
+              <ImageIcon size={24} style={{ color: 'var(--bd2)' }} />
+              {!isRO && <span style={{ fontSize: 10, color: 'var(--t3)' }}>Clique para enviar imagem</span>}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'avaliacao') {
+      const max = Number(campo.valor_padrao) || 5
+      const nota = Number(val) || 0
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: '100%', padding: '0 4px' }}>
+          {Array.from({ length: max }, (_, i) => (
+            <Star key={i} size={18}
+              style={{ color: i < nota ? '#FBBF24' : 'var(--bd2)', fill: i < nota ? '#FBBF24' : 'transparent', cursor: isRO ? 'default' : 'pointer', transition: 'color .15s' }}
+              onClick={() => !isRO && !saving && setField(campo.nome_campo, i + 1 === nota ? 0 : i + 1)}
+            />
+          ))}
+          {nota > 0 && <span style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 4 }}>{nota}/{max}</span>}
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'progresso') {
+      const pct = Math.max(0, Math.min(100, Number(val) || 0))
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, height: '100%', width: '100%', boxSizing: 'border-box', padding: '0 4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--t2)', marginBottom: 2 }}>
+            <span>Progresso</span><span>{pct}%</span>
+          </div>
+          <div style={{ height: 8, background: 'var(--s3)', borderRadius: 4, overflow: 'hidden', width: '100%' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: pct < 40 ? '#22c55e' : pct < 70 ? '#eab308' : '#ef4444', borderRadius: 4, transition: 'width .3s' }} />
+          </div>
+          {!isRO && (
+            <input type="range" min="0" max="100" value={pct}
+              onChange={e => setField(campo.nome_campo, Number(e.target.value))}
+              disabled={saving}
+              style={{ width: '100%', accentColor: 'var(--or)', cursor: 'pointer' }} />
+          )}
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'cor') return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: '100%' }}>
+        <input type="color" value={val || '#3B82F6'}
+          onChange={e => setField(campo.nome_campo, e.target.value)}
+          disabled={isRO || saving}
+          style={{ width: 36, height: 36, borderRadius: 6, border: '2px solid var(--bd)', cursor: isRO ? 'default' : 'pointer', flexShrink: 0, padding: 2, background: 'none' }} />
+        <input className="form-input" value={val || ''}
+          onChange={e => setField(campo.nome_campo, e.target.value)}
+          disabled={isRO || saving}
+          placeholder="#3B82F6"
+          maxLength={9}
+          style={{ flex: 1, height: '100%', fontFamily: 'monospace', ...inputStyle }} />
+      </div>
+    )
+
+    if (campo.tipo === 'percentual') return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, height: '100%' }}>
+        <input className="form-input" value={val}
+          onChange={e => setField(campo.nome_campo, e.target.value)}
+          disabled={isRO || saving}
+          type="number"
+          min="0" max="100" step="0.01"
+          placeholder="0"
+          style={{ flex: 1, height: '100%', borderRadius: '8px 0 0 8px', ...inputStyle }} />
+        <div style={{ padding: '0 10px', height: '100%', display: 'flex', alignItems: 'center', background: 'var(--s3)', border: '1px solid var(--bd)', borderLeft: 'none', borderRadius: '0 8px 8px 0', fontSize: 13, fontWeight: 700, color: 'var(--t2)', flexShrink: 0 }}>%</div>
+      </div>
+    )
+
+    if (campo.tipo === 'calculo') {
+      let formula = ''
+      try { formula = JSON.parse(campo.valor_padrao || '{}').formula || '' } catch {}
+      let resultado = ''
+      if (formula) {
+        try {
+          const expr = formula.replace(/\{(\w+)\}/g, (_, k) => {
+            const v = form[k]
+            return (v !== undefined && v !== '' && !isNaN(Number(v))) ? Number(v) : 0
+          })
+          // eslint-disable-next-line no-new-func
+          resultado = String(Math.round(new Function(`return (${expr})`)() * 100) / 100)
+        } catch { resultado = 'Erro' }
+      }
+      return (
+        <div className="form-input" style={{ display: 'flex', alignItems: 'center', gap: 6, height: '100%', cursor: 'default', background: 'rgba(255,107,43,.04)', borderColor: 'rgba(255,107,43,.3)' }}>
+          <Calculator size={12} style={{ color: 'var(--or)', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, color: 'var(--t1)', fontSize: 13 }}>{resultado || '—'}</span>
+          {formula && <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--t3)', fontFamily: 'monospace' }}>{formula}</span>}
+        </div>
+      )
+    }
+
     return (
       <input className="form-input" value={val}
         onChange={e => setField(campo.nome_campo, e.target.value)}
@@ -831,6 +1217,33 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         {tabLabel && activeTab === 'cadastro' && (
           <span className="page-tab-info">{tabLabel}</span>
         )}
+        {/* Botões contextuais de arquivo — aparecem quando a tela tem campo arquivo */}
+        {campos.some(c => c.tipo === 'arquivo') && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {importando && (
+              <span style={{ fontSize: 10, color: 'var(--t3)', fontStyle: 'italic' }}>
+                {importProg.fase === 'escaneando' ? 'Escaneando...' : `${importProg.atual}/${importProg.total} — ${importProg.arquivo}`}
+              </span>
+            )}
+            <button className="btn btn-ghost" style={{ height: 28, fontSize: 11, gap: 5 }}
+              onClick={handleImportarPasta} disabled={importando} title="Importar todos os arquivos de uma pasta">
+              <FolderInput size={13} /> {importando ? 'Importando...' : 'Importar Pasta'}
+            </button>
+            {importando && (
+              <button className="btn btn-danger" style={{ height: 28, fontSize: 11, gap: 5 }}
+                onClick={() => window.api.arquivos.cancelarImport()} title="Cancelar importação">
+                <X size={13} /> Cancelar
+              </button>
+            )}
+            <button className="btn btn-ghost" style={{ height: 28, fontSize: 11, gap: 5, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              onClick={handleConfigurarPasta} title="Clique para alterar a pasta de arquivos">
+              <Settings size={13} />
+              <span style={{ fontFamily: 'monospace', fontSize: 10, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {pastaConfig || 'Configurar pasta...'}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="page-content" ref={contentRef}>
@@ -899,6 +1312,47 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                               const lkpOpts = lookupOpcoes[c.nome_campo] || []
                               const lbl = lkpOpts.find(o => o.id === Number(v))?.label
                               return <td key={c.id} style={{ ...tdS, color: lbl ? 'var(--t1)' : 'var(--t3)' }}>{lbl || (v ? `#${v}` : '—')}</td>
+                            }
+                            if (c.tipo === 'arquivo') {
+                              let meta = null
+                              try { meta = v ? JSON.parse(v) : null } catch {}
+                              if (!meta) return <td key={c.id} style={{ ...tdS, color: 'var(--t3)' }}>—</td>
+                              return (
+                                <td key={c.id} style={{ ...tdS, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <ExtIcon ext={meta.ext} />
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.nome}</span>
+                                  <span style={{ fontSize: 9.5, color: 'var(--t3)', flexShrink: 0 }}>{fmtSize(meta.tamanho)}</span>
+                                </td>
+                              )
+                            }
+                            if (c.tipo === 'avaliacao') {
+                              const nota = Number(v) || 0
+                              const max  = Number(c.opcoes?.max) || 5
+                              if (!nota) return <td key={c.id} style={{ ...tdS, color: 'var(--t3)' }}>—</td>
+                              return <td key={c.id} style={tdS}><span style={{ color: '#FBBF24', letterSpacing: 1 }}>{'★'.repeat(nota)}{'☆'.repeat(Math.max(0,max-nota))}</span></td>
+                            }
+                            if (c.tipo === 'progresso') {
+                              const pct = Math.max(0, Math.min(100, Number(v) || 0))
+                              return (
+                                <td key={c.id} style={tdS}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <div style={{ flex: 1, height: 5, background: 'var(--s3)', borderRadius: 3, overflow: 'hidden', minWidth: 40 }}>
+                                      <div style={{ height: '100%', width: `${pct}%`, background: pct < 40 ? '#22c55e' : pct < 70 ? '#eab308' : '#ef4444', borderRadius: 3 }} />
+                                    </div>
+                                    <span style={{ fontSize: 10, flexShrink: 0 }}>{pct}%</span>
+                                  </div>
+                                </td>
+                              )
+                            }
+                            if (c.tipo === 'cor') {
+                              return (
+                                <td key={c.id} style={tdS}>
+                                  {v ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                    <span style={{ width: 12, height: 12, borderRadius: 3, background: v, border: '1px solid var(--bd)', display: 'inline-block', flexShrink: 0 }} />
+                                    {v}
+                                  </span> : '—'}
+                                </td>
+                              )
                             }
                             return <td key={c.id} style={tdS}>{String(v ?? '—')}</td>
                           })}

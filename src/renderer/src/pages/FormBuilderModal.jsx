@@ -31,6 +31,18 @@ const TIPOS = [
   { valor: 'documento',    label: 'CPF / CNPJ',       pg: 'VARCHAR(18)',   desc: 'Campo unificado: toggle Física (CPF) / Jurídica (CNPJ). Adapta máscara, validação e busca automaticamente.', ex: '000.000.000-00 ou 00.000.000/0000-00' },
   { valor: 'flags',        label: 'Flags',            pg: 'VARCHAR(50)',   desc: 'Checkboxes múltiplos. Cada opção tem um código curto; o valor salvo é a concatenação dos selecionados (ex: CFT).', ex: 'C, F, T → CFT' },
   { valor: 'lookup',       label: 'Lookup (outra tabela)', pg: 'INTEGER',  desc: 'Referência a um registro de outra tela (FK).', ex: 'Banco, Cliente, Produto'  },
+  // ── Componentes especiais ──────────────────────────────────────────────────
+  { valor: 'pasta',        label: 'Pasta (autocomplete)', pg: 'VARCHAR(200)', desc: 'Texto com sugestão automática dos valores já cadastrados nessa coluna. Ideal para categorias/pastas.', ex: 'Contratos, Financeiro' },
+  { valor: 'arquivo',      label: 'Arquivo',          pg: 'TEXT',          desc: 'Upload de arquivo qualquer (PDF, DOCX, XLSX...). Salva o caminho no banco.', ex: 'Contrato.pdf, Planilha.xlsx' },
+  { valor: 'imagem',       label: 'Imagem',           pg: 'TEXT',          desc: 'Upload de imagem com preview inline (PNG, JPG, GIF, WEBP).', ex: 'foto_perfil.jpg' },
+  { valor: 'avaliacao',    label: 'Avaliação ★',      pg: 'SMALLINT',      desc: 'Estrelas de 1 a 5. Ideal para NPS, satisfação, qualidade.', ex: '★★★★☆' },
+  { valor: 'progresso',    label: 'Progresso %',      pg: 'SMALLINT',      desc: 'Barra de progresso de 0 a 100%. Ótimo para tarefas, etapas.', ex: '0%, 50%, 100%' },
+  { valor: 'cor',          label: 'Cor',              pg: 'VARCHAR(7)',     desc: 'Seletor de cor HEX. Salva o valor como #RRGGBB.', ex: '#FF6B2B, #4ADE80' },
+  { valor: 'url',          label: 'URL / Link',       pg: 'TEXT',          desc: 'Campo de endereço web com botão de abrir no navegador.', ex: 'https://empresa.com.br' },
+  { valor: 'data_hora',    label: 'Data e Hora',      pg: 'TIMESTAMP',     desc: 'Data + horário completo.',                           ex: '2024-06-04 14:30' },
+  { valor: 'hora',         label: 'Hora',             pg: 'TIME',          desc: 'Apenas o horário, sem data.',                        ex: '08:00, 14:30' },
+  { valor: 'percentual',   label: 'Percentual',       pg: 'NUMERIC(6,2)',  desc: 'Número com símbolo % automático. De 0 a 100.',        ex: '12.5%, 100%' },
+  { valor: 'calculo',      label: 'Cálculo',          pg: 'NUMERIC(15,2)', desc: 'Campo calculado a partir de outros campos. Configure a fórmula nas opções.', ex: '{preco} * {quantidade}' },
 ]
 
 const TIPOS_COM_OPCOES = ['select', 'radio', 'flags']
@@ -141,6 +153,39 @@ function lookupVazio(campos) {
   }
 }
 
+function pastaVazio(campos) {
+  const pos = autoPos(campos, 'pasta')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Pasta', tipo: 'pasta', tamanho: 200, obrigatorio: false, sequencial: false, campoBusca: true, valorPadrao: '', largura: 50, opcoes: null, ...pos, w_px: 280, h_px: 48 }
+}
+function arquivoVazio(campos) {
+  const pos = autoPos(campos, 'arquivo')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Arquivo', tipo: 'arquivo', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '', largura: 100, opcoes: null, ...pos, w_px: 400, h_px: 60 }
+}
+function imagemVazio(campos) {
+  const pos = autoPos(campos, 'imagem')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Imagem', tipo: 'imagem', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '', largura: 100, opcoes: null, ...pos, w_px: 280, h_px: 180 }
+}
+function avaliacaoVazio(campos) {
+  const pos = autoPos(campos, 'avaliacao')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Avaliação', tipo: 'avaliacao', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '0', largura: 50, opcoes: { max: 5 }, ...pos, w_px: 200, h_px: 48 }
+}
+function progressoVazio(campos) {
+  const pos = autoPos(campos, 'progresso')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Progresso', tipo: 'progresso', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '0', largura: 100, opcoes: null, ...pos, w_px: 400, h_px: 52 }
+}
+function corVazio(campos) {
+  const pos = autoPos(campos, 'cor')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Cor', tipo: 'cor', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '#FF6B2B', largura: 25, opcoes: null, ...pos, w_px: 160, h_px: 48 }
+}
+function urlVazio(campos) {
+  const pos = autoPos(campos, 'url')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'URL', tipo: 'url', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '', largura: 100, opcoes: null, ...pos, w_px: 400, h_px: 48 }
+}
+function calculoVazio(campos) {
+  const pos = autoPos(campos, 'calculo')
+  return { _key: Math.random().toString(36).slice(2), nomeCampo: '', label: 'Cálculo', tipo: 'calculo', tamanho: 0, obrigatorio: false, sequencial: false, campoBusca: false, valorPadrao: '', largura: 50, opcoes: { formula: '' }, ...pos, w_px: 280, h_px: 48 }
+}
+
 function opcoesVazias() {
   return [
     { label: 'Opção 1', valor: 'opcao_1', cor: COR_PALETTE[0] },
@@ -165,6 +210,107 @@ function TipoCampoInfo({ tipo }) {
       </div>
       <div style={{ color: 'var(--t2)', marginBottom: 2 }}>{info.desc}</div>
       <div style={{ color: 'var(--t3)', fontSize: 10 }}><span style={{ fontWeight: 600 }}>Ex: </span>{info.ex}</div>
+    </div>
+  )
+}
+
+function OpcoesList({ opcoes, tipo, salvando, onChange }) {
+  const [dragging, setDragging] = useState(null) // índice sendo arrastado
+  const [overAt,   setOverAt]   = useState(null) // índice sob o cursor
+  const listRef = useRef(null)
+  const rowH    = 35 // altura estimada de cada linha (gap=5 + height=30)
+
+  function handleMouseDown(e, idx) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    setDragging(idx)
+    setOverAt(idx)
+
+    const startY = e.clientY
+
+    function onMouseMove(ev) {
+      const delta = ev.clientY - startY
+      const newIdx = Math.max(0, Math.min(opcoes.length - 1, idx + Math.round(delta / rowH)))
+      setOverAt(newIdx)
+    }
+
+    function onMouseUp() {
+      setDragging(prev => {
+        setOverAt(over => {
+          if (prev !== null && over !== null && prev !== over) {
+            const novo = [...opcoes]
+            const [moved] = novo.splice(prev, 1)
+            novo.splice(over, 0, moved)
+            onChange(novo)
+          }
+          return null
+        })
+        return null
+      })
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
+  // Reconstrói a ordem visual durante o drag
+  const displayOps = (() => {
+    if (dragging === null || overAt === null || dragging === overAt) return opcoes.map((op, i) => ({ op, i }))
+    const arr = opcoes.map((op, i) => ({ op, i }))
+    const [moved] = arr.splice(dragging, 1)
+    arr.splice(overAt, 0, moved)
+    return arr
+  })()
+
+  return (
+    <div ref={listRef} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {displayOps.map(({ op, i: oi }, displayIdx) => {
+        const isDragging = dragging === oi
+        return (
+          <div key={oi}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, height: 30,
+              opacity: isDragging ? 0.4 : 1,
+              background: overAt === displayIdx && dragging !== null && dragging !== displayIdx ? 'var(--s3)' : 'transparent',
+              borderRadius: 6,
+              transition: 'background .1s',
+            }}>
+            <span
+              onMouseDown={e => handleMouseDown(e, oi)}
+              style={{ color: 'var(--t3)', fontSize: 14, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none', padding: '0 2px' }}
+              title="Arrastar para reordenar">⠿</span>
+            {tipo !== 'flags' && (
+              <input type="color" value={op.cor || '#888888'}
+                onChange={e => { const ops = [...opcoes]; ops[oi] = { ...ops[oi], cor: e.target.value }; onChange(ops) }}
+                style={{ width: 26, height: 26, border: 'none', borderRadius: 5, cursor: 'pointer', padding: 2, background: 'none' }} />
+            )}
+            <input className="form-input" style={{ height: 28, flex: 1, fontSize: 11 }} value={op.label} placeholder="Label"
+              onChange={e => {
+                const ops = [...opcoes]
+                if (tipo === 'flags') ops[oi] = { ...ops[oi], label: e.target.value }
+                else ops[oi] = { ...ops[oi], label: e.target.value, valor: slugify(e.target.value) || ops[oi].valor }
+                onChange(ops)
+              }}
+              disabled={salvando} />
+            <input className="form-input"
+              style={{ height: 28, width: tipo === 'flags' ? 44 : 90, fontSize: tipo === 'flags' ? 13 : 10, fontFamily: 'monospace', textAlign: 'center', fontWeight: tipo === 'flags' ? 700 : 400, textTransform: tipo === 'flags' ? 'uppercase' : 'none' }}
+              value={op.valor}
+              placeholder={tipo === 'flags' ? 'C' : 'valor'}
+              maxLength={tipo === 'flags' ? 1 : undefined}
+              onChange={e => {
+                const ops = [...opcoes]
+                ops[oi] = { ...ops[oi], valor: tipo === 'flags' ? e.target.value.toUpperCase().slice(0, 1) : slugify(e.target.value) }
+                onChange(ops)
+              }}
+              disabled={salvando} />
+            <button className="btn btn-danger" style={{ height: 26, width: 26, padding: 0, flexShrink: 0 }}
+              onClick={() => onChange(opcoes.filter((_, i) => i !== oi))}
+              disabled={salvando}><Trash2 size={10} /></button>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -264,7 +410,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
       if (field === 'label' && !editando && !c._nomeManual) up.nomeCampo = slugify(value)
       if (field === 'nomeCampo') { up._nomeManual = true; up.nomeCampo = slugify(value) }
       if (field === 'tipo') {
-        const hDefault = { texto_longo: 120, booleano: 44, radio: 52, tags: 60, codigo_auto: 60 }
+        const hDefault = { texto_longo: 120, booleano: 44, radio: 52, tags: 60, codigo_auto: 60, imagem: 180, avaliacao: 48, progresso: 52, calculo: 48, cor: 48, url: 48 }
         up.h_px = hDefault[value] || 60
         up.w_px = value === 'texto_longo' ? CANVAS_W : (c.w_px || 280)
         if (TIPOS_COM_OPCOES.includes(value) && !c.opcoes) up.opcoes = opcoesVazias()
@@ -313,11 +459,11 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, height: fill ? '100%' : 'auto', alignContent: 'center' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Criado em</label>
-            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 32, background: 'var(--s2)' }}>—</div>
+            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 32 }}>—</div>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">Atualizado em</label>
-            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 32, background: 'var(--s2)' }}>—</div>
+            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 32 }}>—</div>
           </div>
         </div>
       )
@@ -343,7 +489,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         </select>
       )
       if (campo.tipo === 'radio') return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: fill ? '100%' : 37, padding: '0 12px', background: 'var(--s2)', border: '1.5px solid var(--bd)', borderRadius: 10, flexWrap: 'wrap', boxSizing: 'border-box', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: fill ? '100%' : 37, padding: '0 12px', background: 'var(--s1)', border: '1.5px solid var(--bd)', borderRadius: 10, flexWrap: 'wrap', boxSizing: 'border-box', width: '100%' }}>
           {ops.length ? ops.map((o, i) => (
             <label key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: o.cor || 'var(--t2)', fontWeight: 600, userSelect: 'none' }}>
               <input type="radio" disabled style={{ accentColor: o.cor || 'var(--or)', width: 13, height: 13 }} /> {o.label}
@@ -405,6 +551,78 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
               {op.valor && <span style={{ fontSize: 9, fontFamily: 'monospace', opacity: .5 }}>[{op.valor}]</span>}
             </div>
           )) : <span style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>Sem flags</span>}
+        </div>
+      )
+      if (campo.tipo === 'pasta') return (
+        <div style={{ position: 'relative', height: fill ? '100%' : 37 }}>
+          <input className="form-input" disabled placeholder={campo.valorPadrao || 'Contratos, Financeiro...'} style={{ width: '100%', height: '100%' }} />
+          <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: 'var(--t3)', pointerEvents: 'none' }}>▾ sugestões</span>
+        </div>
+      )
+      if (campo.tipo === 'arquivo') return (
+        <div style={{ display:'flex', alignItems:'center', gap:8, height: fill ? '100%' : 37, padding:'0 10px', background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:8, fontSize:11, color:'var(--t3)' }}>
+          <span style={{ fontSize:16 }}>📎</span>
+          <span style={{ flex:1, fontStyle:'italic' }}>Nenhum arquivo selecionado</span>
+          <span style={{ background:'var(--s3)', border:'1px solid var(--bd)', borderRadius:5, padding:'2px 8px', fontSize:10, color:'var(--t2)', cursor:'not-allowed' }}>Escolher</span>
+        </div>
+      )
+      if (campo.tipo === 'imagem') return (
+        <div style={{ width:'100%', height: fill ? '100%' : 120, background:'var(--s2)', border:'2px dashed var(--bd)', borderRadius:10, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, color:'var(--t3)', fontSize:11 }}>
+          <span style={{ fontSize:28 }}>🖼️</span>
+          <span>Clique para selecionar imagem</span>
+          <span style={{ fontSize:9, color:'var(--t3)' }}>PNG, JPG, WEBP, GIF</span>
+        </div>
+      )
+      if (campo.tipo === 'avaliacao') {
+        const max = campo.opcoes?.max || 5
+        return (
+          <div style={{ display:'flex', alignItems:'center', gap:4, height: fill ? '100%' : 37, padding:'0 4px' }}>
+            {Array.from({ length: max }, (_, i) => (
+              <span key={i} style={{ fontSize:22, color: i < 3 ? '#FBD24C' : 'var(--bd2)', cursor:'not-allowed' }}>★</span>
+            ))}
+            <span style={{ fontSize:10, color:'var(--t3)', marginLeft:4 }}>3/{max}</span>
+          </div>
+        )
+      }
+      if (campo.tipo === 'progresso') return (
+        <div style={{ display:'flex', flexDirection:'column', gap:6, width:'100%', justifyContent:'center', height: fill ? '100%' : 52 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--t2)' }}>
+            <span>{campo.label || 'Progresso'}</span><span style={{ fontWeight:700, color:'var(--or)' }}>0%</span>
+          </div>
+          <div style={{ height:8, background:'var(--s3)', borderRadius:4, overflow:'hidden' }}>
+            <div style={{ width:'0%', height:'100%', background:'linear-gradient(90deg, var(--or),#FF9055)', borderRadius:4 }}/>
+          </div>
+        </div>
+      )
+      if (campo.tipo === 'cor') return (
+        <div style={{ display:'flex', alignItems:'center', gap:8, height: fill ? '100%' : 37 }}>
+          <div style={{ width:32, height:32, borderRadius:6, background: campo.valorPadrao || '#FF6B2B', border:'2px solid var(--bd)', flexShrink:0 }}/>
+          <input className="form-input" disabled value={campo.valorPadrao || '#FF6B2B'} style={{ flex:1, height:32, fontFamily:'monospace' }}/>
+        </div>
+      )
+      if (campo.tipo === 'url') return (
+        <div style={{ display:'flex', gap:4, height: fill ? '100%' : 37 }}>
+          <input className="form-input" disabled placeholder="https://..." style={{ flex:1, height:'100%' }}/>
+          <button className="btn btn-ghost" style={{ flexShrink:0, padding:'0 8px', height:'100%' }} disabled title="Abrir link"><ExternalLink size={13}/></button>
+        </div>
+      )
+      if (campo.tipo === 'data_hora') return (
+        <input className="form-input" type="datetime-local" disabled style={{ width:'100%', height: fill ? '100%' : 37 }}/>
+      )
+      if (campo.tipo === 'hora') return (
+        <input className="form-input" type="time" disabled style={{ width:'100%', height: fill ? '100%' : 37 }}/>
+      )
+      if (campo.tipo === 'percentual') return (
+        <div style={{ display:'flex', alignItems:'center', gap:4, height: fill ? '100%' : 37 }}>
+          <input className="form-input" type="number" disabled placeholder="0" style={{ flex:1, height:'100%' }}/>
+          <span style={{ fontSize:14, fontWeight:700, color:'var(--t2)', paddingRight:8 }}>%</span>
+        </div>
+      )
+      if (campo.tipo === 'calculo') return (
+        <div style={{ display:'flex', alignItems:'center', gap:6, height: fill ? '100%' : 37, padding:'0 10px', background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:8 }}>
+          <span style={{ fontSize:12 }}>𝑓𝑥</span>
+          <span style={{ fontSize:12, color:'var(--t3)', fontStyle:'italic', fontFamily:'monospace' }}>{campo.opcoes?.formula || 'fórmula não configurada'}</span>
+          <span style={{ marginLeft:'auto', fontWeight:700, color:'var(--or)', fontFamily:'monospace' }}>0,00</span>
         </div>
       )
       return (
@@ -484,6 +702,17 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     cep:         { short: 'CEP', color: '#34D399' },
     documento:   { short: 'DOC', color: '#34D399' },
     flags:       { short: 'FLG', color: '#F472B6' },
+    pasta:       { short: 'PST', color: '#34D399' },
+    arquivo:     { short: 'ARQ', color: '#60A5FA' },
+    imagem:      { short: 'IMG', color: '#F472B6' },
+    avaliacao:   { short: '★',   color: '#FBD24C' },
+    progresso:   { short: '%',   color: '#4ADE80' },
+    cor:         { short: 'COR', color: '#E879F9' },
+    url:         { short: 'URL', color: '#60A5FA' },
+    data_hora:   { short: 'D+H', color: '#34D399' },
+    hora:        { short: 'HOR', color: '#34D399' },
+    percentual:  { short: 'PCT', color: '#A78BFA' },
+    calculo:     { short: 'FX',  color: '#FB923C' },
   }
 
   // ── Campo card ────────────────────────────────────────────────────────────
@@ -791,6 +1020,34 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
                 </span>
               </div>
             )}
+            {campo.tipo === 'calculo' && (
+              <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8, padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .8 }}>Fórmula</span>
+                <input className="form-input" style={{ height: 32, fontFamily: 'monospace', fontSize: 12 }}
+                  value={campo.opcoes?.formula || ''}
+                  onChange={e => atualizarCampo(campo._key, 'opcoes', { ...(campo.opcoes || {}), formula: e.target.value })}
+                  placeholder="{preco} * {quantidade}" disabled={salvando} />
+                <span style={{ fontSize: 9.5, color: 'var(--t3)', lineHeight: 1.5 }}>
+                  Use <code style={{ fontFamily: 'monospace', background: 'var(--s3)', padding: '0 4px', borderRadius: 3 }}>{'{nome_campo}'}</code> para referenciar outros campos. Suporta <code style={{ fontFamily: 'monospace', background: 'var(--s3)', padding: '0 4px', borderRadius: 3 }}>+  -  *  /  (  )</code> e funções JS como <code style={{ fontFamily: 'monospace', background: 'var(--s3)', padding: '0 4px', borderRadius: 3 }}>Math.round()</code>.
+                </span>
+                <span style={{ fontSize: 9.5, color: 'var(--t3)' }}>
+                  O campo não é gravado no banco — é calculado em tempo real no formulário.
+                </span>
+              </div>
+            )}
+            {campo.tipo === 'avaliacao' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, color: 'var(--t2)', whiteSpace: 'nowrap' }}>Máximo de estrelas:</span>
+                <input type="number" className="form-input" min={1} max={10}
+                  value={campo.opcoes?.max || 5}
+                  onChange={e => atualizarCampo(campo._key, 'opcoes', { ...(campo.opcoes || {}), max: Math.max(1, Math.min(10, Number(e.target.value) || 5)) })}
+                  disabled={salvando}
+                  style={{ width: 56, height: 28, fontSize: 12, padding: '0 8px' }} />
+                <span style={{ fontSize: 11, color: 'var(--t3)' }}>
+                  {Array.from({ length: campo.opcoes?.max || 5 }, () => '★').join('')}
+                </span>
+              </div>
+            )}
             {TIPOS_COM_OPCOES.includes(campo.tipo) && (
               <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8, padding: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -808,52 +1065,25 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
                     }}
                     disabled={salvando}><Plus size={10} /> {campo.tipo === 'flags' ? 'Flag' : 'Opção'}</button>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {(campo.opcoes||[]).map((op, oi) => (
-                    <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 30 }}>
-                      {campo.tipo !== 'flags' && (
-                        <input type="color" value={op.cor||'#888888'}
-                          onChange={e => { const ops=[...(campo.opcoes||[])]; ops[oi]={...ops[oi],cor:e.target.value}; atualizarCampo(campo._key,'opcoes',ops) }}
-                          style={{ width: 26, height: 26, border: 'none', borderRadius: 5, cursor: 'pointer', padding: 2, background: 'none' }} />
-                      )}
-                      <input className="form-input" style={{ height: 28, flex: 1, fontSize: 11 }} value={op.label} placeholder="Label"
-                        onChange={e => {
-                          const ops=[...(campo.opcoes||[])]
-                          if (campo.tipo === 'flags') ops[oi]={...ops[oi],label:e.target.value}
-                          else ops[oi]={...ops[oi],label:e.target.value,valor:slugify(e.target.value)||ops[oi].valor}
-                          atualizarCampo(campo._key,'opcoes',ops)
-                        }}
-                        disabled={salvando} />
-                      <input className="form-input"
-                        style={{ height: 28, width: campo.tipo === 'flags' ? 44 : 90, fontSize: campo.tipo === 'flags' ? 13 : 10, fontFamily: 'monospace', textAlign: 'center', fontWeight: campo.tipo === 'flags' ? 700 : 400, textTransform: campo.tipo === 'flags' ? 'uppercase' : 'none' }}
-                        value={op.valor}
-                        placeholder={campo.tipo === 'flags' ? 'C' : 'valor'}
-                        maxLength={campo.tipo === 'flags' ? 1 : undefined}
-                        onChange={e => {
-                          const ops=[...(campo.opcoes||[])]
-                          ops[oi]={...ops[oi],valor: campo.tipo === 'flags' ? e.target.value.toUpperCase().slice(0,1) : slugify(e.target.value)}
-                          atualizarCampo(campo._key,'opcoes',ops)
-                        }}
-                        disabled={salvando} />
-                      <button className="btn btn-danger" style={{ height: 26, width: 26, padding: 0, flexShrink: 0 }}
-                        onClick={() => atualizarCampo(campo._key,'opcoes',(campo.opcoes||[]).filter((_,i)=>i!==oi))}
-                        disabled={salvando}><Trash2 size={10} /></button>
-                    </div>
-                  ))}
-                </div>
+                <OpcoesList
+                  opcoes={campo.opcoes || []}
+                  tipo={campo.tipo}
+                  salvando={salvando}
+                  onChange={ops => atualizarCampo(campo._key, 'opcoes', ops)}
+                />
               </div>
             )}
-            {/* ── Valor padrão + flags de comportamento ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div className="form-group">
+            {/* ── Valor padrão + opções do campo ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {/* Valor padrão */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Valor Padrão</label>
                 {TIPOS_COM_OPCOES.includes(campo.tipo) && Array.isArray(campo.opcoes) && campo.opcoes.length > 0 ? (
                   <select className="form-select" style={{ height: 30 }} value={campo.valorPadrao || ''}
                     onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
                     <option value="">— nenhum —</option>
-                    {campo.opcoes.map((op, i) => (
-                      <option key={i} value={op.valor}>{op.label}</option>
-                    ))}
+                    {campo.opcoes.map((op, i) => <option key={i} value={op.valor}>{op.label}</option>)}
                   </select>
                 ) : (
                   <input className="form-input" style={{ height: 30 }} value={campo.valorPadrao}
@@ -862,72 +1092,97 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
                 )}
               </div>
 
-              {/* Flags + estilo em grade 2×3 */}
-              <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8, padding: '8px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', alignContent: 'start' }}>
-                {/* Linha 1 */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none', color: 'var(--t2)' }}>
-                  <input type="checkbox" checked={!!campo.obrigatorio}
-                    onChange={e => atualizarCampo(campo._key, 'obrigatorio', e.target.checked)}
-                    disabled={salvando} style={{ accentColor: 'var(--or)' }} />
-                  Obrigatório
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none', color: 'var(--t2)' }}>
-                  <input type="checkbox" checked={!!campo.campoBusca}
-                    onChange={e => atualizarCampo(campo._key, 'campoBusca', e.target.checked)}
-                    disabled={salvando} style={{ accentColor: 'var(--or)' }} />
-                  Campo de busca
-                </label>
-                {/* Linha 2 */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: editando ? 'not-allowed' : 'pointer', userSelect: 'none', color: 'var(--t2)' }}>
-                  <input type="checkbox" checked={!!campo.sequencial}
-                    onChange={e => atualizarCampo(campo._key, 'sequencial', e.target.checked)}
-                    disabled={salvando || editando} style={{ accentColor: 'var(--or)' }} />
-                  Sequencial
-                </label>
-                {campo.sequencial ? (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--t2)', userSelect: 'none' }}>
-                    Qtde chars:
+              {/* Grade de opções compacta */}
+              <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8, padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+                {/* Linha única com tudo */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 20px', alignItems: 'center' }}>
+
+                  {/* Checkboxes comportamento */}
+                  {[
+                    { key: 'obrigatorio', label: 'Obrigatório',    dis: false },
+                    { key: 'campoBusca',  label: 'Campo de busca', dis: false },
+                    { key: 'sequencial',  label: 'Sequencial',     dis: !!editando },
+                  ].map(({ key, label, dis }) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: dis ? 'not-allowed' : 'pointer', userSelect: 'none', color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                      <input type="checkbox" checked={!!campo[key]}
+                        onChange={e => atualizarCampo(campo._key, key, e.target.checked)}
+                        disabled={salvando || dis} style={{ accentColor: 'var(--or)', flexShrink: 0 }} />
+                      {label}
+                    </label>
+                  ))}
+
+                  <div style={{ width: 1, height: 14, background: 'var(--bd2)', flexShrink: 0 }} />
+
+                  {/* Label */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', userSelect: 'none', color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" checked={!!campo.semNegrito}
+                      onChange={e => atualizarCampo(campo._key, 'semNegrito', e.target.checked)}
+                      disabled={salvando} style={{ accentColor: 'var(--or)', flexShrink: 0 }} />
+                    Label s/ negrito
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                    Label px:
+                    <input type="number" className="form-input" min={8} max={32}
+                      value={campo.fontSize || ''}
+                      onChange={e => atualizarCampo(campo._key, 'fontSize', e.target.value ? Number(e.target.value) : null)}
+                      placeholder="—" disabled={salvando}
+                      style={{ width: 44, height: 22, fontSize: 10, padding: '0 4px' }} />
+                  </div>
+
+                  <div style={{ width: 1, height: 14, background: 'var(--bd2)', flexShrink: 0 }} />
+
+                  {/* Conteúdo */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer', userSelect: 'none', color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                    <input type="checkbox" checked={!!campo.inputNegrito}
+                      onChange={e => atualizarCampo(campo._key, 'inputNegrito', e.target.checked)}
+                      disabled={salvando} style={{ accentColor: 'var(--or)', flexShrink: 0 }} />
+                    Conteúdo negrito
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                    Conteúdo px:
+                    <input type="number" className="form-input" min={8} max={32}
+                      value={campo.inputFontSize || ''}
+                      onChange={e => atualizarCampo(campo._key, 'inputFontSize', e.target.value ? Number(e.target.value) : null)}
+                      placeholder="—" disabled={salvando}
+                      style={{ width: 44, height: 22, fontSize: 10, padding: '0 4px' }} />
+                  </div>
+
+                  <div style={{ width: 1, height: 14, background: 'var(--bd2)', flexShrink: 0 }} />
+
+                  {/* Métricas */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                    Largura:
+                    <input type="number" className="form-input" min={10} max={100}
+                      value={campo.largura || 50}
+                      onChange={e => atualizarCampo(campo._key, 'largura', Math.max(10, Math.min(100, Number(e.target.value) || 50)))}
+                      disabled={salvando}
+                      style={{ width: 44, height: 22, fontSize: 10, padding: '0 4px' }} />
+                    %
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--t2)', whiteSpace: 'nowrap' }}>
+                    BD:
+                    <input type="number" className="form-input" min={1} max={5000}
+                      value={campo.tamanho || 100}
+                      onChange={e => atualizarCampo(campo._key, 'tamanho', Math.max(1, Number(e.target.value) || 100))}
+                      disabled={salvando}
+                      style={{ width: 54, height: 22, fontSize: 10, padding: '0 4px' }} />
+                    chars
+                  </div>
+
+                </div>
+
+                {/* Sequencial — linha extra só quando ativo */}
+                {campo.sequencial && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--t2)' }}>
+                    <span>Dígitos do código sequencial:</span>
                     <input type="number" className="form-input" min={1} max={20}
                       value={(campo.opcoes?.seqChars) || 3}
                       onChange={e => atualizarCampo(campo._key, 'opcoes', { ...(campo.opcoes || {}), seqChars: Math.max(1, Math.min(20, Number(e.target.value) || 3)) })}
-                      disabled={salvando}
-                      style={{ width: 46, height: 24, fontSize: 11, padding: '0 5px' }} />
-                  </label>
-                ) : <div />}
-                {/* Linha 3 — label */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none', color: 'var(--t2)' }}>
-                  <input type="checkbox" checked={!!campo.semNegrito}
-                    onChange={e => atualizarCampo(campo._key, 'semNegrito', e.target.checked)}
-                    disabled={salvando} style={{ accentColor: 'var(--or)' }} />
-                  Label sem negrito
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--t2)', userSelect: 'none' }}>
-                  Label fonte:
-                  <input type="number" className="form-input" min={8} max={32}
-                    value={campo.fontSize || ''}
-                    onChange={e => atualizarCampo(campo._key, 'fontSize', e.target.value ? Number(e.target.value) : null)}
-                    placeholder="—"
-                    disabled={salvando}
-                    style={{ width: 46, height: 24, fontSize: 11, padding: '0 5px' }} />
-                  px
-                </label>
-                {/* Linha 4 — input */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none', color: 'var(--t2)' }}>
-                  <input type="checkbox" checked={!!campo.inputNegrito}
-                    onChange={e => atualizarCampo(campo._key, 'inputNegrito', e.target.checked)}
-                    disabled={salvando} style={{ accentColor: 'var(--or)' }} />
-                  Conteúdo negrito
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--t2)', userSelect: 'none' }}>
-                  Conteúdo fonte:
-                  <input type="number" className="form-input" min={8} max={32}
-                    value={campo.inputFontSize || ''}
-                    onChange={e => atualizarCampo(campo._key, 'inputFontSize', e.target.value ? Number(e.target.value) : null)}
-                    placeholder="—"
-                    disabled={salvando}
-                    style={{ width: 46, height: 24, fontSize: 11, padding: '0 5px' }} />
-                  px
-                </label>
+                      disabled={salvando} style={{ width: 48, height: 22, fontSize: 10, padding: '0 4px' }} />
+                  </div>
+                )}
+
               </div>
             </div>
           </div>
@@ -1031,14 +1286,14 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
           <div className="form-group">
             <label className="form-label">Nome da Tela *</label>
             <input className="form-input" style={h ? { height: h } : {}} value={nomeTela}
-              onChange={e => { setNomeTela(e.target.value); if (!editando) setNomeTabela(slugify(e.target.value)) }}
+              onChange={e => { setNomeTela(e.target.value); if (!editando) setNomeTabela(slugify(e.target.value) ? slugify(e.target.value) + '_001' : '') }}
               placeholder="Ex: Cadastro de Fornecedores" disabled={salvando} />
           </div>
           <div className="form-group">
-            <label className="form-label">Nome da Tabela *</label>
+            <label className="form-label">Nome no Banco (tabela) *</label>
             <input className="form-input" style={{ ...(h ? { height: h } : {}), fontFamily: 'monospace', fontSize: 12, opacity: editando ? .6 : 1 }} value={nomeTabela}
               onChange={e => !editando && setNomeTabela(slugify(e.target.value))}
-              placeholder="cad_fornecedores" disabled={editando || salvando} />
+              placeholder="cad_fornecedores_001" disabled={editando || salvando} />
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr 60px' : '1fr 1fr 80px', gap: compact ? 10 : 12 }}>
@@ -1187,6 +1442,40 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
                   <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
                     onClick={() => setCampos(p => [...p, divisorVazio(p)])} disabled={salvando} title="Linha divisória">
                     <Minus size={12} /> Divisor
+                  </button>
+                  <div style={{ width: 1, height: 18, background: 'var(--bd)', margin: '0 2px' }} />
+                  {/* Componentes especiais */}
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(pastaVazio)} disabled={salvando} title="Campo com autocomplete de valores existentes">
+                    📁 Pasta
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(arquivoVazio)} disabled={salvando} title="Upload de arquivo">
+                    📎 Arquivo
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(imagemVazio)} disabled={salvando} title="Upload de imagem com preview">
+                    🖼️ Imagem
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(avaliacaoVazio)} disabled={salvando} title="Avaliação em estrelas">
+                    ★ Avaliação
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(progressoVazio)} disabled={salvando} title="Barra de progresso">
+                    ▓ Progresso
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(corVazio)} disabled={salvando} title="Seletor de cor HEX">
+                    🎨 Cor
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(urlVazio)} disabled={salvando} title="URL com botão de abrir">
+                    <ExternalLink size={12} /> URL
+                  </button>
+                  <button className="btn btn-ghost" style={{ height: 30, fontSize: 11 }}
+                    onClick={() => addCampo(calculoVazio)} disabled={salvando} title="Campo calculado por fórmula">
+                    𝑓𝑥 Cálculo
                   </button>
                 </div>
               </div>

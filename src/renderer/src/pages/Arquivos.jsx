@@ -129,7 +129,7 @@ export default function Arquivos({ newTrigger }) {
       ])
       setItems(data)
       setPastas(ps)
-      if (data.length > 0) { setCurrentIdx(0); loadForm(data[0]) }
+      if (data.length > 0) { const last = data.length - 1; setCurrentIdx(last); loadForm(data[last]) }
     } catch (err) { setErro('Erro ao carregar: ' + (err?.message ?? String(err))) }
     finally { setLoading(false) }
   }
@@ -210,8 +210,8 @@ export default function Arquivos({ newTrigger }) {
           ...form,
           arquivo_path_origem: form.arquivo_path,
         })
-        const updated = [created, ...items]
-        setItems(updated); setCurrentIdx(0); loadForm(created)
+        const updated = [...items, created]
+        setItems(updated); setCurrentIdx(updated.length - 1); loadForm(created)
         setPastas(await window.api.arquivos.getPastas())
       } else {
         const item = items[currentIdx]

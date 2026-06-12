@@ -42,6 +42,7 @@ const api = {
     copiarLocal:     (caminhoOrigem, nomeArquivo) => ipcRenderer.invoke('arquivos:copiarLocal', { caminhoOrigem, nomeArquivo }),
     abrirPasta:      (pasta)        => ipcRenderer.invoke('arquivos:abrirPasta', pasta),
     copiarClipboard: (caminho)      => ipcRenderer.invoke('arquivos:copiarClipboard', caminho),
+    selecionarECopiar: (opts)     => ipcRenderer.invoke('arquivos:selecionarECopiar', opts),
     importarPasta:  ()            => ipcRenderer.invoke('arquivos:importarPasta'),
     cancelarImport: ()            => ipcRenderer.invoke('arquivos:cancelarImport'),
     onProgresso:    (cb) => {
@@ -72,6 +73,7 @@ const api = {
     toggleFavorito:      (tbl, id, hasTs)          => ipcRenderer.invoke('fb:toggleFavorito', tbl, id, hasTs),
     listarOpcoesLookup:  (tbl, exibir, codigo)     => ipcRenderer.invoke('fb:listarOpcoesLookup', tbl, exibir, codigo),
     listarColunasTabela: (tbl)                      => ipcRenderer.invoke('fb:listarColunasTabela', tbl),
+    valoresDistintos:    (tbl, coluna)              => ipcRenderer.invoke('fb:valoresDistintos', tbl, coluna),
   },
   designer: {
     open: () => ipcRenderer.invoke('designer:open'),

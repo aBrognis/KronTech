@@ -474,6 +474,10 @@ export function registerHandlers() {
   ipcMain.handle('fb:toggleFavorito',      (_, tbl, id, hasTs)         => fb.toggleFavorito(tbl, id, hasTs))
   ipcMain.handle('fb:listarOpcoesLookup',  (_, tbl, exibir, codigo)    => fb.listarOpcoesLookup(tbl, exibir, codigo))
   ipcMain.handle('fb:listarColunasTabela', (_, tbl)                    => fb.listarColunasTabela(tbl))
+  ipcMain.handle('fb:valoresDistintos',   async (_, tbl, coluna) => {
+    const rows = await query(`SELECT DISTINCT ${coluna} FROM ${tbl} WHERE ${coluna} IS NOT NULL AND ${coluna} <> '' ORDER BY ${coluna}`)
+    return rows.map(r => r[coluna])
+  })
 
   // ── Configuração (krontech.ini) ───────────────────────────────────────────
   ipcMain.handle('config:get',          ()          => getConfigForFrontend())
@@ -510,6 +514,45 @@ export function registerHandlers() {
   ipcMain.handle('arquivos:abrirPasta', async (_, caminhoPasta) => {
     const err = await shell.openPath(caminhoPasta)
     return err ? { ok: false, erro: err } : { ok: true }
+  })
+
+  // Seleção + cópia genérica para uso no FormBuilder (sem gravar no banco)
+  ipcMain.handle('arquivos:selecionarECopiar', async (e, { subpasta = 'anexos', filtros = [] } = {}) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Selecionar arquivo',
+      properties: ['openFile'],
+      filters: filtros.length ? filtros : undefined,
+    })
+    if (canceled || !filePaths.length) return null
+    const src     = filePaths[0]
+    const stat    = statSync(src)
+    const cfg     = getConfig()
+    const baseDir = cfg.Caminhos?.arquivos || join(app.getPath('userData'), 'arquivos')
+    const destDir = join(baseDir, subpasta)
+    if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
+    const origName = basename(src)
+    const origExt  = extname(origName)
+    const origBase = basename(origName, origExt)
+    let destName = origName
+    let destPath = join(destDir, destName)
+    let counter  = 1
+    while (existsSync(destPath)) {
+      destName = `${origBase} (${counter++})${origExt}`
+      destPath = join(destDir, destName)
+    }
+    try {
+      copyFileSync(src, destPath)
+    } catch (err) {
+      return { ok: false, erro: err.message }
+    }
+    return {
+      ok:      true,
+      path:    destPath,
+      nome:    destName,
+      ext:     origExt.toLowerCase().replace('.', ''),
+      tamanho: stat.size,
+    }
   })
 
   ipcMain.handle('arquivos:copiarClipboard', (_, caminhoArquivo) => {

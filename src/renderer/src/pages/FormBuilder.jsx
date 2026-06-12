@@ -21,7 +21,7 @@ function notifyTelasUpdated(cb) {
   window.dispatchEvent(new CustomEvent('krontech:telas-updated'))
 }
 
-export default function FormBuilder({ onTelasUpdated, hideHeader = false }) {
+export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTabs = false, initialTab = 'telas' }) {
   const [telas,       setTelas]       = useState([])
   const [modulos,     setModulos]     = useState([])
   const [busca,       setBusca]       = useState('')
@@ -29,7 +29,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false }) {
   const [modalAberto, setModalAberto] = useState(false)
   const [telaEditando,setTelaEditando]= useState(null)
   const [erro,        setErro]        = useState(null)
-  const [abaAtiva,    setAbaAtiva]    = useState('telas')
+  const [abaAtiva,    setAbaAtiva]    = useState(initialTab)
 
   // Estado para gestão de módulos
   const [novoMod,     setNovoMod]     = useState({ nome: '', icone: 'folder', ordem: 99 })
@@ -286,8 +286,8 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false }) {
         </div>
       )}
 
-      {/* Abas */}
-      <div style={hideHeader
+      {/* Abas — ocultas quando a navegação é feita externamente (Designer) */}
+      {!hideTabs && <div style={hideHeader
         ? { display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--bd)', padding: '0 16px', flexShrink: 0, background: 'var(--s3)', minHeight: 44 }
         : { display: 'flex', gap: 0, borderBottom: '1px solid var(--bd)', marginBottom: -4 }
       }>
@@ -321,7 +321,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false }) {
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Conteúdo das abas */}
       <div style={hideHeader

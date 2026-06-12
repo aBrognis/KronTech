@@ -1,9 +1,36 @@
-import { useEffect, useState } from 'react'
-import { Sun, Moon } from 'lucide-react'
-import FormBuilder from './pages/FormBuilder'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  Sun, Moon, X, Plus, ChevronLeft, ChevronRight, LayoutGrid, Package, Zap,
+} from 'lucide-react'
+import Sidebar from './components/Sidebar'
+import FuncoesTab from './pages/FuncoesTab'
+import TelasPage from './pages/designer/TelasPage'
+import ModulosPage from './pages/designer/ModulosPage'
 import { aplicarCorSistema } from './pages/Configuracoes'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
+
+// ── Páginas do Designer mapeadas para abas do FormBuilder ────────────────────
+// pageId do Designer → aba interna do FormBuilder
+// 'funcoes' → componente próprio
+const DESIGNER_PAGES = [
+  { pageId: 'telas',   label: 'Telas',   Icon: LayoutGrid, fbTab: 'telas'   },
+  { pageId: 'modulos', label: 'Módulos', Icon: Package,    fbTab: 'modulos' },
+  { pageId: 'funcoes', label: 'Funções', Icon: Zap,        fbTab: null      },
+]
+
+const PAGE_META = {
+  telas:        { title: 'Telas',        sub: 'CRIADOR DE TELAS'          },
+  modulos:      { title: 'Módulos',      sub: 'ORGANIZAÇÃO · MÓDULOS'     },
+  funcoes:      { title: 'Funções',      sub: 'AUTOMAÇÃO · FUNÇÕES'       },
+  // páginas do KronTech principal que o Sidebar também pode navegar
+  dashboard:           { title: 'Dashboard',         sub: 'VISÃO GERAL'          },
+  agenda:              { title: 'Agenda',             sub: 'GESTÃO · COMPROMISSOS'},
+  arquivos:            { title: 'Arquivos',           sub: 'FERRAMENTAS · ARQUIVOS'},
+  sql:                 { title: 'Editor SQL',         sub: 'FERRAMENTAS · SQL'    },
+  configuracoes:       { title: 'Personalização',     sub: 'SISTEMA · CONFIGURAÇÕES'},
+  'dashboard-designer':{ title: 'Dashboard Config',  sub: 'DASHBOARD · WIDGETS'  },
+}
 
 const KT_ANIM_CSS = `
 @keyframes kr-rR{to{transform:rotate(360deg)}}
@@ -11,6 +38,7 @@ const KT_ANIM_CSS = `
 @keyframes kr-op{0%,100%{opacity:.35}50%{opacity:1}}
 `
 
+// ── Controles de janela ──────────────────────────────────────────────────────
 function WinControls() {
   return (
     <div className="win-controls">
@@ -29,7 +57,8 @@ function WinControls() {
   )
 }
 
-function KtLogo({ size = 32, isDark = true }) {
+// ── Logo KronTech (topbar) ───────────────────────────────────────────────────
+function KtLogo({ size = 22, isDark = true }) {
   const accent = isDark ? '#FF6B2B' : '#E85A1A'
   const kC     = isDark ? '#FFFFFF' : '#111111'
   const dF0    = isDark ? '#2a2a2a' : '#e8e8e8'
@@ -66,9 +95,199 @@ function KtLogo({ size = 32, isDark = true }) {
   )
 }
 
+// ── Painel flutuante Alt+Tab ─────────────────────────────────────────────────
+function TabsPanel({ tabs, activeTabId, onSelect, onClose, onReorder, onHide }) {
+  const [pos, setPos] = useState(null)
+  const dragTabRef = useRef(null)
+  const [localTabs, setLocalTabs] = useState(tabs)
+  const [draggingId, setDraggingId] = useState(null)
+  const [overIdx, setOverIdx] = useState(null)
+  const panelRef = useRef(null)
+
+  useEffect(() => { setLocalTabs(tabs) }, [tabs])
+
+  function onHeaderMouseDown(e) {
+    if (e.target.closest('button')) return
+    e.preventDefault()
+    const rect = panelRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 }
+    const ox = e.clientX - rect.left, oy = e.clientY - rect.top
+    const move = ev => setPos({ x: ev.clientX - ox, y: ev.clientY - oy })
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up) }
+    document.addEventListener('mousemove', move)
+    document.addEventListener('mouseup', up)
+  }
+
+  function onCardDragStart(e, tabId, idx) {
+    dragTabRef.current = { tabId, idx }; setDraggingId(tabId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  function onCardDragOver(e, idx) { e.preventDefault(); setOverIdx(idx) }
+  function onCardDrop(e, toIdx) {
+    e.preventDefault()
+    if (dragTabRef.current == null) return
+    const fromIdx = dragTabRef.current.idx
+    setDraggingId(null); setOverIdx(null); dragTabRef.current = null
+    if (fromIdx === toIdx) return
+    const next = [...localTabs]
+    const [m] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, m)
+    setLocalTabs(next)
+    onReorder(m.id, localTabs[toIdx].id)
+  }
+  function onCardDragEnd() { setDraggingId(null); setOverIdx(null); dragTabRef.current = null }
+
+  const posStyle = pos ? { left: pos.x, top: pos.y, transform: 'none' } : {}
+
+  return (
+    <div ref={panelRef} className={`tabs-panel${pos ? '' : ' centered'}`} style={posStyle}>
+      <div className="tpanel-header" onMouseDown={onHeaderMouseDown}>
+        <span className="tpanel-title">Abas abertas · {localTabs.length}</span>
+        <button className="tpanel-close" onClick={onHide}><X size={11} strokeWidth={2.5} /></button>
+      </div>
+      <div className="tpanel-cards">
+        {localTabs.map((tab, idx) => {
+          const page = DESIGNER_PAGES.find(p => p.pageId === tab.pageId)
+          const Icon = page?.Icon ?? LayoutGrid
+          return (
+            <div
+              key={tab.id}
+              draggable
+              onDragStart={e => onCardDragStart(e, tab.id, idx)}
+              onDragOver={e => onCardDragOver(e, idx)}
+              onDrop={e => onCardDrop(e, idx)}
+              onDragEnd={onCardDragEnd}
+              className={[
+                'tpanel-card',
+                tab.id === activeTabId ? 'active' : '',
+                draggingId === tab.id ? 'dragging' : '',
+                overIdx === idx && draggingId !== tab.id ? 'drag-over' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => onSelect(tab.id)}
+            >
+              <div className="tpanel-card-preview">
+                <Icon size={22} strokeWidth={1.5} />
+              </div>
+              <div className="tpanel-card-footer">
+                <span className="tpanel-card-label">{tab.label}</span>
+                {localTabs.length > 1 && (
+                  <button className="tpanel-card-close" onClick={e => { e.stopPropagation(); onClose(tab.id) }}>
+                    <X size={8} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Barra de abas ────────────────────────────────────────────────────────────
+function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, showPanel, onTogglePanel }) {
+  const scrollRef = useRef(null)
+  const dragState = useRef(null)
+  const [canLeft,  setCanLeft]  = useState(false)
+  const [canRight, setCanRight] = useState(false)
+  const [dragOver, setDragOver] = useState(null)
+
+  function checkScroll() {
+    const el = scrollRef.current; if (!el) return
+    setCanLeft(el.scrollLeft > 0)
+    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1)
+  }
+
+  useEffect(() => { checkScroll() }, [tabs])
+  useEffect(() => {
+    const el = scrollRef.current; if (!el) return
+    const activeEl = el.querySelector(`[data-tabid="${activeTabId}"]`)
+    if (activeEl) activeEl.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+    checkScroll()
+  }, [activeTabId, tabs])
+
+  function scroll(dir) {
+    scrollRef.current?.scrollBy({ left: dir * 140, behavior: 'smooth' })
+    setTimeout(checkScroll, 300)
+  }
+
+  function onTabDragStart(e, tabId) { dragState.current = tabId; e.dataTransfer.effectAllowed = 'move' }
+  function onTabDragOver(e, tabId) { e.preventDefault(); if (dragState.current !== tabId) setDragOver(tabId) }
+  function onTabDrop(e, tabId) {
+    e.preventDefault(); setDragOver(null)
+    if (dragState.current == null || dragState.current === tabId) return
+    onReorder(dragState.current, tabId); dragState.current = null
+  }
+
+  return (
+    <div className="tab-bar no-drag">
+      {canLeft && <button className="tab-scroll-btn" onClick={() => scroll(-1)}><ChevronLeft size={12} /></button>}
+      <div ref={scrollRef} className="tab-list" onScroll={checkScroll}>
+        {tabs.map(tab => {
+          const page = DESIGNER_PAGES.find(p => p.pageId === tab.pageId)
+          const Icon = page?.Icon ?? LayoutGrid
+          return (
+            <button
+              key={tab.id}
+              data-tabid={tab.id}
+              draggable
+              onDragStart={e => onTabDragStart(e, tab.id)}
+              onDragOver={e => onTabDragOver(e, tab.id)}
+              onDrop={e => onTabDrop(e, tab.id)}
+              onDragEnd={() => setDragOver(null)}
+              className={`tab-item${tab.id === activeTabId ? ' active' : ''}${dragOver === tab.id ? ' drag-over' : ''}`}
+              onClick={() => onSelect(tab.id)}
+              title={tab.label}
+            >
+              <span className="tab-icon"><Icon size={12} strokeWidth={1.5} /></span>
+              <span className="tab-label">{tab.label}</span>
+              {tabs.length > 1 && (
+                <span className="tab-close" onClick={e => { e.stopPropagation(); onClose(tab.id) }}>
+                  <X size={10} strokeWidth={2.5} />
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+      {canRight && <button className="tab-scroll-btn" onClick={() => scroll(1)}><ChevronRight size={12} /></button>}
+      <button className={`tab-new-btn${showPanel ? ' open' : ''}`} onClick={onTogglePanel} title="Gerenciar abas">
+        <Plus size={12} strokeWidth={2.5} />
+      </button>
+    </div>
+  )
+}
+
+// ── Conteúdo de cada aba ─────────────────────────────────────────────────────
+function DesignerTabContent({ pageId }) {
+  switch (pageId) {
+    case 'telas':   return <TelasPage />
+    case 'modulos': return <ModulosPage />
+    case 'funcoes': return <FuncoesTab />
+    default:        return <TelasPage />
+  }
+}
+
+// ── Contador de abas ─────────────────────────────────────────────────────────
+let tabCounter = 0
+function makeTab(pageId) {
+  const page = DESIGNER_PAGES.find(p => p.pageId === pageId)
+  return { id: ++tabCounter, pageId, label: page?.label ?? pageId }
+}
+
+// ── Designer App ─────────────────────────────────────────────────────────────
 export default function DesignerApp() {
   const { isDark, toggle } = useTheme()
   const [version, setVersion] = useState('1.1')
+
+  const [tabs,        setTabs]        = useState(() => [makeTab('telas')])
+  const [activeTabId, setActiveTabId] = useState(1)
+  const [showPanel,   setShowPanel]   = useState(false)
+  const tabsRef = useRef(tabs)
+  useEffect(() => { tabsRef.current = tabs }, [tabs])
+
+  const activeTab  = tabs.find(t => t.id === activeTabId) ?? tabs[0]
+  const activePage = activeTab?.pageId ?? 'telas'
+  const topMeta    = PAGE_META[activePage] ?? PAGE_META['telas']
 
   useEffect(() => {
     if (!document.getElementById('kt-anim-css')) {
@@ -84,75 +303,131 @@ export default function DesignerApp() {
     window.api.update?.version().then(v => setVersion(v)).catch(() => {})
   }, [])
 
+  const handleNavigate = useCallback((pageId) => {
+    // Páginas do Designer (telas/modulos/funcoes) → abrem em aba no Designer
+    if (DESIGNER_PAGES.some(p => p.pageId === pageId)) {
+      const existing = tabsRef.current.find(t => t.pageId === pageId)
+      if (existing) { setActiveTabId(existing.id); return }
+      const tab = makeTab(pageId)
+      setTabs(prev => [...prev, tab])
+      setActiveTabId(tab.id)
+      return
+    }
+    // Qualquer outra página (dashboard, agenda, etc.) — ignora no Designer
+    // O Sidebar vai tentar navegar mas essas páginas não existem aqui
+  }, [])
+
+  function closeTab(tabId) {
+    setTabs(prev => {
+      if (prev.length <= 1) return prev
+      const idx = prev.findIndex(t => t.id === tabId)
+      const next = prev.filter(t => t.id !== tabId)
+      if (activeTabId === tabId) setActiveTabId(next[Math.min(idx, next.length - 1)].id)
+      return next
+    })
+  }
+
+  function reorderTabs(fromId, toId) {
+    setTabs(prev => {
+      const next = [...prev]
+      const fromIdx = next.findIndex(t => t.id === fromId)
+      const toIdx   = next.findIndex(t => t.id === toId)
+      if (fromIdx === -1 || toIdx === -1) return prev
+      const [moved] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, moved)
+      return next
+    })
+  }
+
   return (
-    <div className="app" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="app">
 
-      {/* ── Titlebar ─────────────────────────────────────────────────────── */}
-      <header
-        className="drag-region"
-        style={{
-          height: 56,
-          background: 'var(--s1)',
-          borderBottom: '1px solid var(--bd)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 0 0 18px',
-          flexShrink: 0,
-          position: 'relative',
-          zIndex: 5,
-          boxShadow: 'var(--sh-xs)',
-        }}
-      >
-        {/* Lado esquerdo */}
-        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <KtLogo size={34} isDark={isDark} />
+      {/* ── Sidebar real do KronTech — idêntico ao App principal ── */}
+      <Sidebar
+        activePage={activePage}
+        onNavigate={handleNavigate}
+        designerMode
+      />
 
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', letterSpacing: -0.4, lineHeight: 1.25 }}>
-              KronTech Designer
+      <div className="main">
+
+        {/* ── Topbar ── */}
+        <header className="topbar drag-region">
+          <div className="tb-left no-drag">
+            <KtLogo size={22} isDark={isDark} />
+            <h1 className="tb-title">{topMeta.title}</h1>
+            <span className="tb-sub">{topMeta.sub}</span>
+
+            <div style={{ width: 1, height: 14, background: 'var(--bd)', flexShrink: 0, margin: '0 4px' }} />
+
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: 'var(--or4)', border: '1px solid rgba(255,107,43,0.22)',
+              borderRadius: 5, padding: '2px 7px',
+            }}>
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--or)', opacity: 0.85 }} />
+              <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--or)', letterSpacing: 0.3 }}>
+                v{version} · {__BUILD_DATE__} · {__BUILD_TIME__}
+              </span>
             </div>
-            <div style={{ fontSize: 9, color: 'var(--t3)', letterSpacing: 1.6, fontWeight: 600, textTransform: 'uppercase', lineHeight: 1.1, marginTop: 1 }}>
-              Criador de Telas
-            </div>
-          </div>
 
-          {/* Divisor */}
-          <div style={{ width: 1, height: 20, background: 'var(--bd)', flexShrink: 0, margin: '0 2px' }} />
-
-          {/* Badge versão */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: 'var(--or4)',
-            border: '1px solid rgba(255,107,43,0.22)',
-            borderRadius: 6, padding: '3px 9px',
-          }}>
-            <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--or)', opacity: 0.85 }} />
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--or)', letterSpacing: 0.3 }}>
-              v{version} · {__BUILD_DATE__} · {__BUILD_TIME__}
-            </span>
+            {import.meta.env.DEV && (
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,107,43,.15)', color: 'var(--or)', border: '1px solid rgba(255,107,43,.3)', textTransform: 'uppercase' }}>
+                DEV
+              </span>
+            )}
           </div>
+          <div className="tb-right no-drag">
+            <button className="theme-toggle no-transition" onClick={toggle} title={isDark ? 'Modo claro' : 'Modo escuro'}>
+              {isDark ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}
+            </button>
+            <WinControls />
+          </div>
+        </header>
+
+        {/* ── Tab bar ── */}
+        <TabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onSelect={id => { setActiveTabId(id); setShowPanel(false) }}
+          onClose={closeTab}
+          onReorder={reorderTabs}
+          showPanel={showPanel}
+          onTogglePanel={() => setShowPanel(v => !v)}
+        />
+
+        {/* ── Painel Alt+Tab ── */}
+        {showPanel && (
+          <>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 9400, background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(3px)' }}
+              onClick={() => setShowPanel(false)}
+            />
+            <TabsPanel
+              tabs={tabs}
+              activeTabId={activeTabId}
+              onSelect={id => { setActiveTabId(id); setShowPanel(false) }}
+              onClose={closeTab}
+              onReorder={reorderTabs}
+              onHide={() => setShowPanel(false)}
+            />
+          </>
+        )}
+
+        {/* ── Conteúdo das abas ── */}
+        <div className="tab-content-area">
+          {tabs.map(tab => (
+            <main
+              key={tab.id}
+              className="content"
+              style={{ display: tab.id === activeTabId ? 'flex' : 'none' }}
+            >
+              <DesignerTabContent pageId={tab.pageId} />
+            </main>
+          ))}
         </div>
 
-        {/* Lado direito */}
-        <div className="no-drag" style={{ display: 'flex', alignItems: 'center', gap: 6, height: '100%' }}>
-          <span className="tb-dot" />
-          <button
-            className="theme-toggle no-transition"
-            onClick={toggle}
-            title={isDark ? 'Modo claro' : 'Modo escuro'}
-          >
-            {isDark ? <Sun size={14} strokeWidth={2} /> : <Moon size={14} strokeWidth={2} />}
-          </button>
-          <WinControls />
-        </div>
-      </header>
-
-      {/* ── Conteúdo ─────────────────────────────────────────────────────── */}
-      <main style={{ flex: 1, overflow: 'hidden', padding: 0 }}>
-        <FormBuilder hideHeader onTelasUpdated={() => {}} />
-      </main>
-
+      </div>
     </div>
   )
 }

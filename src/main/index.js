@@ -34,7 +34,8 @@ function createWindow() {
     win.setIcon(getIcon())
   })
 
-  win.on('ready-to-show', () => { win.show() })
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+  win.on('ready-to-show', () => { win.show(); if (isDev) win.maximize() })
 
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -51,8 +52,6 @@ function createWindow() {
       }
     }
   })
-
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
   if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  LayoutDashboard, CalendarDays,
+  LayoutDashboard, CalendarDays, Package, Zap,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
@@ -30,18 +30,30 @@ const MENU_BASE = [
     id: 'ferramentas',
     baseLabel: 'Ferramentas',
     items: [
-{ id: 'arquivos',    label: 'Arquivos',         Icon: FolderOpen },
+      { id: 'arquivos',    label: 'Arquivos',         Icon: FolderOpen },
       { id: 'sql',         label: 'Editor SQL',       Icon: Database   },
       { id: 'formbuilder', label: 'KronTech Designer', Icon: LayoutGrid },
     ]
   }
 ]
 
+const MENU_DESIGNER = [
+  {
+    id: 'designer',
+    baseLabel: 'Designer',
+    items: [
+      { id: 'telas',   label: 'Telas',   Icon: LayoutGrid },
+      { id: 'modulos', label: 'Módulos', Icon: Package    },
+      { id: 'funcoes', label: 'Funções', Icon: Zap        },
+    ]
+  }
+]
+
 const LABELS_KEY = { inicio: 'label_inicio', gestao: 'label_gestao', ferramentas: 'label_ferramentas' }
 
-export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
+export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hideFormbuilder = false, designerMode = false }) {
   const [collapsed,      setCollapsed]      = useState(false)
-  const [openGroups,     setOpenGroups]     = useState({ inicio: true, gestao: true, ferramentas: true })
+  const [openGroups,     setOpenGroups]     = useState({ inicio: true, gestao: true, ferramentas: true, designer: true })
   const [version,        setVersion]        = useState('1.1')
   const [telasDin,       setTelasDin]       = useState([])
   const [reloading,      setReloading]      = useState(false)
@@ -154,8 +166,14 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
     items: telas.map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) }))
   })
 
+  // Remove o item formbuilder se solicitado (ex: quando já estamos dentro do Designer)
+  const filterItems = items => hideFormbuilder ? items.filter(i => i.id !== 'formbuilder') : items
+
+  // Modo Designer: menu fixo com Telas/Módulos/Funções, sem telas dinâmicas
   let menu
-  if (ordemGlobal.length) {
+  if (designerMode) {
+    menu = MENU_DESIGNER
+  } else if (ordemGlobal.length) {
     const result = []
     const usedDin = new Set()
     ordemGlobal.forEach(sid => {
@@ -168,7 +186,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
       } else {
         const base = MENU_BASE.find(g => g.id === sid)
         if (!base) return
-        result.push({ ...base, label: labelsMenu[sid] || base.baseLabel })
+        result.push({ ...base, items: filterItems(base.items), label: labelsMenu[sid] || base.baseLabel })
       }
     })
     Object.entries(gruposDin).forEach(([nome, tls]) => {
@@ -179,7 +197,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
     const menuFixo = ordemSecoes
       .map(id => MENU_BASE.find(g => g.id === id))
       .filter(Boolean)
-      .map(g => ({ ...g, label: labelsMenu[g.id] || g.baseLabel }))
+      .map(g => ({ ...g, items: filterItems(g.items), label: labelsMenu[g.id] || g.baseLabel }))
     menu = [
       ...menuFixo,
       ...Object.entries(gruposDin).map(([nome, tls]) => buildDynGroup(nome, tls))
@@ -192,13 +210,16 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
   const horaStr = `${String(hh).padStart(2, '0')}:${mm}`
   const segStr  = ss
 
-  // barra = tempo RESTANTE do dia (começa cheia, esvazia até meia-noite)
+  // barra = tempo DECORRIDO do dia (cresce da esquerda, verde→amarelo→vermelho)
   const totalSeg   = 24 * 3600
   const segAtual   = hh * 3600 + agora.getMinutes() * 60 + agora.getSeconds()
-  const segRestante = totalSeg - segAtual
-  const barPct     = Math.round((segRestante / totalSeg) * 100)
+  const barPct     = Math.round((segAtual / totalSeg) * 100)
+
+  // cor do texto acompanha a posição na barra: verde→amarelo→vermelho
+  const barTextColor = barPct < 40 ? '#22c55e' : barPct < 70 ? '#eab308' : '#ef4444'
 
   // tempo restante formatado
+  const segRestante = totalSeg - segAtual
   const hRest = Math.floor(segRestante / 3600)
   const mRest = Math.floor((segRestante % 3600) / 60)
   const sRest = segRestante % 60
@@ -214,14 +235,122 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
     return 'Boa noite'
   }
 
+  const MSGS = {
+    manha: [
+      'Cada hora conta. Domine o dia.',
+      'O dia é uma tela em branco. Pinte com propósito.',
+      'Comece antes de estar pronto.',
+      'A disciplina de hoje é a vitória de amanhã.',
+      'Pequenos passos, grandes conquistas.',
+      'Foque no que você pode controlar.',
+      'Quem age cedo, colhe primeiro.',
+      'A manhã pertence aos que se antecipam.',
+      'Um passo agora vale dez depois.',
+      'Clareza de manhã, resultado à noite.',
+      'Construa hoje o que vai celebrar amanhã.',
+      'Energia alta, foco total.',
+      'O sucesso começa antes do café esfriar.',
+      'Priorize o que move o ponteiro.',
+      'Menos desculpa, mais ação.',
+      'O dia não espera. Você também não deveria.',
+      'Execute com intenção.',
+      'Bom dia é o dia que você decide ser bom.',
+      'Sua versão mais produtiva acorda cedo.',
+      'Comece. O resto vem enquanto você anda.',
+    ],
+    tarde: [
+      'A tarde é sua. Execute sem limites.',
+      'Metade do dia feito — não desperdice a outra.',
+      'Consistência bate talento todos os dias.',
+      'Não espere a motivação. Aja primeiro.',
+      'O progresso acontece um passo de cada vez.',
+      'Feito é melhor que perfeito.',
+      'Cada tarefa concluída é uma vitória.',
+      'O cansaço passa. O resultado fica.',
+      'Ajuste a rota, mas não pare o motor.',
+      'A tarde decide o que a manhã prometeu.',
+      'Foco é escassez bem gerenciada.',
+      'Entregue mais do que o esperado.',
+      'Quem não para, chega.',
+      'O detalhe que você caprichar agora faz diferença.',
+      'Mova o que importa. Ignore o resto.',
+      'Produtividade é escolha, não talento.',
+      'Cada hora investida tem juros.',
+      'Não meça o esforço. Meça o impacto.',
+      'A tarde eficiente salva a semana.',
+      'Termine forte o que começou bem.',
+    ],
+    noiteCedo: [
+      'Hora de fechar com chave de ouro.',
+      'O que você entregou hoje?',
+      'Revisar, ajustar, evoluir.',
+      'O esforço de hoje vira resultado amanhã.',
+      'Terminar bem é começar melhor.',
+      'Cada entrega conta na construção do todo.',
+      'Avalie o dia com honestidade.',
+      'Feche pendências antes de fechar os olhos.',
+      'O que ficou pra amanhã pode ser resolvido agora.',
+      'Organize a mente antes de descansar.',
+      'Um bom encerramento vale um bom começo.',
+      'Celebre o que foi feito. Planeje o que vem.',
+      'O fim do dia é o início do próximo.',
+      'Gratidão pelo que foi. Foco no que vem.',
+      'Quem reflete hoje, age melhor amanhã.',
+      'Desacelere com propósito.',
+      'O que você aprendeu hoje?',
+      'A noite recarrega quem usou bem o dia.',
+      'Fechar bem é tão importante quanto começar.',
+      'Cada dia encerrado com intencionalidade conta.',
+    ],
+    noite: [
+      'O mundo dorme. Você decide.',
+      'Silêncio é combustível para quem sabe usar.',
+      'Grandes ideias nascem quando tudo cala.',
+      'A madrugada pertence a quem não desiste.',
+      'O amanhã agradece o que você faz agora.',
+      'Enquanto o mundo para, você avança.',
+      'Na quietude, nasce a clareza.',
+      'Noite funda, mente afiada.',
+      'O silêncio da noite é o barulho do progresso.',
+      'Quem trabalha no escuro, brilha na luz.',
+      'A concentração da madrugada é um superpoder.',
+      'Menos distrações, mais profundidade.',
+      'A noite revela o que o dia esconde.',
+      'Cada hora noturna vale por duas diurnas.',
+      'Enquanto dormem, você constrói.',
+      'O descanso também é estratégia.',
+      'Noite é tempo de criar, não de desperdiçar.',
+      'Quem planta na noite, colhe de manhã.',
+      'O universo conspira com quem age.',
+      'A última hora do dia pode ser a mais importante.',
+    ],
+  }
+
+  const [msgIdx, setMsgIdx] = useState(0)
+  const [msgVisible, setMsgVisible] = useState(true)
+
+  const msgList = hh >= 5 && hh < 12 ? MSGS.manha
+    : hh >= 12 && hh < 18 ? MSGS.tarde
+    : hh >= 18 && hh < 22 ? MSGS.noiteCedo
+    : MSGS.noite
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMsgVisible(false)
+      setTimeout(() => {
+        setMsgIdx(i => (i + 1) % msgList.length)
+        setMsgVisible(true)
+      }, 500)
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [msgList.length])
+
   function getSubMsg() {
-    if (hh >= 5  && hh < 12) return 'Cada hora conta. Domine o dia.'
-    if (hh >= 12 && hh < 18) return 'A tarde é sua. Execute sem limites.'
-    if (hh >= 18 && hh < 22) return 'Hora de fechar com chave de ouro.'
-    return 'O mundo dorme. Você decide.'
+    return msgList[msgIdx % msgList.length]
   }
 
   return (
+    <>
     <aside className={`sb${collapsed ? ' collapsed' : ''}`}>
 
       <button className="sb-toggle" onClick={() => setCollapsed(p => !p)}>
@@ -283,6 +412,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
         <div className="sb-bottom">
 
           <div className="sb-actions">
+            {!designerMode && (<>
             <button
               className={`ni${activePage === 'configuracoes' ? ' active' : ''}`}
               data-tip="Personalização"
@@ -296,13 +426,14 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
               className="ni"
               data-tip="Recarregar menu"
               disabled={reloading}
-              onClick={() => carregarTelas(true)}
+              onClick={() => { carregarTelas(true); carregarPersonalizacao() }}
             >
               <span className="ni-icon">
                 <RefreshCw size={16} strokeWidth={1.75} style={{ animation: reloading ? 'spin 0.8s linear infinite' : 'none' }} />
               </span>
               <span className="ni-label">{reloading ? 'Carregando...' : 'Recarregar menu'}</span>
             </button>
+            </>)}
           </div>
 
           <div className="sb-welcome">
@@ -328,17 +459,22 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
 
             {/* frase com efeito de digitação via CSS */}
             <div className="sb-wel-msg">
-              <span className="sb-wel-msg-inner">{getSubMsg()}</span>
+              <span className="sb-wel-msg-inner" style={{ opacity: msgVisible ? 1 : 0, transition: 'opacity 0.5s ease' }}>{getSubMsg()}</span>
               <span className="sb-wel-cursor" />
             </div>
 
-            {/* barra — tempo restante do dia */}
+            {/* barra — tempo decorrido do dia */}
             <div className="sb-wel-bar-track">
-              <div className="sb-wel-bar-fill" style={{ width: `${barPct}%` }} />
+              <div className="sb-wel-bar-fill" style={{
+                width: `${barPct}%`,
+                backgroundImage: 'linear-gradient(90deg, #22c55e 0%, #eab308 50%, #ef4444 100%)',
+                backgroundSize: `${(100 / Math.max(barPct, 1)) * 100}% 100%`,
+                backgroundPosition: 'left center',
+              }} />
             </div>
             <div className="sb-wel-bar-label">
               <span className="sb-wel-bar-reset">↻ inicio de um novo dia em</span>
-              <span className="sb-wel-bar-time">{tempoRestante}</span>
+              <span className="sb-wel-bar-time" style={{ color: barTextColor }}>{tempoRestante}</span>
             </div>
           </div>
 
@@ -346,11 +482,13 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
 
       </div>
 
-      {/* Modal confirmação KronTech Designer */}
+    </aside>
+
+      {/* Modal confirmação KronTech Designer — fora do aside para cobrir tela toda */}
       {designerConfirm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)',
+          background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(6px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <div style={{
@@ -369,18 +507,17 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0 }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setDesignerConfirm(false)}>
-                Cancelar
-              </button>
               <button className="btn btn-primary" style={{ height: 32, fontSize: 12 }} onClick={() => { setDesignerConfirm(false); window.api.designer?.open() }}>
                 Abrir
+              </button>
+              <button className="btn btn-ghost" style={{ height: 32, fontSize: 12 }} onClick={() => setDesignerConfirm(false)}>
+                Cancelar
               </button>
             </div>
           </div>
         </div>
       )}
-
-    </aside>
+    </>
   )
 }
 
