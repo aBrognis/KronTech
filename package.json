@@ -53,11 +53,13 @@
   "build": {
     "appId": "com.anderson.krontech",
     "productName": "KronTech",
+    "artifactName": "KronTech-Setup-${version}.exe",
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico",
       "sign": null,
-      "certificateFile": null
+      "certificateFile": null,
+      "artifactName": "KronTech-Setup-${version}.exe"
     },
     "nsis": {
       "oneClick": false,
