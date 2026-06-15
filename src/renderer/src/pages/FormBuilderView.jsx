@@ -2019,8 +2019,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                     if (redefinirNova !== redefinirConf) { setRedefinirErro('As senhas não coincidem.'); return }
                     setRedefinirSaving(true)
                     try {
-                      const pkCampo = tela?.campos?.find(c => c.tipo === 'codigo_auto')?.nome_campo || 'id'
-                      const r = await window.api.auth.redefinirSenha({ tabelaUsuario: tela.nome_tabela, campoCodigo: pkCampo, id: form[pkCampo], novaSenha: redefinirNova })
+                      const r = await window.api.auth.redefinirSenha({ tabelaUsuario: tela.nome_tabela, campoCodigo: 'id', id: form.id, novaSenha: redefinirNova })
                       if (r.ok) { setRedefinirOpen(false) }
                       else setRedefinirErro(r.erro || 'Erro ao redefinir senha.')
                     } catch (e) { setRedefinirErro(e.message) }
