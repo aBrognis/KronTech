@@ -49,6 +49,27 @@ function createDesignerWindow() {
   }
 }
 
+async function hashCamposSenha(nomeTabela, dados) {
+  if (!dados || typeof dados !== 'object') return dados
+  try {
+    const camposSenha = await query(
+      `SELECT tc.nome_campo FROM kr_tela_campos tc
+       JOIN kr_telas t ON t.id = tc.tela_id
+       WHERE t.nome_tabela = $1 AND tc.tipo = 'senha' AND tc.ativo = TRUE`,
+      [nomeTabela]
+    )
+    if (!camposSenha?.length) return dados
+    const resultado = { ...dados }
+    for (const { nome_campo } of camposSenha) {
+      const val = resultado[nome_campo]
+      if (val && typeof val === 'string' && val !== '***' && !val.startsWith('$2b$')) {
+        resultado[nome_campo] = await bcrypt.hash(val, 10)
+      }
+    }
+    return resultado
+  } catch { return dados }
+}
+
 export function registerHandlers() {
 
   // ── Controles da janela ──────────────────────────────────────────────────
@@ -479,8 +500,14 @@ export function registerHandlers() {
   ipcMain.handle('fb:reativarTela',     (_, id)         => fb.reativarTela(id))
   ipcMain.handle('fb:listarRegistros',  (_, tbl, opts)  => fb.listarRegistros(tbl, opts))
   ipcMain.handle('fb:getAllRegistros',   (_, tbl)        => fb.getAllRegistros(tbl))
-  ipcMain.handle('fb:inserirRegistro',  (_, tbl, dados) => fb.inserirRegistro(tbl, dados))
-  ipcMain.handle('fb:atualizarRegistro',(_, tbl, id, d, hasTs) => fb.atualizarRegistro(tbl, id, d, hasTs))
+  ipcMain.handle('fb:inserirRegistro',  async (_, tbl, dados) => {
+    const dadosHash = await hashCamposSenha(tbl, dados)
+    return fb.inserirRegistro(tbl, dadosHash)
+  })
+  ipcMain.handle('fb:atualizarRegistro', async (_, tbl, id, d, hasTs) => {
+    const dadosHash = await hashCamposSenha(tbl, d)
+    return fb.atualizarRegistro(tbl, id, dadosHash, hasTs)
+  })
   ipcMain.handle('fb:reordenarTelas',   (_, items)      => fb.reordenarTelas(items))
   ipcMain.handle('fb:inativarRegistro', (_, tbl, id, hasTs)     => fb.inativarRegistro(tbl, id, hasTs))
   ipcMain.handle('fb:proximoCodigo',    (_, tbl, campo, padrao, seqChars) => fb.proximoCodigo(tbl, campo, padrao, seqChars))

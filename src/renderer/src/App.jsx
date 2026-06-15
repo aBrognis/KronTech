@@ -458,7 +458,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} />
+      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} onLogout={() => { setSessao(null); setAppPhase('login') }} />
       <div className="main">
 
         {/* ── Topbar ── */}

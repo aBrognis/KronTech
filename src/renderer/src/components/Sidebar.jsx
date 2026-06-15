@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap,
-  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings
+  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, LogOut
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -51,7 +51,7 @@ const MENU_DESIGNER = [
 
 const LABELS_KEY = { inicio: 'label_inicio', gestao: 'label_gestao', ferramentas: 'label_ferramentas' }
 
-export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hideFormbuilder = false, designerMode = false, sessao = null }) {
+export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hideFormbuilder = false, designerMode = false, sessao = null, onLogout }) {
   const [collapsed,      setCollapsed]      = useState(false)
   const [openGroups,     setOpenGroups]     = useState({ inicio: true, gestao: true, ferramentas: true, designer: true })
   const [version,        setVersion]        = useState('1.1')
@@ -433,6 +433,14 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
               </span>
               <span className="ni-label">{reloading ? 'Carregando...' : 'Recarregar menu'}</span>
             </button>
+            {onLogout && (
+            <button className="ni" data-tip="Sair" onClick={onLogout}>
+              <span className="ni-icon">
+                <LogOut size={16} strokeWidth={1.75} />
+              </span>
+              <span className="ni-label">Sair</span>
+            </button>
+            )}
             </>)}
           </div>
 
