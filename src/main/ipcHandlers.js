@@ -62,7 +62,9 @@ async function hashCamposSenha(nomeTabela, dados) {
     const resultado = { ...dados }
     for (const { nome_campo } of camposSenha) {
       const val = resultado[nome_campo]
-      if (val && typeof val === 'string' && val !== '***' && !val.startsWith('$2b$')) {
+      if (!val || val === '***' || val === '') {
+        delete resultado[nome_campo]
+      } else if (typeof val === 'string' && !val.startsWith('$2b$')) {
         resultado[nome_campo] = await bcrypt.hash(val, 10)
       }
     }
