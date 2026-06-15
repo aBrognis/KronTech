@@ -275,9 +275,20 @@ async function migration1() {
     `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS font_size      SMALLINT DEFAULT NULL`,
     `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_negrito  BOOLEAN  DEFAULT FALSE`,
     `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_font_size SMALLINT DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS label_cor      VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_align    VARCHAR(10)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_cor      VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_bg       VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_radius  SMALLINT     DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_width   SMALLINT     DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_color   VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS opcoes_layout  VARCHAR(10)  DEFAULT NULL`,
   ]) { await query(col).catch(() => {}) }
   await query(`
     ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_tipo_check
+  `).catch(() => {})
+  await query(`
+    ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check
   `).catch(() => {})
 
   // ── Tabela de usuários ────────────────────────────────────────────────────
@@ -321,6 +332,12 @@ async function migration1() {
         WHEN 'booleano'    THEN 'BOOLEAN'
         WHEN 'texto_longo' THEN 'TEXT'
         WHEN 'arquivo'     THEN 'TEXT'
+        WHEN 'imagem'      THEN 'TEXT'
+        WHEN 'url'         THEN 'TEXT'
+        WHEN 'login'       THEN 'VARCHAR(100)'
+        WHEN 'senha'       THEN 'TEXT'
+        WHEN 'documento'   THEN 'VARCHAR(20)'
+        WHEN 'cep'         THEN 'VARCHAR(10)'
         WHEN 'select'      THEN 'VARCHAR(200)'
         WHEN 'radio'       THEN 'VARCHAR(200)'
         WHEN 'tags'        THEN 'TEXT'
@@ -526,6 +543,9 @@ export async function initDb() {
     )
     console.log(`[db] Schema atualizado para versão ${SCHEMA_VERSION}`)
   }
+
+  // Remove constraints problemáticos a cada startup (idempotente)
+  await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(() => {})
 
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()

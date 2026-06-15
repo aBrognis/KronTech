@@ -3,8 +3,8 @@ import { join } from 'path'
 import { loadConfig, encryptSensitiveConfig } from './config'
 import { registerHandlers } from './ipcHandlers'
 import { initDb } from './db'
-import { startReminderCheck } from './reminder'
-import { setupAutoUpdater } from './updater'
+import { startReminderCheck } from './services/reminder'
+import { setupAutoUpdater } from './services/updater'
 
 function getIcon() {
   const name = nativeTheme.shouldUseDarkColors ? 'icon.ico' : 'icon-light.ico'
@@ -63,11 +63,11 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.krontech.app')
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   loadConfig()              // lê/cria C:\KronTech\krontech.ini
   encryptSensitiveConfig() // criptografa senhas em texto puro (Windows DPAPI)
   registerHandlers()
-  initDb().catch(err => console.error('initDb error:', err.message))
+  await initDb().catch(err => console.error('initDb error:', err.message))
   startReminderCheck()
   setupAutoUpdater()
   createWindow()

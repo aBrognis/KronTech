@@ -51,7 +51,7 @@ const MENU_DESIGNER = [
 
 const LABELS_KEY = { inicio: 'label_inicio', gestao: 'label_gestao', ferramentas: 'label_ferramentas' }
 
-export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hideFormbuilder = false, designerMode = false }) {
+export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hideFormbuilder = false, designerMode = false, sessao = null }) {
   const [collapsed,      setCollapsed]      = useState(false)
   const [openGroups,     setOpenGroups]     = useState({ inicio: true, gestao: true, ferramentas: true, designer: true })
   const [version,        setVersion]        = useState('1.1')
@@ -144,7 +144,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       const extras = {}
       telas.forEach(t => { if (t.modulo_nome) extras[`din_${t.modulo_nome}`] = true })
       if (telas.length) setOpenGroups(prev => ({ ...prev, ...extras }))
-    } catch { /* banco pode não estar pronto ainda */ }
+    } catch (e) { console.error('[Sidebar] carregarTelas:', e) }
     finally { if (showSpin) setReloading(false) }
   }
 
@@ -426,7 +426,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
               className="ni"
               data-tip="Recarregar menu"
               disabled={reloading}
-              onClick={() => { carregarTelas(true); carregarPersonalizacao() }}
+              onClick={() => { carregarTelas(true); carregarPersonalizacao(); window.dispatchEvent(new CustomEvent('krontech:telas-updated')) }}
             >
               <span className="ni-icon">
                 <RefreshCw size={16} strokeWidth={1.75} style={{ animation: reloading ? 'spin 0.8s linear infinite' : 'none' }} />
@@ -447,7 +447,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
             </div>
 
             <div className="sb-wel-name">
-              {(nomeUsuario || 'Usuário').toUpperCase()}
+              {(sessao?.nome || nomeUsuario || 'Usuário').toUpperCase()}
             </div>
 
             {/* relógio */}

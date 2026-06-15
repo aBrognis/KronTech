@@ -1,6 +1,6 @@
 {
   "name": "krontech",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "KronTech — Ordem no caos do dia a dia.",
   "main": "out/main/index.js",
   "scripts": {
@@ -21,7 +21,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "better-sqlite3": "^12.10.0",
+    "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "echarts": "^6.1.0",
@@ -36,7 +36,6 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
-    "@electron/rebuild": "^4.0.4",
     "@resvg/resvg-js": "^2.6.2",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.5.0",
@@ -44,7 +43,6 @@
     "electron": "^30.5.1",
     "electron-builder": "^24.9.1",
     "electron-vite": "^2.1.0",
-    "playwright-core": "^1.60.0",
     "postcss": "^8.5.15",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

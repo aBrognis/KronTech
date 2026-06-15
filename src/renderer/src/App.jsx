@@ -307,6 +307,7 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, sho
 // ── App principal ────────────────────────────────────────────────────────────
 export default function App() {
   const [appPhase, setAppPhase] = useState(import.meta.env.DEV ? 'app' : 'splash')
+  const [sessao,   setSessao]   = useState(null) // { usuario, nome, registro }
 
   // Abas: cada aba tem { id, pageId, label }
   const [tabs,        setTabs]        = useState(() => [makeTab('dashboard')])
@@ -453,11 +454,11 @@ export default function App() {
   }
 
   if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} />
-  if (appPhase === 'login')  return <><LoginPage onLogin={() => { window.api.win.maximize(); setAppPhase('app') }} /><UpdateBanner /></>
+  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); setAppPhase('app') }} /><UpdateBanner /></>
 
   return (
     <div className="app">
-      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} />
+      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} />
       <div className="main">
 
         {/* ── Topbar ── */}

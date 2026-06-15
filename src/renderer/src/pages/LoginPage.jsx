@@ -212,8 +212,13 @@ export default function LoginPage({ onLogin }) {
     try {
       if (lembrar) localStorage.setItem('kt-lembrar-usuario', usuario.trim())
       else         localStorage.removeItem('kt-lembrar-usuario')
-      await new Promise(r => setTimeout(r, 1100))
-      onLogin?.({ usuario: usuario.trim() })
+      const res = await window.api.auth.login(usuario.trim(), senha)
+      if (!res.ok) {
+        setError(res.erro || 'Usuário ou senha incorretos.')
+        setLoading(false)
+        return
+      }
+      onLogin?.({ usuario: usuario.trim(), nome: res.user?.nome || usuario.trim(), registro: res.user || null })
     } catch {
       setError('Falha na autenticação. Verifique suas credenciais.')
       setLoading(false)

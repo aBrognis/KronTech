@@ -43,6 +43,7 @@ const api = {
     abrirPasta:      (pasta)        => ipcRenderer.invoke('arquivos:abrirPasta', pasta),
     copiarClipboard: (caminho)      => ipcRenderer.invoke('arquivos:copiarClipboard', caminho),
     selecionarECopiar: (opts)     => ipcRenderer.invoke('arquivos:selecionarECopiar', opts),
+    lerBase64:         (path)     => ipcRenderer.invoke('arquivos:lerBase64', path),
     importarPasta:  ()            => ipcRenderer.invoke('arquivos:importarPasta'),
     cancelarImport: ()            => ipcRenderer.invoke('arquivos:cancelarImport'),
     onProgresso:    (cb) => {
@@ -115,7 +116,8 @@ const api = {
     },
   },
   auth: {
-    login: (usuario, senha) => ipcRenderer.invoke('auth:login', usuario, senha),
+    login:          (usuario, senha)  => ipcRenderer.invoke('auth:login', usuario, senha),
+    redefinirSenha: (opts)            => ipcRenderer.invoke('auth:redefinirSenha', opts),
   },
 }
 
