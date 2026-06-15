@@ -319,7 +319,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
   function carregarForm(t, reg) {
     if (!t || !reg) return
-    const f = {}
+    const f = { _id: reg.id }
     t.campos.filter(c => c.ativo && !TIPOS_SISTEMA.includes(c.tipo)).forEach(c => {
       let v = reg[c.nome_campo] ?? ''
       // Aplica máscara nos campos de documento ao carregar do banco
@@ -1437,7 +1437,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     )
 
     if (campo.tipo === 'senha') {
-      const registroId = form[tela?.campos?.find(c => c.tipo === 'codigo_auto')?.nome_campo || 'id']
+      const registroId = form._id
       return (
         <div style={{ display: 'flex', gap: 4, height: '100%' }}>
           <div className="form-input" style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', color: 'var(--t3)', letterSpacing: 3, fontSize: 16 }}>
@@ -2019,7 +2019,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                     if (redefinirNova !== redefinirConf) { setRedefinirErro('As senhas não coincidem.'); return }
                     setRedefinirSaving(true)
                     try {
-                      const r = await window.api.auth.redefinirSenha({ tabelaUsuario: tela.nome_tabela, campoCodigo: 'id', id: form.id, novaSenha: redefinirNova })
+                      const r = await window.api.auth.redefinirSenha({ tabelaUsuario: tela.nome_tabela, campoCodigo: 'id', id: form._id, novaSenha: redefinirNova })
                       if (r.ok) { setRedefinirOpen(false) }
                       else setRedefinirErro(r.erro || 'Erro ao redefinir senha.')
                     } catch (e) { setRedefinirErro(e.message) }
