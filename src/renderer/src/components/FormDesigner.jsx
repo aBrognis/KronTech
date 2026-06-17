@@ -12,7 +12,7 @@ import {
 export const CANVAS_W    = 780
 export const CANVAS_H_MIN = 480
 export const SNAP        = 8
-const GUIDE_T = 5
+const GUIDE_T = 12
 
 const TIPO_ICONS = {
   texto:       Type,    numero:      Hash,
@@ -102,13 +102,18 @@ const TIPOS_DESIGNER = [
 
 function s(v) { return Math.max(0, Math.round(v / SNAP) * SNAP) }
 
-export function autoPos(campos, tipo) {
+export function autoPos(campos, tipo, opcoes) {
   const maxY = campos.reduce((m, c) => Math.max(m, (c.y_pos || 0) + (c.h_px || 60)), 0)
+  let h = TIPO_H_DEFAULT[tipo] || 60
+  if ((tipo === 'flags' || tipo === 'radio') && Array.isArray(opcoes) && opcoes.length > 0) {
+    // header(28) + padding(16) + per-item(22) * n
+    h = 28 + 16 + opcoes.length * 22
+  }
   return {
     x_pos: 0,
     y_pos: maxY > 0 ? maxY + SNAP : 0,
     w_px:  (tipo === 'texto_longo' || tipo === 'divisor') ? CANVAS_W : 280,
-    h_px:  TIPO_H_DEFAULT[tipo] || 60,
+    h_px:  h,
   }
 }
 
@@ -260,7 +265,8 @@ export default function FormDesigner({
   // ── Smart guides ────────────────────────────────────────────────────────────
   function computeGuides(draggingCampos, allCampos) {
     const others = allCampos.filter(c => !draggingCampos.find(d => d._key === c._key))
-    const res = []
+    // Collect candidates: { type, movingEdge, value, dist }
+    const candidates = []
     draggingCampos.forEach(dc => {
       const dL = dc.x_pos || 0, dT = dc.y_pos || 0
       const dR = dL + (dc.w_px || 280), dB = dT + (dc.h_px || 60)
@@ -270,20 +276,36 @@ export default function FormDesigner({
         const oR = oL + (oc.w_px || 280), oB = oT + (oc.h_px || 60)
         const oMX = (oL + oR) / 2, oMY = (oT + oB) / 2
         ;[[dL,oL],[dL,oR],[dL,oMX],[dR,oL],[dR,oR],[dR,oMX],[dMX,oMX]].forEach(([a,b]) => {
-          if (Math.abs(a - b) < GUIDE_T) res.push({ type: 'v', value: b })
+          const dist = Math.abs(a - b)
+          if (dist < GUIDE_T) candidates.push({ type:'v', movingEdge:a, value:b, dist })
         })
         ;[[dT,oT],[dT,oB],[dT,oMY],[dB,oT],[dB,oB],[dB,oMY],[dMY,oMY]].forEach(([a,b]) => {
-          if (Math.abs(a - b) < GUIDE_T) res.push({ type: 'h', value: b })
+          const dist = Math.abs(a - b)
+          if (dist < GUIDE_T) candidates.push({ type:'h', movingEdge:a, value:b, dist })
         })
       })
     })
-    return res.filter((g,i,arr) => arr.findIndex(x => x.type===g.type && Math.abs(x.value-g.value)<1)===i)
+    // Per moving edge, keep only the closest static edge
+    const best = {}
+    candidates.forEach(c => {
+      const k = `${c.type}-${c.movingEdge}`
+      if (!best[k] || c.dist < best[k].dist) best[k] = c
+    })
+    // Deduplicate by value (same static line shown once)
+    const seen = new Set()
+    return Object.values(best).filter(g => {
+      const k = `${g.type}-${Math.round(g.value)}`
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    })
   }
 
   // ── Mouse move / up ─────────────────────────────────────────────────────────
   useEffect(() => {
     function onMove(e) {
       const snp = v => Math.max(0, Math.round(v / snapSzRef.current) * snapSzRef.current)
+
       if (dragging.current) {
         const { fields, startMX, startMY } = dragging.current
         const z  = zoomRef.current
@@ -312,13 +334,15 @@ export default function FormDesigner({
       }
 
       if (resizing.current) {
-        const { key, startMX, startMY, startW, startH, fieldX } = resizing.current
+        const { key, startMX, startMY, startW, startH, fieldX, fieldY } = resizing.current
         const z = zoomRef.current
-        const snp = v => Math.max(0, Math.round(v / snapSzRef.current) * snapSzRef.current)
         if (!resizing.current.snapshotted) { snapshot(); resizing.current.snapshotted = true }
-        const w = snp(Math.max(80, Math.min(canvasConfigW - (fieldX || 0), startW + (e.clientX - startMX) / z)))
+        const w = snp(Math.max(32, Math.min(canvasConfigW - (fieldX || 0), startW + (e.clientX - startMX) / z)))
         const h = snp(Math.max(16, startH + (e.clientY - startMY) / z))
         updateLayout(key, { w_px: w, h_px: h })
+
+        const updAll = camposRef.current.map(c => c._key === key ? { ...c, w_px: w, h_px: h } : c)
+        setGuides(computeGuides(updAll.filter(c => c._key === key), updAll))
       }
 
       if (marqueeRef.current) {
@@ -339,7 +363,7 @@ export default function FormDesigner({
     }
 
     function onUp() {
-      if (dragging.current || resizing.current) setGuides([])
+      setGuides([])
       if (marqueeRef.current) { marqueeRef.current = null; setMarquee(null) }
       dragging.current = null
       resizing.current = null
@@ -489,6 +513,8 @@ export default function FormDesigner({
   }
   function sameWidth()  { const r=selCampos[0]?.w_px||280; onChange(p=>p.map(c=>selected.has(c._key)?{...c,w_px:r}:c)) }
   function sameHeight() { const r=selCampos[0]?.h_px||60;  onChange(p=>p.map(c=>selected.has(c._key)?{...c,h_px:r}:c)) }
+
+  // ── Auto-layout ──────────────────────────────────────────────────────────────
 
   // ── Canvas mousedown (marquee) ───────────────────────────────────────────────
   function handleCanvasMD(e) {
@@ -689,11 +715,13 @@ export default function FormDesigner({
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0, flexWrap:'wrap' }}>
 
+        {/* Grupo 1: Histórico */}
         <TbBtn title="Desfazer (Ctrl+Z)"  onClick={undo}><Undo2 size={13}/></TbBtn>
         <TbBtn title="Refazer (Ctrl+Y)"   onClick={redo}><Redo2 size={13}/></TbBtn>
 
         <div style={{ width:1, height:18, background:'var(--bd2)', margin:'0 2px' }}/>
 
+        {/* Grupo 2: Zoom */}
         <TbBtn title="Diminuir zoom (Ctrl+Scroll↓)" onClick={()=>setZoom(z=>Math.max(0.25,+(z-.1).toFixed(2)))}><ZoomOut size={13}/></TbBtn>
         <TbBtn title="Redefinir zoom (100%)" onClick={()=>setZoom(1)}>
           <span style={{ fontFamily:'monospace', fontSize:10 }}>{Math.round(zoom*100)}%</span>
@@ -702,6 +730,7 @@ export default function FormDesigner({
 
         <div style={{ width:1, height:18, background:'var(--bd2)', margin:'0 2px' }}/>
 
+        {/* Grupo 3: Visualização */}
         <TbBtn title={livePreview ? 'Modo wireframe' : 'Campos reais'} onClick={()=>onLivePreview(!livePreview)} active={livePreview}>
           {livePreview ? <Eye size={13}/> : <EyeOff size={13}/>}
           <span style={{ fontSize:10 }}>{livePreview ? 'Real' : 'Wire'}</span>
@@ -711,6 +740,7 @@ export default function FormDesigner({
 
         <div style={{ width:1, height:18, background:'var(--bd2)', margin:'0 2px' }}/>
 
+        {/* Grupo 4: Snap */}
         <div style={{ display:'flex', alignItems:'center', gap:3 }}>
           <span style={{ fontSize:10, color:'var(--t3)' }}>Snap</span>
           {[4, 8, 16].map(sz => (
@@ -721,15 +751,14 @@ export default function FormDesigner({
           ))}
         </div>
 
+        <div style={{ width:1, height:18, background:'var(--bd2)', margin:'0 2px' }}/>
+
+        {/* Grupo 5: Ações de seleção (só quando há seleção) */}
         {selected.size > 0 && <>
-          <TbBtn title="Copiar (Ctrl+C)" onClick={()=>{ clipboard.current=campos.filter(c=>selected.has(c._key)).map(c=>({...c})) }}><Copy size={13}/><span>Copiar</span></TbBtn>
-          <TbBtn title="Duplicar (Ctrl+D)" onClick={duplicateSelected}><Layers size={13}/><span>Duplicar</span></TbBtn>
-          <TbBtn title="Excluir seleção (Del)" onClick={deleteSelected} danger><Trash2 size={13}/></TbBtn>
           <div style={{ width:1, height:18, background:'var(--bd2)', margin:'0 2px' }}/>
-          <TbBtn title="Trazer ao topo" onClick={bringToFront}><ChevronsUp size={13}/></TbBtn>
-          <TbBtn title="Um para frente" onClick={bringForward}><ChevronUp size={13}/></TbBtn>
-          <TbBtn title="Um para trás"   onClick={sendBackward}><ChevronDown size={13}/></TbBtn>
-          <TbBtn title="Mandar ao fundo" onClick={sendToBack}><ChevronsDown size={13}/></TbBtn>
+          <TbBtn title="Copiar (Ctrl+C)" onClick={()=>{ clipboard.current=campos.filter(c=>selected.has(c._key)).map(c=>({...c})) }}><Copy size={13}/><span style={{ fontSize:10 }}>Copiar</span></TbBtn>
+          <TbBtn title="Duplicar (Ctrl+D)" onClick={duplicateSelected}><Copy size={13}/><span style={{ fontSize:10 }}>Duplicar</span></TbBtn>
+          <TbBtn title="Excluir seleção (Del)" onClick={deleteSelected} danger><Trash2 size={13}/></TbBtn>
         </>}
 
         <div style={{ marginLeft:'auto', fontSize:10, color:'var(--t3)' }}>
@@ -755,18 +784,12 @@ export default function FormDesigner({
                 transform: `scale(${zoom})`,
                 transformOrigin: 'top left',
                 ...(showGrid ? {
-                  backgroundImage: 'radial-gradient(circle, var(--bd2) 1.2px, transparent 1.2px)',
+                  backgroundImage: 'radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px)',
                   backgroundSize: `${snapSz * 2}px ${snapSz * 2}px`,
                 } : {}),
                 cursor: 'crosshair',
               }}
             >
-              {/* Top accent line */}
-              <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'rgba(255,107,43,.15)', pointerEvents:'none' }} />
-
-              {/* Canvas boundary */}
-              <div style={{ position:'absolute', top:0, left:0, width:canvasConfigW, height:canvasConfigH, border:'1px dashed rgba(255,107,43,.2)', pointerEvents:'none', zIndex:1 }}/>
-
               {/* Rulers */}
               {showRulers && (<>
                 <div style={{ position:'absolute', top:0, left:0, right:0, height:18, background:'rgba(0,0,0,.18)', borderBottom:'1px solid var(--bd2)', pointerEvents:'none', zIndex:400, overflow:'hidden' }}>
@@ -839,7 +862,7 @@ export default function FormDesigner({
                 const resizeHandle = (
                   <div
                     data-resize="1" title="Redimensionar"
-                    onMouseDown={e => { e.stopPropagation(); if (e.button !== 0) return; resizing.current = { key:campo._key, startMX:e.clientX, startMY:e.clientY, startW:w, startH:h, fieldX:x, snapshotted:false } }}
+                    onMouseDown={e => { e.stopPropagation(); if (e.button !== 0) return; resizing.current = { key:campo._key, startMX:e.clientX, startMY:e.clientY, startW:w, startH:h, fieldX:x, fieldY:y, snapshotted:false } }}
                     style={{ position:'absolute', right:0, bottom:0, width:14, height:14, cursor:'se-resize', borderTop:`2px solid ${isSel?'var(--or)':'var(--bd2)'}`, borderLeft:`2px solid ${isSel?'var(--or)':'var(--bd2)'}`, borderBottomRightRadius:7, opacity:isSel?1:0.4, transition:'opacity .12s,border-color .12s', pointerEvents:'all' }}
                   />
                 )
@@ -897,7 +920,6 @@ export default function FormDesigner({
                         {campo.label||campo.nomeCampo||'Campo'}
                         {campo.obrigatorio && <span style={{ color:'var(--red)', marginLeft:2 }}>*</span>}
                       </span>
-                      <span style={{ fontSize:8, color:'var(--t3)', background:'var(--s3)', padding:'1px 5px', borderRadius:4, whiteSpace:'nowrap', flexShrink:0 }}>{campo.tipo}</span>
                     </div>
                     <div style={{ flex:1, background:'var(--s2)', borderRadius:5, border:'1px solid var(--bd)', display:'flex', alignItems:campo.tipo==='texto_longo'?'flex-start':'center', padding:campo.tipo==='texto_longo'?'6px 8px':'0 8px', fontSize:10, color:'var(--t3)', overflow:'hidden' }}>
                       {campo.tipo==='booleano'
@@ -909,6 +931,7 @@ export default function FormDesigner({
                         : campo.tipo==='texto_longo' ? <span style={{ fontStyle:'italic', lineHeight:1.4 }}>Texto longo...</span>
                         : campo.tipo==='select'      ? <span>▾ {(campo.opcoes||[])[0]?.label||'Selecione...'}</span>
                         : campo.tipo==='radio'        ? <span style={{ display:'flex', gap:8, flexWrap:'wrap' }}>{(campo.opcoes||[]).slice(0,3).map((o,i)=><span key={i} style={{ display:'flex', alignItems:'center', gap:3, color:o.cor||'var(--t2)', fontWeight:600 }}><span style={{ width:10, height:10, borderRadius:'50%', border:`1.5px solid ${o.cor||'var(--t3)'}`, display:'inline-block' }}/>{o.label}</span>)}</span>
+                        : campo.tipo==='flags'        ? <span style={{ display:'flex', flexDirection:'column', gap:3, width:'100%' }}>{(campo.opcoes||[]).map((o,i)=><span key={i} style={{ display:'flex', alignItems:'center', gap:5 }}><span style={{ width:10, height:10, border:'1.5px solid var(--bd2)', borderRadius:2, display:'inline-block', flexShrink:0 }}/><span style={{ fontSize:10 }}>{o.label}</span>{o.codigo&&<span style={{ fontSize:9, color:'var(--t3)', fontFamily:'monospace' }}>[{o.codigo}]</span>}</span>)}</span>
                         : campo.tipo==='tags'         ? <span style={{ display:'flex', gap:4 }}>{(campo.valorPadrao||'tag1,tag2').split(',').slice(0,3).map((t,i)=><span key={i} style={{ background:'var(--s3)', borderRadius:3, padding:'0 4px' }}>{t.trim()}</span>)}</span>
                         : campo.tipo==='codigo_auto'  ? <span style={{ fontFamily:'monospace', fontWeight:700, color:'var(--or)', letterSpacing:2 }}>001</span>
                         : campo.tipo==='data'         ? <span>dd/mm/aaaa</span>
@@ -933,8 +956,8 @@ export default function FormDesigner({
               {/* Smart guides */}
               {guides.map((g,i) => (
                 g.type==='v'
-                  ? <div key={i} style={{ position:'absolute', top:0, bottom:0, left:g.value, width:1, background:'rgba(255,107,43,.85)', pointerEvents:'none', zIndex:200 }}/>
-                  : <div key={i} style={{ position:'absolute', left:0, right:0, top:g.value, height:1, background:'rgba(255,107,43,.85)', pointerEvents:'none', zIndex:200 }}/>
+                  ? <div key={i} style={{ position:'absolute', top:0, bottom:0, left:g.value, width:1, background:'rgba(34,197,94,.9)', pointerEvents:'none', zIndex:200 }}/>
+                  : <div key={i} style={{ position:'absolute', left:0, right:0, top:g.value, height:1, background:'rgba(34,197,94,.9)', pointerEvents:'none', zIndex:200 }}/>
               ))}
 
               {/* Empty state */}
@@ -1063,59 +1086,33 @@ export default function FormDesigner({
           </>)}
 
           {!selSingle && !selMulti && panelTab === 'canvas' && (<>
+
+            {/* ── Dimensões ── */}
             <div style={panelBox}>
-              <div style={panelTitle}>Dimensões</div>
+              <div style={panelTitle}>Dimensões do canvas</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize:9 }}>Largura (px)</label>
+                <div>
+                  <div style={{ fontSize:9, color:'var(--t3)', marginBottom:4, textTransform:'uppercase', letterSpacing:.5 }}>Largura (px)</div>
                   <input className="form-input" type="number" min={400} step={8} value={canvasConfigW}
-                    onChange={e=>onCanvasConfig?.(Math.max(400,Number(e.target.value)),canvasConfigH)} style={{ height:28, fontSize:11, padding:'0 6px' }}/>
+                    onChange={e=>onCanvasConfig?.(Math.max(400,Number(e.target.value)),canvasConfigH)} style={{ height:28, fontSize:11, padding:'0 6px', width:'100%' }}/>
                 </div>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize:9 }}>Altura (px)</label>
+                <div>
+                  <div style={{ fontSize:9, color:'var(--t3)', marginBottom:4, textTransform:'uppercase', letterSpacing:.5 }}>Altura (px)</div>
                   <input className="form-input" type="number" min={200} step={8} value={canvasConfigH}
-                    onChange={e=>onCanvasConfig?.(canvasConfigW,Math.max(200,Number(e.target.value)))} style={{ height:28, fontSize:11, padding:'0 6px' }}/>
+                    onChange={e=>onCanvasConfig?.(canvasConfigW,Math.max(200,Number(e.target.value)))} style={{ height:28, fontSize:11, padding:'0 6px', width:'100%' }}/>
                 </div>
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4, marginTop:2 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4, marginTop:6 }}>
                 {[{label:'HD',w:1280,h:720},{label:'4:3',w:1024,h:768},{label:'Padrão',w:780,h:480}].map(p=>(
                   <button key={p.label} className={`btn ${canvasConfigW===p.w&&canvasConfigH===p.h?'btn-primary':'btn-ghost'}`} style={{ height:26, fontSize:10 }} onClick={()=>onCanvasConfig?.(p.w,p.h)}>{p.label}</button>
                 ))}
               </div>
             </div>
 
+            {/* ── Visualização ── */}
             <div style={panelBox}>
-              <div style={panelTitle}>Margens (mm)</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                {[
-                  { label:'Superior',  key:'top'    },
-                  { label:'Inferior',  key:'bottom' },
-                  { label:'Esquerda',  key:'left'   },
-                  { label:'Direita',   key:'right'  },
-                ].map(({ label, key }) => (
-                  <div key={key} className="form-group">
-                    <label className="form-label" style={{ fontSize:9 }}>{label}</label>
-                    <div style={{ display:'flex', alignItems:'center', gap:3 }}>
-                      <input className="form-input" type="number" min={0} step={1}
-                        value={canvasMargins[key]}
-                        onChange={e => onCanvasMargins?.({ ...canvasMargins, [key]: Math.max(0, Number(e.target.value)) })}
-                        style={{ height:28, fontSize:11, padding:'0 6px', flex:1, minWidth:0 }}/>
-                      <span style={{ fontSize:9, color:'var(--t3)', flexShrink:0 }}>mm</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {(canvasMargins.top > 0 || canvasMargins.bottom > 0 || canvasMargins.left > 0 || canvasMargins.right > 0) && (
-                <button className="btn btn-ghost" style={{ height:24, fontSize:10, marginTop:2 }}
-                  onClick={() => onCanvasMargins?.({ top:0, bottom:0, left:0, right:0 })}>
-                  Limpar margens
-                </button>
-              )}
-            </div>
-
-            <div style={panelBox}>
-              <div style={panelTitle}>Grade &amp; Visualização</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={panelTitle}>Visualização</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
                 <label style={{ display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:11, cursor:'pointer', userSelect:'none' }}>
                   Mostrar grade
                   <input type="checkbox" checked={showGrid} onChange={e=>onShowGrid(e.target.checked)} style={{ accentColor:'var(--or)', width:14, height:14 }}/>
@@ -1129,8 +1126,8 @@ export default function FormDesigner({
                   <input type="checkbox" checked={livePreview} onChange={e=>onLivePreview(e.target.checked)} style={{ accentColor:'var(--or)', width:14, height:14 }}/>
                 </label>
               </div>
-              <div style={{ borderTop:'1px solid var(--bd)', paddingTop:6, marginTop:2 }}>
-                <div style={{ fontSize:9, color:'var(--t3)', marginBottom:4 }}>Snap (px)</div>
+              <div style={{ borderTop:'1px solid var(--bd)', paddingTop:8, marginTop:6 }}>
+                <div style={{ fontSize:9, color:'var(--t3)', marginBottom:5, textTransform:'uppercase', letterSpacing:.5 }}>Snap (px)</div>
                 <div style={{ display:'flex', gap:4 }}>
                   {[4,8,16].map(sz=>(
                     <button key={sz} onClick={()=>onSnapSz(sz)}
@@ -1140,6 +1137,31 @@ export default function FormDesigner({
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* ── Margens ── */}
+            <div style={panelBox}>
+              <div style={panelTitle}>Margens do canvas (mm)</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                {[{label:'Superior',key:'top'},{label:'Inferior',key:'bottom'},{label:'Esquerda',key:'left'},{label:'Direita',key:'right'}].map(({label,key})=>(
+                  <div key={key}>
+                    <div style={{ fontSize:9, color:'var(--t3)', marginBottom:4, textTransform:'uppercase', letterSpacing:.5 }}>{label}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                      <input className="form-input" type="number" min={0} step={1}
+                        value={canvasMargins[key]}
+                        onChange={e=>onCanvasMargins?.({...canvasMargins,[key]:Math.max(0,Number(e.target.value))})}
+                        style={{ height:28, fontSize:11, padding:'0 6px', flex:1, minWidth:0 }}/>
+                      <span style={{ fontSize:10, color:'var(--t3)', flexShrink:0 }}>mm</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(canvasMargins.top>0||canvasMargins.bottom>0||canvasMargins.left>0||canvasMargins.right>0)&&(
+                <button className="btn btn-ghost" style={{ height:24, fontSize:10, marginTop:6, width:'100%' }}
+                  onClick={()=>onCanvasMargins?.({top:0,bottom:0,left:0,right:0})}>
+                  Limpar margens
+                </button>
+              )}
             </div>
           </>)}
 

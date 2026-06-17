@@ -98,6 +98,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   // CPF / CNPJ / CEP — busca automática
   const [docLoading, setDocLoading] = useState({}) // { nome_campo: true/false }
   const [docErro,    setDocErro]    = useState({}) // { nome_campo: 'mensagem' }
+  const [confirmExcluir, setConfirmExcluir] = useState(false)
 
   // Lookup
   const [lookupOpcoes,    setLookupOpcoes]    = useState({}) // { nome_campo: [{id, label}] }
@@ -405,9 +406,17 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
   async function handleExcluir() {
     if (!registros.length) return
-    if (!confirm('Excluir este registro?')) return
-    await window.api.formBuilder.inativarRegistro(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
-    await carregar(tela, pagina, busca, null)
+    setConfirmExcluir(true)
+  }
+
+  async function confirmarExcluir() {
+    setConfirmExcluir(false)
+    try {
+      await window.api.formBuilder.excluirRegistro(nomeTabela, registros[currentIdx].id)
+      await carregar(tela, pagina, busca, null)
+    } catch (e) {
+      alert('Erro ao excluir: ' + (e.message || e))
+    }
   }
 
   function handleDesistir() {
@@ -2233,6 +2242,27 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmação de exclusão */}
+      {confirmExcluir && (
+        <div style={{ position:'fixed', inset:0, zIndex:1200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,.45)' }}>
+          <div style={{ width:380, background:'var(--s1)', borderRadius:14, boxShadow:'var(--sh-lg)', overflow:'hidden' }}>
+            <div style={{ padding:'20px 22px 10px', display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:'rgba(220,38,38,.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Trash2 size={16} color="var(--red)"/>
+              </div>
+              <div>
+                <div style={{ fontWeight:700, fontSize:14, color:'var(--t1)' }}>Excluir registro</div>
+                <div style={{ fontSize:12, color:'var(--t3)', marginTop:2 }}>Esta ação não pode ser desfeita.</div>
+              </div>
+            </div>
+            <div style={{ padding:'8px 22px 20px', display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button className="btn btn-ghost" style={{ height:34, fontSize:12 }} onClick={() => setConfirmExcluir(false)}>Cancelar</button>
+              <button className="btn btn-danger" style={{ height:34, fontSize:12 }} onClick={confirmarExcluir}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2279,6 +2309,7 @@ function MetaDados({ reg, onToggleFav, showFav = true, showTs = true }) {
           </>
         )}
       </div>
+
     </div>
   )
 }

@@ -71,6 +71,7 @@ const api = {
     atualizarRegistro: (tbl, id, d, hasTs) => ipcRenderer.invoke('fb:atualizarRegistro', tbl, id, d, hasTs),
     reordenarTelas:    (items)          => ipcRenderer.invoke('fb:reordenarTelas', items),
     inativarRegistro:  (tbl, id, hasTs) => ipcRenderer.invoke('fb:inativarRegistro', tbl, id, hasTs),
+    excluirRegistro:   (tbl, id)        => ipcRenderer.invoke('fb:excluirRegistro', tbl, id),
     proximoCodigo:     (tbl, campo, padrao, seqChars) => ipcRenderer.invoke('fb:proximoCodigo', tbl, campo, padrao, seqChars),
     toggleFavorito:      (tbl, id, hasTs)          => ipcRenderer.invoke('fb:toggleFavorito', tbl, id, hasTs),
     listarOpcoesLookup:  (tbl, exibir, codigo)     => ipcRenderer.invoke('fb:listarOpcoesLookup', tbl, exibir, codigo),

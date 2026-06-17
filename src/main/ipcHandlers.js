@@ -512,6 +512,7 @@ export function registerHandlers() {
   })
   ipcMain.handle('fb:reordenarTelas',   (_, items)      => fb.reordenarTelas(items))
   ipcMain.handle('fb:inativarRegistro', (_, tbl, id, hasTs)     => fb.inativarRegistro(tbl, id, hasTs))
+  ipcMain.handle('fb:excluirRegistro',  (_, tbl, id)            => fb.excluirRegistro(tbl, id))
   ipcMain.handle('fb:proximoCodigo',    (_, tbl, campo, padrao, seqChars) => fb.proximoCodigo(tbl, campo, padrao, seqChars))
   ipcMain.handle('fb:toggleFavorito',      (_, tbl, id, hasTs)         => fb.toggleFavorito(tbl, id, hasTs))
   ipcMain.handle('fb:listarOpcoesLookup',  (_, tbl, exibir, codigo)    => fb.listarOpcoesLookup(tbl, exibir, codigo))

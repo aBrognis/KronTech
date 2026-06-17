@@ -329,6 +329,11 @@ export async function inativarRegistro(nomeTabela, id, hasTs = true) {
   return { sucesso: true }
 }
 
+export async function excluirRegistro(nomeTabela, id) {
+  await query(`DELETE FROM ${tbl(nomeTabela)} WHERE id=$1`, [id])
+  return { sucesso: true }
+}
+
 export async function toggleFavorito(nomeTabela, id, hasTs = true) {
   const tsClause = hasTs !== false ? ', alterado_em = NOW()' : ''
   return queryOne(
