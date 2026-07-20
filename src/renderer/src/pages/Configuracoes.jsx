@@ -131,8 +131,8 @@ export default function Configuracoes() {
   const [salvo,    setSalvo]    = useState(false)
 
   useEffect(() => {
-    window.api.config.get().then(cfg => {
-      const p = cfg?.Personalizacao || {}
+    window.api.config.get().then(res => {
+      const p = (res.ok ? res.data?.Personalizacao : null) || {}
       const corSalva = p.cor_primaria === '#FF6B2B' ? '#D95218' : (p.cor_primaria || VAZIO.cor)
       const loaded = {
         cor:          corSalva,

@@ -117,8 +117,8 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
 
   async function carregarPersonalizacao() {
     try {
-      const cfg = await window.api.config.get()
-      const p = cfg?.Personalizacao || {}
+      const res = await window.api.config.get()
+      const p = (res.ok ? res.data?.Personalizacao : null) || {}
       if (p.nome_sistema)  setNomeSistema(p.nome_sistema)
       if (p.nome_usuario)  setNomeUsuario(p.nome_usuario)
       if (p.cargo_usuario) setCargoUsuario(p.cargo_usuario)

@@ -59,8 +59,8 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
 
   // Reconstrói a ordemGlobal unificada sempre que módulos são carregados
   useEffect(() => {
-    window.api.config.get().then(cfg => {
-      const p = cfg?.Personalizacao || {}
+    window.api.config.get().then(res => {
+      const p = (res.ok ? res.data?.Personalizacao : null) || {}
       const fixedItems = [
         { id: 'inicio',      label: p.label_inicio      || 'Início',      tipo: 'fixo' },
         { id: 'gestao',      label: p.label_gestao      || 'Gestão',      tipo: 'fixo' },

@@ -4,7 +4,6 @@ import { readFileSync, writeFileSync, copyFileSync, unlinkSync, existsSync, mkdi
 import { join, extname, basename, dirname, relative } from 'path'
 
 import { query, queryOne, getPool } from './db'
-import { checkForUpdates, downloadUpdate, installUpdate } from './services/updater'
 import * as fb from './services/formBuilderService'
 import { wrap, importLog, importCancelFlags, categoriaByExt, scanDir, hashCamposSenha } from './handlers/_shared'
 import { registerJanelaHandlers } from './handlers/janela'
@@ -14,6 +13,8 @@ import { registerDashboardHandlers } from './handlers/dashboard'
 import { registerClipboardHandlers } from './handlers/clipboard'
 import { registerEntidadeHandlers } from './handlers/entidade'
 import { registerAuthHandlers } from './handlers/auth'
+import { registerConfigHandlers } from './handlers/config'
+import { registerUpdateHandlers } from './handlers/update'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -23,6 +24,8 @@ export function registerHandlers() {
   registerClipboardHandlers({ ipcMain, wrap })
   registerEntidadeHandlers({ ipcMain })
   registerAuthHandlers({ ipcMain, query, queryOne })
+  registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, INI_PATH })
+  registerUpdateHandlers({ ipcMain, wrap })
 
   // ── Arquivos ──────────────────────────────────────────────────────────────
   ipcMain.handle('arquivos:getAll', async () => {
@@ -445,24 +448,7 @@ export function registerHandlers() {
     }
   })
 
-  // ── Configuração (krontech.ini) ───────────────────────────────────────────
-  ipcMain.handle('config:get',          ()          => getConfigForFrontend())
-  ipcMain.handle('config:set',          (_, { section, key, value }) => saveConfig(section, key, value))
-  ipcMain.handle('config:setSection',   (_, { section, kvs })        => saveSectionConfig(section, kvs))
-  ipcMain.handle('config:getIniPath',   ()          => INI_PATH)
-
-  ipcMain.handle('config:selecionarPasta', async (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'Selecionar pasta de arquivos',
-      properties: ['openDirectory', 'createDirectory'],
-    })
-    if (canceled || !filePaths.length) return null
-    const pasta = filePaths[0]
-    saveConfig('Caminhos', 'arquivos', pasta)
-    if (!existsSync(pasta)) mkdirSync(pasta, { recursive: true })
-    return pasta
-  })
+  // ── Configuração (ver handlers/config.js) ──────────────────────────────────
 
   ipcMain.handle('arquivos:copiarLocal', async (_, { caminhoOrigem, nomeArquivo }) => {
     const cfg     = getConfig()
@@ -551,11 +537,7 @@ export function registerHandlers() {
     }
   })
 
-  // ── Atualizador ──────────────────────────────────────────────────────────
-  ipcMain.handle('update:check',    () => checkForUpdates().catch(e => ({ error: e.message })))
-  ipcMain.handle('update:download', () => downloadUpdate().catch(e => ({ error: e.message })))
-  ipcMain.handle('update:install',  () => installUpdate())
-  ipcMain.handle('update:version',  () => app.getVersion())
+  // ── Atualizador (ver handlers/update.js) ──────────────────────────────────
 
 }
 

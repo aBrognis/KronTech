@@ -111,7 +111,7 @@ export default function Arquivos({ newTrigger }) {
 
   useEffect(() => {
     loadAll()
-    window.api.config.get().then(cfg => setPastaAtual(cfg?.Caminhos?.arquivos || ''))
+    window.api.config.get().then(res => setPastaAtual((res.ok ? res.data?.Caminhos?.arquivos : '') || ''))
   }, [])
   useEffect(() => {
     if (newTrigger > prevTrigger.current) {
@@ -299,7 +299,8 @@ export default function Arquivos({ newTrigger }) {
   }
 
   async function handleConfigurarPasta() {
-    const nova = await window.api.config.selecionarPasta()
+    const res = await window.api.config.selecionarPasta()
+    const nova = res.ok ? res.data : null
     if (nova) { setPastaAtual(nova); alert(`Pasta atualizada:\n${nova}\n\nO sistema usará este caminho para novos arquivos importados.`) }
   }
 

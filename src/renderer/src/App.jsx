@@ -334,8 +334,8 @@ export default function App() {
       s.textContent = '@keyframes kr-rR{to{transform:rotate(360deg)}}@keyframes kr-rL{to{transform:rotate(-360deg)}}@keyframes kr-op{0%,100%{opacity:.35}50%{opacity:1}}'
       document.head.appendChild(s)
     }
-    window.api.config.get().then(cfg => {
-      let hex = cfg?.Personalizacao?.cor_primaria
+    window.api.config.get().then(res => {
+      let hex = res.ok ? res.data?.Personalizacao?.cor_primaria : null
       if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) aplicarCorSistema(hex)
     }).catch(() => {})

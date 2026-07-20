@@ -295,12 +295,12 @@ export default function DesignerApp() {
       s.id = 'kt-anim-css'; s.textContent = KT_ANIM_CSS
       document.head.appendChild(s)
     }
-    window.api.config.get().then(cfg => {
-      let hex = cfg?.Personalizacao?.cor_primaria
+    window.api.config.get().then(res => {
+      let hex = res.ok ? res.data?.Personalizacao?.cor_primaria : null
       if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) aplicarCorSistema(hex)
     }).catch(() => {})
-    window.api.update?.version().then(v => setVersion(v)).catch(() => {})
+    window.api.update?.version().then(res => res.ok && setVersion(res.data)).catch(() => {})
   }, [])
 
   const handleNavigate = useCallback((pageId) => {

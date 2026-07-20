@@ -18,7 +18,7 @@ import {
 function genId() { return Math.random().toString(36).slice(2) + Date.now().toString(36) }
 
 async function carregarSecao(chave, fallback = []) {
-  try { const cfg = await window.api.config.get(); return cfg?.[chave] ?? fallback }
+  try { const res = await window.api.config.get(); return res.ok ? (res.data?.[chave] ?? fallback) : fallback }
   catch { return fallback }
 }
 async function salvarSecao(chave, valor) {

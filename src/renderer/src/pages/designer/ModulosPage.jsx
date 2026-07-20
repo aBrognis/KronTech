@@ -62,8 +62,8 @@ export default function ModulosPage() {
 
   // Reconstrói ordemGlobal quando módulos mudam
   useEffect(() => {
-    window.api.config.get().then(cfg => {
-      const p = cfg?.Personalizacao || {}
+    window.api.config.get().then(res => {
+      const p = (res.ok ? res.data?.Personalizacao : null) || {}
       const fixedItems = [
         { id: 'inicio',      label: p.label_inicio      || 'Início',      tipo: 'fixo' },
         { id: 'gestao',      label: p.label_gestao      || 'Gestão',      tipo: 'fixo' },

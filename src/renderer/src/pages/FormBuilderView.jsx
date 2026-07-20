@@ -162,7 +162,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       onTituloChange?.(t.nome_tela, t.nome_tabela)
       // Carrega pasta configurada se a tela tiver campo arquivo
       if ((t.campos || []).some(c => c.tipo === 'arquivo')) {
-        window.api.config.get().then(cfg => setPastaConfig(cfg?.Caminhos?.arquivos || ''))
+        window.api.config.get().then(res => setPastaConfig((res.ok ? res.data?.Caminhos?.arquivos : '') || ''))
       }
       // Pré-carrega sugestões para campos do tipo pasta
       const camposPasta = (t.campos || []).filter(c => c.tipo === 'pasta' && c.nome_campo)
@@ -290,8 +290,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   }
 
   async function handleConfigurarPasta() {
-    const nova = await window.api.config.selecionarPasta()
-    if (nova) setPastaConfig(nova)
+    const res = await window.api.config.selecionarPasta()
+    if (res.ok && res.data) setPastaConfig(res.data)
   }
 
   async function carregar(t = tela, pag = pagina, buscaVal = busca, manterIdReg = null) {
