@@ -1,88 +1,17 @@
 import { ipcMain, BrowserWindow, dialog, app, shell, clipboard } from 'electron'
 import bcrypt from 'bcrypt'
 import { getConfig, saveConfig, saveSectionConfig, getConfigForFrontend, INI_PATH, getDecryptedBancoConfig } from './config'
-import { readFileSync, writeFileSync, appendFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync, readdirSync } from 'fs'
+import { readFileSync, writeFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync } from 'fs'
 import { join, extname, basename, dirname, relative } from 'path'
-
-function importLog(msg) {
-  try {
-    const logPath = join(app.getPath('userData'), 'import_debug.log')
-    appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`)
-  } catch {}
-}
 
 import { query, queryOne, getPool } from './db'
 import { checkForUpdates, downloadUpdate, installUpdate } from './services/updater'
 import * as fb from './services/formBuilderService'
-
-let _designerWin = null
-
-function createDesignerWindow() {
-  if (_designerWin && !_designerWin.isDestroyed()) {
-    _designerWin.focus()
-    return
-  }
-  _designerWin = new BrowserWindow({
-    width: 1440, height: 900, minWidth: 1000, minHeight: 700,
-    show: false, frame: false, titleBarStyle: 'hidden',
-    backgroundColor: '#0A0A0A',
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false, contextIsolation: true,
-    },
-  })
-  _designerWin.on('ready-to-show', () => { _designerWin.show(); _designerWin.maximize() })
-  _designerWin.on('closed', () => { _designerWin = null })
-  _designerWin.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' } })
-  _designerWin.webContents.on('before-input-event', (_ev, input) => {
-    if (input.type === 'keyDown' && input.code === 'F12') {
-      _designerWin.webContents.isDevToolsOpened()
-        ? _designerWin.webContents.closeDevTools()
-        : _designerWin.webContents.openDevTools({ mode: 'undocked' })
-    }
-  })
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
-  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
-    _designerWin.loadURL(process.env['ELECTRON_RENDERER_URL'] + '?mode=designer')
-  } else {
-    _designerWin.loadFile(join(__dirname, '../renderer/index.html'), { query: { mode: 'designer' } })
-  }
-}
-
-async function hashCamposSenha(nomeTabela, dados) {
-  if (!dados || typeof dados !== 'object') return dados
-  try {
-    const camposSenha = await query(
-      `SELECT tc.nome_campo FROM kr_tela_campos tc
-       JOIN kr_telas t ON t.id = tc.tela_id
-       WHERE t.nome_tabela = $1 AND tc.tipo = 'senha' AND tc.ativo = TRUE`,
-      [nomeTabela]
-    )
-    if (!camposSenha?.length) return dados
-    const resultado = { ...dados }
-    for (const { nome_campo } of camposSenha) {
-      const val = resultado[nome_campo]
-      if (!val || val === '***' || val === '') {
-        delete resultado[nome_campo]
-      } else if (typeof val === 'string' && !val.startsWith('$2b$')) {
-        resultado[nome_campo] = await bcrypt.hash(val, 10)
-      }
-    }
-    return resultado
-  } catch { return dados }
-}
+import { wrap, importLog, importCancelFlags, categoriaByExt, scanDir, hashCamposSenha } from './handlers/_shared'
+import { registerJanelaHandlers } from './handlers/janela'
 
 export function registerHandlers() {
-
-  // ── Controles da janela ──────────────────────────────────────────────────
-  ipcMain.handle('win:minimize',    (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
-  ipcMain.handle('designer:open',   () => createDesignerWindow())
-  ipcMain.handle('win:maximize',    (e) => {
-    const win = BrowserWindow.fromWebContents(e.sender)
-    win?.isMaximized() ? win.unmaximize() : win.maximize()
-  })
-  ipcMain.handle('win:close',       (e) => BrowserWindow.fromWebContents(e.sender)?.close())
-  ipcMain.handle('win:isMaximized', (e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false)
+  registerJanelaHandlers({ ipcMain, wrap })
 
   // ── Editor SQL ───────────────────────────────────────────────────────────
   ipcMain.handle('sql:execute', async (_, sql) => {
@@ -394,42 +323,6 @@ export function registerHandlers() {
   })
 
   // ── Importação em massa ───────────────────────────────────────────────────
-  const importCancelFlags = new Map()
-
-  function categoriaByExt(ext) {
-    const map = {
-      fr3: 'Relatório',  rpt: 'Relatório',
-      pdf: 'Contrato',
-      doc: 'Manual',     docx: 'Manual',    odt: 'Manual',
-      xls: 'Financeiro', xlsx: 'Financeiro', csv: 'Financeiro',
-      jpg: 'Imagem',     jpeg: 'Imagem',     png: 'Imagem',
-      gif: 'Imagem',     bmp: 'Imagem',      webp: 'Imagem',
-      sql: 'Script',     pas: 'Script',      dpr: 'Script',
-      txt: 'Script',     ini: 'Script',
-      ppt: 'Apresentação', pptx: 'Apresentação',
-    }
-    return map[ext.toLowerCase()] || 'Outro'
-  }
-
-  function scanDir(rootDir) {
-    const files = []
-    const queue = [rootDir]
-    while (queue.length) {
-      const dir = queue.pop()
-      try {
-        for (const entry of readdirSync(dir, { withFileTypes: true })) {
-          if (entry.name.startsWith('.')) continue
-          const full = join(dir, entry.name)
-          try {
-            if (entry.isDirectory()) queue.push(full)
-            else if (entry.isFile()) files.push(full)
-          } catch {}
-        }
-      } catch {}
-    }
-    return files
-  }
-
   ipcMain.handle('arquivos:importarPasta', async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
