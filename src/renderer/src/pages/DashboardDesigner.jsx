@@ -33,7 +33,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
 
   useEffect(() => {
     window.api.dash.getAll()
-      .then(list => { setWidgets(list || []); setLoading(false) })
+      .then(res => { setWidgets(res.ok ? res.data : []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
@@ -86,10 +86,11 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         const pos  = nextPos(widgets)
         const meta = TIPOS.find(t => t.value === form.tipo) || TIPOS[0]
         const payload = { ...form, grid_x: pos.x, grid_y: pos.y, grid_w: meta.defW, grid_h: meta.defH }
-        const created = await window.api.dash.create(payload)
-        const newW = { ...payload, id: created.id }
+        const res = await window.api.dash.create(payload)
+        if (!res.ok) return
+        const newW = { ...payload, id: res.data.id }
         setWidgets(prev => [...prev, newW])
-        setSelected(created.id)
+        setSelected(res.data.id)
       } else {
         await window.api.dash.update({ id: selected, ...form })
         setWidgets(prev => prev.map(w => w.id === selected ? { ...w, ...form } : w))

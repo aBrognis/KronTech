@@ -97,8 +97,8 @@ export default function Dashboard({ onNavigate }) {
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const list = await window.api.dash.getAll()
-      const filled = await Promise.all((list || []).map(loadWidget))
+      const res = await window.api.dash.getAll()
+      const filled = await Promise.all((res.ok ? res.data : []).map(loadWidget))
       setWidgets(filled)
       setLayout(filled.map(w => ({
         i: String(w.id),
