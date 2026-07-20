@@ -123,12 +123,15 @@ export default function Arquivos({ newTrigger }) {
   async function loadAll() {
     setLoading(true)
     try {
-      const [data, ps] = await Promise.all([
+      const [resItems, resPastas] = await Promise.all([
         window.api.arquivos.getAll(),
         window.api.arquivos.getPastas(),
       ])
+      if (!resItems.ok) throw new Error(resItems.erro)
+      if (!resPastas.ok) throw new Error(resPastas.erro)
+      const data = resItems.data
       setItems(data)
-      setPastas(ps)
+      setPastas(resPastas.data)
       if (data.length > 0) { const last = data.length - 1; setCurrentIdx(last); loadForm(data[last]) }
     } catch (err) { setErro('Erro ao carregar: ' + (err?.message ?? String(err))) }
     finally { setLoading(false) }
@@ -188,7 +191,8 @@ export default function Arquivos({ newTrigger }) {
   }
 
   async function handleSelecionarArquivo() {
-    const info = await window.api.arquivos.selecionar()
+    const res = await window.api.arquivos.selecionar()
+    const info = res.ok ? res.data : null
     if (!info) return
     setForm(f => ({
       ...f,
@@ -206,16 +210,21 @@ export default function Arquivos({ newTrigger }) {
     setSaving(true); setErro(null)
     try {
       if (mode === 'new') {
-        const created = await window.api.arquivos.create({
+        const resCreate = await window.api.arquivos.create({
           ...form,
           arquivo_path_origem: form.arquivo_path,
         })
+        if (!resCreate.ok) throw new Error(resCreate.erro)
+        const created = resCreate.data
         const updated = [...items, created]
         setItems(updated); setCurrentIdx(updated.length - 1); loadForm(created)
-        setPastas(await window.api.arquivos.getPastas())
+        const resPastas = await window.api.arquivos.getPastas()
+        if (resPastas.ok) setPastas(resPastas.data)
       } else {
         const item = items[currentIdx]
-        const upd  = await window.api.arquivos.update({ id: item.id, ...form })
+        const resUpdate = await window.api.arquivos.update({ id: item.id, ...form })
+        if (!resUpdate.ok) throw new Error(resUpdate.erro)
+        const upd = resUpdate.data
         const updated = items.map(i => i.id === item.id ? upd : i)
         setItems(updated); loadForm(upd)
       }
