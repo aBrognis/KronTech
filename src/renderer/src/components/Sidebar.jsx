@@ -153,12 +153,23 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     setOpenGroups(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
+  // Telas com grupo_fixo vão para o grupo fixo correspondente; as demais ficam em grupos dinâmicos
+  const telasPorGrupoFixo = { inicio: [], gestao: [], ferramentas: [] }
   const gruposDin = {}
   telasDin.filter(t => !t.sistema).forEach(t => {
-    const grp = t.modulo_nome || 'Minhas Telas'
-    if (!gruposDin[grp]) gruposDin[grp] = []
-    gruposDin[grp].push(t)
+    if (t.grupo_fixo && telasPorGrupoFixo[t.grupo_fixo]) {
+      telasPorGrupoFixo[t.grupo_fixo].push(t)
+    } else {
+      const grp = t.modulo_nome || 'Minhas Telas'
+      if (!gruposDin[grp]) gruposDin[grp] = []
+      gruposDin[grp].push(t)
+    }
   })
+
+  function buildFixoGroup(base, labelOverride) {
+    const extras = (telasPorGrupoFixo[base.id] || []).map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) }))
+    return { ...base, items: [...filterItems(base.items), ...extras], label: labelOverride || base.baseLabel }
+  }
 
   const buildDynGroup = (nome, telas) => ({
     id: `din_${nome}`,
@@ -186,7 +197,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       } else {
         const base = MENU_BASE.find(g => g.id === sid)
         if (!base) return
-        result.push({ ...base, items: filterItems(base.items), label: labelsMenu[sid] || base.baseLabel })
+        result.push(buildFixoGroup(base, labelsMenu[sid]))
       }
     })
     Object.entries(gruposDin).forEach(([nome, tls]) => {
@@ -197,7 +208,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     const menuFixo = ordemSecoes
       .map(id => MENU_BASE.find(g => g.id === id))
       .filter(Boolean)
-      .map(g => ({ ...g, items: filterItems(g.items), label: labelsMenu[g.id] || g.baseLabel }))
+      .map(g => buildFixoGroup(g, labelsMenu[g.id]))
     menu = [
       ...menuFixo,
       ...Object.entries(gruposDin).map(([nome, tls]) => buildDynGroup(nome, tls))

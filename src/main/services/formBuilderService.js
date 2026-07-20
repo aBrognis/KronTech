@@ -82,7 +82,8 @@ export async function listarTelas(apenasAtivas = false) {
            t.slug,t.criado_em,t.atualizado_em,
            COALESCE(t.canvas_w,780) AS canvas_w, COALESCE(t.canvas_h,480) AS canvas_h,
            COALESCE(t.col_favorito,TRUE)   AS col_favorito,
-           COALESCE(t.col_timestamps,TRUE) AS col_timestamps
+           COALESCE(t.col_timestamps,TRUE) AS col_timestamps,
+           t.grupo_fixo
     FROM kr_telas t
     LEFT JOIN kr_modulos m ON m.id=t.modulo_id
     ${apenasAtivas ? 'WHERE t.ativo=TRUE' : ''}
@@ -159,10 +160,10 @@ export async function criarTela(payload) {
     const colTs  = temTimestamps ? true : (payload.colTimestamps !== false)
 
     const { rows } = await client.query(
-      `INSERT INTO kr_telas (nome_tela,nome_tabela,descricao,icone,modulo_id,ordem_menu,canvas_w,canvas_h,col_favorito,col_timestamps)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      `INSERT INTO kr_telas (nome_tela,nome_tabela,descricao,icone,modulo_id,grupo_fixo,ordem_menu,canvas_w,canvas_h,col_favorito,col_timestamps)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
       [payload.nomeTela, nomeTabela, payload.descricao||null,
-       payload.icone||'layout', payload.moduloId||null, ordemMenu,
+       payload.icone||'layout', payload.moduloId||null, payload.grupoFixo||null, ordemMenu,
        payload.canvasW||780, payload.canvasH||480,
        colFav, colTs]
     )
@@ -187,10 +188,10 @@ export async function editarTela(telaId, payload) {
     const editColTs  = editTemTs  ? true : (payload.colTimestamps !== false)
 
     await client.query(
-      `UPDATE kr_telas SET nome_tela=$1,descricao=$2,icone=$3,modulo_id=$4,ordem_menu=$5,ativo=$6,canvas_w=$7,canvas_h=$8,col_favorito=$9,col_timestamps=$10
-       WHERE id=$11`,
+      `UPDATE kr_telas SET nome_tela=$1,descricao=$2,icone=$3,modulo_id=$4,grupo_fixo=$5,ordem_menu=$6,ativo=$7,canvas_w=$8,canvas_h=$9,col_favorito=$10,col_timestamps=$11
+       WHERE id=$12`,
       [payload.nomeTela, payload.descricao||null, payload.icone||'layout',
-       payload.moduloId||null, payload.ordemMenu||99,
+       payload.moduloId||null, payload.grupoFixo||null, payload.ordemMenu||99,
        payload.ativo !== undefined ? payload.ativo : true,
        payload.canvasW||780, payload.canvasH||480,
        editColFav, editColTs,

@@ -16,6 +16,10 @@ const api = {
     openFile:   ()               => ipcRenderer.invoke('sql:openFile'),
     saveFile:   (path, content)  => ipcRenderer.invoke('sql:saveFile', { path, content }),
   },
+  form: {
+    query: (sql, params) => ipcRenderer.invoke('form:query', { sql, params }),
+    exec:  (sql, params) => ipcRenderer.invoke('form:exec',  { sql, params }),
+  },
   agenda: {
     getByMonth: (d)  => ipcRenderer.invoke('agenda:getByMonth', d),
     create:     (d)  => ipcRenderer.invoke('agenda:create', d),

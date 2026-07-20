@@ -100,6 +100,26 @@ const TIPOS_DESIGNER = [
   { valor: 'calculo',     label: 'Campo Calculado' },
 ]
 
+const FUNCOES_BOTAO = [
+  { valor: 'copiarTexto',            label: 'Copiar texto / campo'      },
+  { valor: 'mostrarAlerta',          label: 'Mostrar alerta (info)'     },
+  { valor: 'mostrarSucesso',         label: 'Mostrar alerta (sucesso)'  },
+  { valor: 'mostrarErro',            label: 'Mostrar alerta (erro)'     },
+  { valor: 'mostrarAviso',           label: 'Mostrar alerta (aviso)'    },
+  { valor: 'abrirTela',              label: 'Navegar para tela'         },
+  { valor: 'voltarTela',             label: 'Voltar para tela anterior' },
+  { valor: 'abrirEmNovaAba',         label: 'Abrir link externo'        },
+  { valor: 'limparFormulario',       label: 'Limpar formulário'         },
+  { valor: 'exportarPDF',            label: 'Exportar como PDF'         },
+  { valor: 'abrirArquivo',           label: 'Abrir arquivo'             },
+  { valor: 'previewArquivo',         label: 'Preview de arquivo'        },
+  { valor: 'copiarArquivoLocal',     label: 'Copiar arquivo para temp'  },
+  { valor: 'copiarArquivoClipboard', label: 'Copiar arquivo (clipboard)'},
+  { valor: 'excluirRegistro',        label: 'Excluir registro atual'    },
+  { valor: 'buscarCNPJ',             label: 'Buscar CNPJ'               },
+  { valor: 'buscarCEP',              label: 'Buscar CEP'                },
+]
+
 function s(v) { return Math.max(0, Math.round(v / SNAP) * SNAP) }
 
 export function autoPos(campos, tipo, opcoes) {
@@ -115,6 +135,404 @@ export function autoPos(campos, tipo, opcoes) {
     w_px:  (tipo === 'texto_longo' || tipo === 'divisor') ? CANVAS_W : 280,
     h_px:  h,
   }
+}
+
+const COR_PAL = ['#6366F1','#8B5CF6','#EC4899','#EF4444','#F97316','#EAB308','#22C55E','#14B8A6','#3B82F6','#94A3B8']
+
+// ── Compact field editor used inside the designer side panel ──────────────────
+function FieldPropPanel({ campo, updateProp, campos }) {
+  const up = (obj) => updateProp(campo._key, obj)
+  const lbl = (text) => <div style={{ fontSize:9, fontWeight:600, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5, marginBottom:3 }}>{text}</div>
+  const inp = (key, val, extra = {}) => <input className="form-input" value={val ?? ''} placeholder={extra.placeholder || ''} disabled={extra.disabled} onChange={e => up({ [key]: e.target.value })} style={{ height:28, fontSize:11, width:'100%', ...(extra.style||{}) }}/>
+  const chk = (key, label, val) => (
+    <label style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, cursor:'pointer', userSelect:'none', color:'var(--t2)' }}>
+      <input type="checkbox" checked={!!val} onChange={e => up({ [key]: e.target.checked })} style={{ accentColor:'var(--or)', flexShrink:0 }}/>{label}
+    </label>
+  )
+  const numInp = (key, val, min, max) => <input type="number" className="form-input" min={min} max={max} value={val ?? ''} onChange={e => up({ [key]: e.target.value === '' ? null : Number(e.target.value) })} style={{ height:26, fontSize:11, width:'100%', padding:'0 6px' }}/>
+
+  if (campo.tipo === 'favorito' || campo.tipo === 'timestamps') {
+    return <div style={{ fontSize:11, color:'var(--t3)', fontStyle:'italic' }}>{campo.tipo === 'favorito' ? 'Campo de favorito — sem configuração.' : 'Gera criado_em e atualizado_em automaticamente.'}</div>
+  }
+
+  const tiposComOpcoes = ['select','radio','flags']
+  const opcoes = Array.isArray(campo.opcoes) ? campo.opcoes : []
+  const allCampos = campos || []
+
+  // ── Divisor ──
+  if (campo.tipo === 'divisor') {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div>{lbl('Título (opcional)')}{inp('label', campo.label, { placeholder:'Ex: Endereço' })}</div>
+        <div>
+          {lbl('Orientação')}
+          <div style={{ display:'flex', gap:4 }}>
+            {[{label:'― Horizontal',val:'horizontal'},{label:'| Vertical',val:'vertical'}].map(({label,val}) => (
+              <button key={val} className={`btn ${(campo.valorPadrao||'horizontal')===val?'btn-primary':'btn-ghost'}`} style={{ flex:1, height:26, fontSize:10 }} onClick={() => up({ valorPadrao:val })}>{label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Copiar ──
+  if (campo.tipo === 'copiar') {
+    const camposTexto = allCampos.filter(c => c._key !== campo._key && ['texto','texto_longo'].includes(c.tipo) && c.nomeCampo)
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div>{lbl('Texto do botão')}{inp('label', campo.label, { placeholder:'Copiar' })}</div>
+        <div>
+          {lbl('Campo a copiar')}
+          <select className="form-select" value={campo.valorPadrao || ''} onChange={e => up({ valorPadrao: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
+            <option value="">— selecione —</option>
+            {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
+          </select>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Botão ──
+  if (campo.tipo === 'botao') {
+    let cfg = {}; try { cfg = JSON.parse(campo.valorPadrao||'{}') } catch {}
+    const fn = cfg.fn || 'copiarTexto', param = cfg.param || '', variant = cfg.variant || 'ghost'
+    const updateCfg = (u) => up({ valorPadrao: JSON.stringify({...cfg,...u}) })
+    const semParam = ['limparFormulario','exportarPDF','voltarTela'].includes(fn)
+    const fnCampoRef = ['abrirArquivo','previewArquivo','copiarArquivoLocal','copiarArquivoClipboard','buscarCNPJ','buscarCEP']
+    const tiposFiltro = { abrirArquivo:'arquivo', previewArquivo:'arquivo', copiarArquivoLocal:'arquivo', copiarArquivoClipboard:'arquivo', buscarCNPJ:'cnpj', buscarCEP:'cep' }
+    const camposPorTipo = fnCampoRef.includes(fn) ? allCampos.filter(c => c._key !== campo._key && c.tipo === tiposFiltro[fn] && c.nomeCampo) : []
+    const camposRef = allCampos.filter(c => c._key !== campo._key && !['divisor','botao'].includes(c.tipo) && c.nomeCampo)
+    const grupos = [
+      { id:'geral', label:'— Geral' }, { id:'arquivo', label:'— Arquivo' },
+      { id:'registro', label:'— Registro' }, { id:'consulta', label:'— Consultas externas' },
+    ]
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div>{lbl('Texto do botão')}{inp('label', campo.label, { placeholder:'Ex: Salvar, Abrir...' })}</div>
+        <div>
+          {lbl('Ação')}
+          <select className="form-select" value={fn} onChange={e => updateCfg({ fn: e.target.value, param:'' })} style={{ height:28, fontSize:11, width:'100%' }}>
+            {grupos.map(g => {
+              const fns = FUNCOES_BOTAO.filter(f => f.grupo === g.id)
+              if (!fns.length) return null
+              return <optgroup key={g.id} label={g.label}>{fns.map(f => <option key={f.valor} value={f.valor}>{f.label}</option>)}</optgroup>
+            })}
+          </select>
+        </div>
+        {fnCampoRef.includes(fn) && (
+          <div>
+            {lbl(`Campo ${tiposFiltro[fn]}`)}
+            {camposPorTipo.length
+              ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
+                  <option value="">— selecione —</option>
+                  {camposPorTipo.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
+                </select>
+              : <div style={{ fontSize:10, color:'#fb923c', padding:'4px 0' }}>Adicione um campo do tipo "{tiposFiltro[fn]}" primeiro.</div>
+            }
+          </div>
+        )}
+        {fn === 'copiarTexto' && (
+          <div>
+            {lbl('Campo')}
+            {camposRef.length
+              ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
+                  <option value="">— campo —</option>
+                  {camposRef.map(c => <option key={c._key} value={`{${c.nomeCampo}}`}>{c.label || c.nomeCampo}</option>)}
+                </select>
+              : <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })} placeholder="Texto fixo ou {campo}" style={{ height:28, fontSize:11, width:'100%' }}/>
+            }
+          </div>
+        )}
+        {['mostrarAlerta','mostrarSucesso','mostrarErro','mostrarAviso','abrirTela','abrirEmNovaAba','excluirRegistro'].includes(fn) && (
+          <div>
+            {lbl(fn === 'abrirTela' ? 'Tela destino' : fn === 'abrirEmNovaAba' ? 'URL' : fn === 'excluirRegistro' ? 'Confirmação' : 'Mensagem')}
+            <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })}
+              placeholder={fn === 'abrirEmNovaAba' ? 'https://...' : fn === 'abrirTela' ? 'dashboard · fb__tabela' : fn === 'excluirRegistro' ? 'Confirma exclusão?' : 'Mensagem'}
+              style={{ height:28, fontSize:11, width:'100%' }}/>
+          </div>
+        )}
+        {!semParam && !fnCampoRef.includes(fn) && fn !== 'copiarTexto' && !['mostrarAlerta','mostrarSucesso','mostrarErro','mostrarAviso','abrirTela','abrirEmNovaAba','excluirRegistro'].includes(fn) && (
+          <div>
+            {lbl('Parâmetro')}
+            <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}/>
+          </div>
+        )}
+        <div>
+          {lbl('Estilo')}
+          <select className="form-select" value={variant} onChange={e => updateCfg({ variant: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
+            <option value="primary">Laranja</option>
+            <option value="ghost">Cinza</option>
+            <option value="danger">Vermelho</option>
+          </select>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Campos normais ──
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+
+      {/* ── Identificação ── */}
+      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+        <div>{lbl('Label')}{inp('label', campo.label, { placeholder:'Label do campo' })}</div>
+        <div>{lbl('Nome no banco')}{inp('nomeCampo', campo.nomeCampo, { placeholder:'nome_campo', style:{ fontFamily:'monospace', fontSize:10 } })}</div>
+        <div>
+          {lbl('Tipo')}
+          <select className="form-select" value={campo.tipo} onChange={e => up({ tipo: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
+            {TIPOS_DESIGNER.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+          </select>
+        </div>
+        <div>
+          {lbl('Valor padrão')}
+          {tiposComOpcoes.includes(campo.tipo) && opcoes.length > 0
+            ? <select className="form-select" value={campo.valorPadrao || ''} onChange={e => up({ valorPadrao: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
+                <option value="">— nenhum —</option>
+                {opcoes.map((op,i) => <option key={i} value={op.valor}>{op.label}</option>)}
+              </select>
+            : inp('valorPadrao', campo.valorPadrao, { placeholder:'opcional' })
+          }
+        </div>
+        {!['booleano'].includes(campo.tipo) && (
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            {chk('obrigatorio', 'Obrigatório', campo.obrigatorio)}
+            {chk('campoBusca', 'Campo de busca', campo.campoBusca)}
+            {chk('sequencial', 'Sequencial', campo.sequencial)}
+          </div>
+        )}
+      </div>
+
+      {/* ── Configuração do tipo ── */}
+      {(campo.tipo === 'codigo_auto' || campo.tipo === 'documento' || campo.tipo === 'calculo' || campo.tipo === 'avaliacao' || campo.tipo === 'radio' || campo.tipo === 'flags' || tiposComOpcoes.includes(campo.tipo)) && (
+        <div style={{ display:'flex', flexDirection:'column', gap:6, borderTop:'1px solid var(--bd)', paddingTop:8 }}>
+          {lbl('Config. do tipo')}
+
+          {campo.tipo === 'codigo_auto' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <div>
+                {lbl('Dígitos do sequencial')}
+                <input type="number" className="form-input" min={1} max={10} value={campo.opcoes?.seqChars ?? 3}
+                  onChange={e => up({ opcoes: { ...(campo.opcoes||{}), seqChars: e.target.value === '' ? 3 : Number(e.target.value) } })}
+                  style={{ height:28, fontSize:11, width:'100%' }}/>
+                <div style={{ fontSize:9, color:'var(--t3)', marginTop:3 }}>
+                  Preview: {String(1).padStart(campo.opcoes?.seqChars ?? 3, '0')}
+                </div>
+              </div>
+              <div>
+                {lbl('Prefixo (opcional)')}
+                <input className="form-input" value={campo.opcoes?.prefix || ''} placeholder="Ex: CLI- , OS-"
+                  onChange={e => up({ opcoes: { ...(campo.opcoes||{}), prefix: e.target.value } })}
+                  style={{ height:28, fontSize:11, width:'100%', fontFamily:'monospace' }}/>
+              </div>
+            </div>
+          )}
+
+          {campo.tipo === 'documento' && (
+            <div>
+              {lbl('Campo radio PF/PJ')}
+              <input className="form-input" value={campo.opcoes?.tipoRef || ''} placeholder="tipo_pessoa"
+                onChange={e => up({ opcoes: { ...(campo.opcoes||{}), tipoRef: e.target.value.trim() } })}
+                style={{ height:28, fontSize:11, width:'100%', fontFamily:'monospace' }}/>
+            </div>
+          )}
+
+          {campo.tipo === 'calculo' && (
+            <div>
+              {lbl('Fórmula')}
+              <input className="form-input" value={campo.opcoes?.formula || ''} placeholder="{preco} * {qtd}"
+                onChange={e => up({ opcoes: { ...(campo.opcoes||{}), formula: e.target.value } })}
+                style={{ height:28, fontSize:11, width:'100%', fontFamily:'monospace' }}/>
+            </div>
+          )}
+
+          {campo.tipo === 'avaliacao' && (
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <div style={{ flex:1 }}>
+                {lbl('Máx. estrelas')}
+                <input type="number" className="form-input" min={1} max={10} value={campo.opcoes?.max || 5}
+                  onChange={e => up({ opcoes: { ...(campo.opcoes||{}), max: e.target.value === '' ? 5 : Number(e.target.value) } })}
+                  style={{ height:26, fontSize:11, width:'100%', padding:'0 6px' }}/>
+              </div>
+              <span style={{ color:'#FBD24C', fontSize:12, paddingTop:14 }}>{Array.from({ length: campo.opcoes?.max || 5 }, () => '★').join('')}</span>
+            </div>
+          )}
+
+          {(campo.tipo === 'radio' || campo.tipo === 'flags') && (
+            <div>
+              {lbl('Layout')}
+              <div style={{ display:'flex', gap:4 }}>
+                {[{label:'→ Linha',val:'linha'},{label:'↓ Coluna',val:'coluna'}].map(({label,val}) => (
+                  <button key={val} className={`btn ${(campo.opcoesLayout||'linha')===val?'btn-primary':'btn-ghost'}`} style={{ flex:1, height:26, fontSize:10 }} onClick={() => up({ opcoesLayout:val })}>{label}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tiposComOpcoes.includes(campo.tipo) && (
+            <div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                {lbl(campo.tipo === 'flags' ? 'Flags' : 'Opções')}
+                <button className="btn btn-ghost" style={{ height:20, fontSize:10, padding:'0 6px' }}
+                  onClick={() => {
+                    const n = opcoes.length + 1
+                    const nova = campo.tipo === 'flags'
+                      ? { label:`Flag ${n}`, valor:'' }
+                      : { label:`Opção ${n}`, valor:`opcao_${n}`, cor: COR_PAL[opcoes.length % COR_PAL.length] }
+                    up({ opcoes: [...opcoes, nova] })
+                  }}>+ Add</button>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {opcoes.map((op, i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                    {campo.tipo !== 'flags' && (
+                      <input type="color" value={op.cor || '#6366F1'} onChange={e => { const o=[...opcoes]; o[i]={...o[i],cor:e.target.value}; up({opcoes:o}) }}
+                        style={{ width:22, height:22, borderRadius:4, border:'1px solid var(--bd)', padding:1, cursor:'pointer', flexShrink:0 }}/>
+                    )}
+                    <input className="form-input" value={op.label} placeholder="Label" onChange={e => { const o=[...opcoes]; o[i]={...o[i],label:e.target.value}; up({opcoes:o}) }}
+                      style={{ flex:1, height:26, fontSize:11, minWidth:0 }}/>
+                    <input className="form-input" value={op.valor} placeholder="valor" onChange={e => { const o=[...opcoes]; o[i]={...o[i],valor:e.target.value}; up({opcoes:o}) }}
+                      style={{ width:60, height:26, fontSize:10, fontFamily:'monospace', flexShrink:0 }}/>
+                    <button onClick={() => up({ opcoes: opcoes.filter((_,j)=>j!==i) })}
+                      style={{ border:'none', background:'none', cursor:'pointer', color:'var(--t3)', padding:2, flexShrink:0, display:'flex', alignItems:'center' }}>
+                      <Trash2 size={11}/>
+                    </button>
+                  </div>
+                ))}
+                {opcoes.length === 0 && <div style={{ fontSize:10, color:'var(--t3)', fontStyle:'italic' }}>Nenhuma opção ainda.</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tamanho BD / Largura lista ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, borderTop:'1px solid var(--bd)', paddingTop:8 }}>
+        <div>
+          {lbl('Largura % lista')}
+          <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+            {numInp('largura', campo.largura, 10, 100)}
+            <span style={{ fontSize:10, color:'var(--t3)' }}>%</span>
+          </div>
+        </div>
+        <div>
+          {lbl('Tamanho BD')}
+          <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+            {numInp('tamanho', campo.tamanho, 1, 5000)}
+            <span style={{ fontSize:10, color:'var(--t3)' }}>ch</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Estilo ── */}
+      <div style={{ borderTop:'1px solid var(--bd)', paddingTop:8, display:'flex', flexDirection:'column', gap:8 }}>
+        {lbl('Estilo')}
+
+        {/* Label */}
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          <div style={{ fontSize:9, fontWeight:700, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5, borderBottom:'1px solid var(--bd)', paddingBottom:3 }}>Label</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div>
+              <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Fonte (px)</div>
+              {numInp('fontSize', campo.fontSize, 7, 48)}
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+              {chk('semNegrito', 'Sem negrito', campo.semNegrito)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Cor</div>
+            <div style={{ display:'flex', gap:3 }}>
+              <input type="color" value={campo.labelCor||'#888888'} onChange={e => up({ labelCor: e.target.value })} style={{ width:26, height:26, borderRadius:4, border:'1px solid var(--bd)', padding:1, cursor:'pointer', flexShrink:0 }}/>
+              <input className="form-input" value={campo.labelCor||''} onChange={e => up({ labelCor: e.target.value })} placeholder="padrão" style={{ flex:1, height:26, fontSize:10, minWidth:0 }}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Conteúdo */}
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          <div style={{ fontSize:9, fontWeight:700, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5, borderBottom:'1px solid var(--bd)', paddingBottom:3 }}>Conteúdo</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div>
+              <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Fonte (px)</div>
+              {numInp('inputFontSize', campo.inputFontSize, 7, 48)}
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', justifyContent:'flex-end' }}>
+              {chk('inputNegrito', 'Negrito', campo.inputNegrito)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Alinhamento</div>
+            <div style={{ display:'flex', gap:3 }}>
+              {[['left','←'],['center','↔'],['right','→']].map(([v,ico]) => (
+                <button key={v} className={`btn ${(campo.inputAlign||'left')===v?'btn-primary':'btn-ghost'}`}
+                  style={{ flex:1, height:26, fontSize:12, padding:0 }} onClick={() => up({ inputAlign:v })}>{ico}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div>
+              <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Cor texto</div>
+              <div style={{ display:'flex', gap:3 }}>
+                <input type="color" value={campo.inputCor||'#000000'} onChange={e => up({ inputCor: e.target.value })} style={{ width:26, height:26, borderRadius:4, border:'1px solid var(--bd)', padding:1, cursor:'pointer', flexShrink:0 }}/>
+                <input className="form-input" value={campo.inputCor||''} onChange={e => up({ inputCor: e.target.value })} placeholder="padrão" style={{ flex:1, height:26, fontSize:10, minWidth:0 }}/>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Cor fundo</div>
+              <div style={{ display:'flex', gap:3 }}>
+                <input type="color" value={campo.inputBg||'#ffffff'} onChange={e => up({ inputBg: e.target.value })} style={{ width:26, height:26, borderRadius:4, border:'1px solid var(--bd)', padding:1, cursor:'pointer', flexShrink:0 }}/>
+                <input className="form-input" value={campo.inputBg||''} onChange={e => up({ inputBg: e.target.value })} placeholder="padrão" style={{ flex:1, height:26, fontSize:10, minWidth:0 }}/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Borda */}
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          <div style={{ fontSize:9, fontWeight:700, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5, borderBottom:'1px solid var(--bd)', paddingBottom:3 }}>Borda</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+            <div>
+              <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Raio (px)</div>
+              {numInp('borderRadius', campo.borderRadius, 0, 40)}
+            </div>
+            <div>
+              <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Espessura (px)</div>
+              {numInp('borderWidth', campo.borderWidth, 0, 10)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:'var(--t3)', marginBottom:2 }}>Cor</div>
+            <div style={{ display:'flex', gap:3 }}>
+              <input type="color" value={campo.borderColor||'#cccccc'} onChange={e => up({ borderColor: e.target.value })} style={{ width:26, height:26, borderRadius:4, border:'1px solid var(--bd)', padding:1, cursor:'pointer', flexShrink:0 }}/>
+              <input className="form-input" value={campo.borderColor||''} onChange={e => up({ borderColor: e.target.value })} placeholder="padrão" style={{ flex:1, height:26, fontSize:10, minWidth:0 }}/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+// ── Collapsible panel section ─────────────────────────────────────────────────
+function CollapseBox({ title, children, defaultOpen = true, noPad = false }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div style={{ border:'1px solid var(--bd)', borderRadius:8, flexShrink:0 }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+        background:'var(--s2)', border:'none', borderRadius: open ? '8px 8px 0 0' : 8,
+        cursor:'pointer', padding:'6px 10px',
+        fontSize:10, fontWeight:700, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.6,
+        fontFamily:'inherit',
+      }}>
+        {title}
+        <span style={{ fontSize:10, color:'var(--t3)', transition:'transform .15s', display:'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+      </button>
+      {open && <div style={noPad ? {} : { padding:'8px 10px', display:'flex', flexDirection:'column', gap:6 }}>{children}</div>}
+    </div>
+  )
 }
 
 // ── Context menu item ─────────────────────────────────────────────────────────
@@ -182,6 +600,7 @@ export default function FormDesigner({
   snapSz = SNAP,         onSnapSz,
   canvasMargins = { top: 0, bottom: 0, left: 0, right: 0 },
   onCanvasMargins,
+  renderFieldPanel,
 }) {
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -992,7 +1411,7 @@ export default function FormDesigner({
 
           {/* Panel content — hidden when collapsed */}
           {!panelCollapsed && (
-          <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
+          <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
 
           {/* ── Panel header (context-sensitive title + tabs when no selection) */}
           {!selSingle && !selMulti && (
@@ -1054,7 +1473,7 @@ export default function FormDesigner({
           )}
 
           {/* ── Scrollable panel body */}
-          <div style={{ flex:1, overflowY:'auto', padding:'10px 10px 12px', display:'flex', flexDirection:'column', gap:8 }}>
+          <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:'10px 10px 12px', display:'flex', flexDirection:'column', gap:8 }}>
 
           {/* ── Canvas panel ──────────────────────────────────────────────── */}
           {!selSingle && !selMulti && panelTab === 'campos' && (<>
@@ -1196,8 +1615,7 @@ export default function FormDesigner({
 
           {/* ── Multi-select panel ────────────────────────────────────────── */}
           {selMulti && (<>
-            <div style={panelBox}>
-              <div style={panelTitle}>Alinhar</div>
+            <CollapseBox title="Alinhar">
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} title="Alinhar borda esquerda" onClick={alignLeft}>⇤ Esq</button>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} title="Centralizar no canvas" onClick={centerHoriz}>↔ Ctr</button>
@@ -1206,216 +1624,61 @@ export default function FormDesigner({
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} title="Centralizar vertical" onClick={centerVert}>↕ Mid</button>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} title="Alinhar borda inferior" onClick={alignBottom}>⇣ Bot</button>
               </div>
-            </div>
-
-            <div style={panelBox}>
-              <div style={panelTitle}>Distribuir</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={distributeH} disabled={selCampos.length<3} title="3+ campos">⟺ H</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={distributeV} disabled={selCampos.length<3} title="3+ campos">⇕ V</button>
-              </div>
-            </div>
-
-            <div style={panelBox}>
-              <div style={panelTitle}>Igualar tamanho</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={distributeH} disabled={selCampos.length<3} title="3+ campos">⟺ Distrib H</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={distributeV} disabled={selCampos.length<3} title="3+ campos">⇕ Distrib V</button>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sameWidth}>= Larg</button>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sameHeight}>= Alt</button>
               </div>
-            </div>
+            </CollapseBox>
 
-            <div style={panelBox}>
-              <div style={panelTitle}>Z-order</div>
+            <CollapseBox title="Camadas (Z-order)" defaultOpen={false}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringToFront} title="Trazer ao topo">⬆⬆ Topo</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendToBack}   title="Mandar ao fundo">⬇⬇ Fundo</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringForward} title="Um para frente">▲ Frente</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendBackward} title="Um para trás">▼ Trás</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringToFront}>⬆⬆ Topo</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendToBack}>⬇⬇ Fundo</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringForward}>▲ Frente</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendBackward}>▼ Trás</button>
               </div>
-            </div>
-
+            </CollapseBox>
           </>)}
 
           {/* ── Single field panel ────────────────────────────────────────── */}
           {selSingle && (<>
-            {/* Inline property editing */}
-            <div style={panelBox}>
-              <div style={panelTitle}>Propriedades</div>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize:9 }}>Label</label>
-                <input className="form-input" value={selSingle.label || ''} placeholder="Label do campo"
-                  onChange={e => updateProp(selSingle._key, { label: e.target.value })}
-                  style={{ height:28, fontSize:11 }}/>
-              </div>
-              {!['divisor','favorito','timestamps','copiar','botao'].includes(selSingle.tipo) && (
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize:9 }}>Nome no banco</label>
-                  <input className="form-input" value={selSingle.nomeCampo || ''} placeholder="nome_campo"
-                    onChange={e => updateProp(selSingle._key, { nomeCampo: e.target.value })}
-                    style={{ height:28, fontSize:11, fontFamily:'monospace' }}/>
-                </div>
-              )}
-              {!['divisor','favorito','timestamps','copiar'].includes(selSingle.tipo) && (
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize:9 }}>Tipo</label>
-                  <select className="form-select" value={selSingle.tipo}
-                    onChange={e => updateProp(selSingle._key, { tipo: e.target.value })}
-                    style={{ height:28, fontSize:11 }}>
-                    {TIPOS_DESIGNER.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
-                  </select>
-                </div>
-              )}
-              {!['divisor','favorito','timestamps','copiar','booleano','botao'].includes(selSingle.tipo) && (
-                <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, cursor:'pointer', userSelect:'none' }}>
-                    <input type="checkbox" checked={!!selSingle.obrigatorio}
-                      onChange={e => updateProp(selSingle._key, { obrigatorio: e.target.checked })}
-                      style={{ accentColor:'var(--or)' }}/>
-                    Obrigatório
-                  </label>
-                  <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, cursor:'pointer', userSelect:'none' }}>
-                    <input type="checkbox" checked={!!selSingle.campoBusca}
-                      onChange={e => updateProp(selSingle._key, { campoBusca: e.target.checked })}
-                      style={{ accentColor:'var(--or)' }}/>
-                    Campo de busca
-                  </label>
-                  {!['divisor','botao','favorito','timestamps','copiar'].includes(selSingle.tipo) && (
-                    <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, cursor:'pointer', userSelect:'none' }}>
-                      <input type="checkbox" checked={!!selSingle.semNegrito}
-                        onChange={e => updateProp(selSingle._key, { semNegrito: e.target.checked })}
-                        style={{ accentColor:'var(--or)' }}/>
-                      Label sem negrito
-                    </label>
-                  )}
-                  {!['divisor','botao','favorito','timestamps','copiar'].includes(selSingle.tipo) && (
-                    <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, userSelect:'none' }}>
-                      Label fonte:
-                      <input type="number" min={8} max={32}
-                        value={selSingle.fontSize || ''}
-                        onChange={e => updateProp(selSingle._key, { fontSize: e.target.value ? Number(e.target.value) : null })}
-                        placeholder="padrão"
-                        style={{ width:58, height:24, fontSize:11, padding:'0 5px', border:'1px solid var(--bd)', borderRadius:4, background:'var(--bg2)', color:'var(--t1)' }}/>
-                      px
-                    </label>
-                  )}
-                  {!['divisor','botao','favorito','timestamps','copiar','booleano','radio','flags'].includes(selSingle.tipo) && (<>
-                    <div style={{ borderTop:'1px solid var(--bd)', margin:'2px 0' }}/>
-                    <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, cursor:'pointer', userSelect:'none' }}>
-                      <input type="checkbox" checked={!!selSingle.inputNegrito}
-                        onChange={e => updateProp(selSingle._key, { inputNegrito: e.target.checked })}
-                        style={{ accentColor:'var(--or)' }}/>
-                      Conteúdo negrito
-                    </label>
-                    <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, userSelect:'none' }}>
-                      Conteúdo fonte:
-                      <input type="number" min={8} max={32}
-                        value={selSingle.inputFontSize || ''}
-                        onChange={e => updateProp(selSingle._key, { inputFontSize: e.target.value ? Number(e.target.value) : null })}
-                        placeholder="padrão"
-                        style={{ width:58, height:24, fontSize:11, padding:'0 5px', border:'1px solid var(--bd)', borderRadius:4, background:'var(--bg2)', color:'var(--t1)' }}/>
-                      px
-                    </label>
-                  </>)}
-                  {!['lookup','select','tags','multiline','booleano','cpf','cnpj','cep','documento'].includes(selSingle.tipo) && (
-                    <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:11, cursor:'pointer', userSelect:'none' }}>
-                      <input type="checkbox" checked={!!selSingle.sequencial}
-                        onChange={e => updateProp(selSingle._key, { sequencial: e.target.checked })}
-                        style={{ accentColor:'var(--or)' }}/>
-                      Código sequencial
-                    </label>
-                  )}
-                  {selSingle.sequencial && (
-                    <div className="form-group" style={{ marginTop:2 }}>
-                      <label className="form-label" style={{ fontSize:9 }}>Qtde de caracteres</label>
-                      <input className="form-input" type="number" min={1} max={20}
-                        value={(selSingle.opcoes?.seqChars) || 3}
-                        onChange={e => updateProp(selSingle._key, { opcoes: { ...(selSingle.opcoes||{}), seqChars: Math.max(1, Math.min(20, Number(e.target.value)||3)) } })}
-                        style={{ height:28, fontSize:11, padding:'0 6px' }}/>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <CollapseBox title="Propriedades">
+              <FieldPropPanel campo={selSingle} updateProp={updateProp} campos={campos} />
+            </CollapseBox>
 
-            {/* Documento — campo de tipo F/J */}
-            {selSingle.tipo==='documento' && (
-              <div style={panelBox}>
-                <div style={panelTitle}>Vínculo Física / Jurídica</div>
-                <div className="form-group">
-                  <label className="form-label" style={{ fontSize:9 }}>Nome do campo radio (F/J)</label>
-                  <input className="form-input" value={selSingle.opcoes?.tipoRef || ''}
-                    onChange={e => updateProp(selSingle._key, { opcoes: { ...(selSingle.opcoes||{}), tipoRef: e.target.value.trim() } })}
-                    placeholder="ex: tipo_pessoa"
-                    style={{ height:28, fontSize:11, fontFamily:'monospace' }}/>
-                </div>
-                <div style={{ fontSize:9.5, color:'var(--t3)', lineHeight:1.6 }}>
-                  Crie um campo <b>Radio</b> com opções <b>F</b> e <b>J</b>, informe seu nome aqui. O documento troca a máscara automaticamente conforme o radio selecionado.
-                </div>
-              </div>
-            )}
-
-            {/* Divisor orientation toggle */}
-            {selSingle.tipo==='divisor' && (
-              <div style={panelBox}>
-                <div style={panelTitle}>Orientação</div>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
-                  {[{label:'― Horizontal',val:'horizontal'},{label:'| Vertical',val:'vertical'}].map(({label,val})=>{
-                    const active=(selSingle.valorPadrao||'horizontal')===val
-                    return (
-                      <button key={val} className={`btn ${active?'btn-primary':'btn-ghost'}`} style={{ height:28, fontSize:10 }}
-                        onClick={()=>{ const ww=selSingle.w_px||280, hh=selSingle.h_px||24; updateLayout(selSingle._key,{ valorPadrao:val, w_px:val==='vertical'?24:Math.max(hh,120), h_px:val==='vertical'?Math.max(ww,120):24 }) }}>
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Position & Size */}
-            <div style={panelBox}>
-              <div style={panelTitle}>Posição e Tamanho</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
-                {[{label:'X (px)',key:'x_pos',min:0},{label:'Y (px)',key:'y_pos',min:0},{label:'Largura',key:'w_px',min:80},{label:'Altura',key:'h_px',min:16}].map(({label,key,min})=>(
-                  <div key={key} className="form-group">
-                    <label className="form-label" style={{ fontSize:9 }}>{label}</label>
+            <CollapseBox title="Layout" defaultOpen={false}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:5 }}>
+                {[{label:'X',key:'x_pos',min:0},{label:'Y',key:'y_pos',min:0},{label:'W',key:'w_px',min:80},{label:'H',key:'h_px',min:16}].map(({label,key,min})=>(
+                  <div key={key}>
+                    <div style={{ fontSize:9, color:'var(--t3)', marginBottom:3, textAlign:'center' }}>{label}</div>
                     <input className="form-input" type="number" min={min} step={snapSz} value={selSingle[key]||0}
-                      onChange={e=>updateLayout(selSingle._key,{[key]:sn(Number(e.target.value))})} style={{ height:28, fontSize:11, padding:'0 6px' }}/>
+                      onChange={e=>updateLayout(selSingle._key,{[key]:sn(Number(e.target.value))})}
+                      style={{ height:26, fontSize:11, padding:'0 4px', width:'100%', textAlign:'center' }}/>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Quick width */}
-            <div style={panelBox}>
-              <div style={panelTitle}>Largura rápida</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
-                {[{l:'¼',w:Math.round(canvasConfigW*.25/snapSz)*snapSz},{l:'½',w:Math.round(canvasConfigW*.5/snapSz)*snapSz},{l:'¾',w:Math.round(canvasConfigW*.75/snapSz)*snapSz},{l:'Full',w:canvasConfigW}].map(({l,w})=>(
-                  <button key={l} className="btn btn-ghost" style={{ height:26, fontSize:11 }} onClick={()=>updateLayout(selSingle._key,{w_px:w})}>{l}</button>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4 }}>
+                {[{l:'¼',w:Math.round(canvasConfigW*.25/snapSz)*snapSz},{l:'½',w:Math.round(canvasConfigW*.5/snapSz)*snapSz},{l:'¾',w:Math.round(canvasConfigW*.75/snapSz)*snapSz},{l:'↔',w:canvasConfigW}].map(({l,w})=>(
+                  <button key={l} className="btn btn-ghost" style={{ height:24, fontSize:11 }} onClick={()=>updateLayout(selSingle._key,{w_px:w})}>{l}</button>
                 ))}
               </div>
-            </div>
-
-            {/* Single align */}
-            <div style={panelBox}>
-              <div style={panelTitle}>Alinhar</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:5 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={()=>updateLayout(selSingle._key,{x_pos:0})}>⇤ Esq</button>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={()=>updateLayout(selSingle._key,{x_pos:sn((canvasConfigW-(selSingle.w_px||280))/2)})}>↔ Ctr</button>
                 <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={()=>updateLayout(selSingle._key,{x_pos:sn(canvasConfigW-(selSingle.w_px||280))})}>⇥ Dir</button>
               </div>
-            </div>
+            </CollapseBox>
 
-            {/* Z-order single */}
-            <div style={panelBox}>
-              <div style={panelTitle}>Camadas (Z-order)</div>
+            <CollapseBox title="Camadas" defaultOpen={false}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringToFront} title="Trazer ao topo">⬆⬆ Topo</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendToBack}   title="Mandar ao fundo">⬇⬇ Fundo</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringForward} title="Um para frente">▲ Frente</button>
-                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendBackward} title="Um para trás">▼ Trás</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringToFront}>⬆⬆ Topo</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendToBack}>⬇⬇ Fundo</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={bringForward}>▲ Frente</button>
+                <button className="btn btn-ghost" style={{ height:26, fontSize:10 }} onClick={sendBackward}>▼ Trás</button>
               </div>
-            </div>
+            </CollapseBox>
           </>)}
 
           </div>

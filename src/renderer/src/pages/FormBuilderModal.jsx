@@ -1379,6 +1379,96 @@ const TEMPLATES = [
       { _key:'lx12', nomeCampo:'_ts',           label:'Datas',             tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:392, w_px:1172, h_px:56 },
     ],
   },
+
+  // ── Agenda ────────────────────────────────────────────────────────────────
+  {
+    id: 'agenda_categorias',
+    emoji: '🏷️', label: 'Categorias da Agenda', categoria: 'Agenda',
+    descricao: 'Tabela de categorias para uso na agenda. Crie quantas categorias quiser com nome, cor e ícone.',
+    nomeTela: 'Categorias da Agenda', nomeTabela: 'agenda_categorias', icone: 'tag', canvasW: 1200, canvasH: 280,
+    campos: [
+      { _key:'ac1', nomeCampo:'codigo',    label:'Código',   tipo:'codigo_auto', tamanho:10,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:10,  opcoes:{seqChars:3}, x_pos:14,  y_pos:14,  w_px:110, h_px:56 },
+      { _key:'ac2', nomeCampo:'nome',      label:'Nome',     tipo:'texto',       tamanho:100, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:60,  opcoes:null,         x_pos:138, y_pos:14,  w_px:700, h_px:56 },
+      { _key:'ac3', nomeCampo:'cor',       label:'Cor',      tipo:'cor',         tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'#60A5FA', largura:15, opcoes:null,      x_pos:852, y_pos:14,  w_px:334, h_px:56 },
+      { _key:'ac4', nomeCampo:'icone',     label:'Ícone',    tipo:'texto',       tamanho:50,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:20,  opcoes:null,         x_pos:14,  y_pos:78,  w_px:580, h_px:56 },
+      { _key:'ac5', nomeCampo:'descricao', label:'Descrição',tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,         x_pos:608, y_pos:78,  w_px:578, h_px:56 },
+      { _key:'ac6', nomeCampo:'_ts',       label:'Datas',    tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,         x_pos:14,  y_pos:142, w_px:1172,h_px:56 },
+    ],
+  },
+  {
+    id: 'agenda_status',
+    emoji: '🔖', label: 'Status da Agenda', categoria: 'Agenda',
+    descricao: 'Tabela de status para uso na agenda. Ex: Pendente, Em andamento, Concluído, Cancelado.',
+    nomeTela: 'Status da Agenda', nomeTabela: 'agenda_status', icone: 'flag', canvasW: 1200, canvasH: 220,
+    campos: [
+      { _key:'as1', nomeCampo:'codigo', label:'Código', tipo:'codigo_auto', tamanho:10,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:10,  opcoes:{seqChars:3}, x_pos:14,  y_pos:14,  w_px:110, h_px:56 },
+      { _key:'as2', nomeCampo:'nome',   label:'Nome',   tipo:'texto',       tamanho:100, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:60,  opcoes:null,         x_pos:138, y_pos:14,  w_px:700, h_px:56 },
+      { _key:'as3', nomeCampo:'cor',    label:'Cor',    tipo:'cor',         tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'#FBD24C', largura:15, opcoes:null,      x_pos:852, y_pos:14,  w_px:334, h_px:56 },
+      { _key:'as4', nomeCampo:'ordem',  label:'Ordem',  tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'1',   largura:10,  opcoes:null,         x_pos:14,  y_pos:78,  w_px:200, h_px:56 },
+      { _key:'as5', nomeCampo:'icone',  label:'Ícone',  tipo:'texto',       tamanho:50,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:30,  opcoes:null,         x_pos:228, y_pos:78,  w_px:958, h_px:56 },
+      { _key:'as6', nomeCampo:'_ts',    label:'Datas',  tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,         x_pos:14,  y_pos:142, w_px:1172,h_px:56 },
+    ],
+  },
+  {
+    id: 'agenda_eventos',
+    emoji: '📅', label: 'Eventos / Compromissos', categoria: 'Agenda',
+    descricao: 'Tabela principal da agenda com título, data, horário, cliente (lookup), categoria, status e descrição.',
+    nomeTela: 'Eventos da Agenda', nomeTabela: 'agenda_eventos', icone: 'calendar', canvasW: 1200, canvasH: 440,
+    campos: [
+      { _key:'ae1',  nomeCampo:'codigo',      label:'Código',      tipo:'codigo_auto', tamanho:10,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:9,   opcoes:{seqChars:5},   x_pos:14,  y_pos:14,  w_px:110, h_px:56 },
+      { _key:'ae2',  nomeCampo:'titulo',      label:'Título',      tipo:'texto',       tamanho:300, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:80,  opcoes:null,           x_pos:138, y_pos:14,  w_px:1048,h_px:56 },
+      { _key:'ae3',  nomeCampo:'dt_evento',   label:'Data',        tipo:'data',        tamanho:0,   obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:20,  opcoes:null,           x_pos:14,  y_pos:78,  w_px:260, h_px:56 },
+      { _key:'ae4',  nomeCampo:'hr_inicio',   label:'Início',      tipo:'texto',       tamanho:5,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:15,  opcoes:null,           x_pos:288, y_pos:78,  w_px:200, h_px:56 },
+      { _key:'ae5',  nomeCampo:'hr_fim',      label:'Fim',         tipo:'texto',       tamanho:5,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:15,  opcoes:null,           x_pos:502, y_pos:78,  w_px:200, h_px:56 },
+      { _key:'ae6',  nomeCampo:'dia_todo',    label:'Dia todo',    tipo:'booleano',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'false',largura:15, opcoes:null,           x_pos:716, y_pos:78,  w_px:200, h_px:56 },
+      { _key:'ae7',  nomeCampo:'recorrencia', label:'Recorrência', tipo:'select',      tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'nenhuma', largura:20, opcoes:[
+        {label:'Nenhuma',valor:'nenhuma',cor:'#94A3B8'},{label:'Diária',valor:'diaria',cor:'#60A5FA'},
+        {label:'Semanal',valor:'semanal',cor:'#A78BFA'},{label:'Mensal',valor:'mensal',cor:'#34D399'},
+      ], x_pos:930, y_pos:78,  w_px:256, h_px:56 },
+      { _key:'ae8',  nomeCampo:'categoria_id',label:'Categoria',   tipo:'lookup',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:30,  opcoes:{lookupTabela:'agenda_categorias',lookupExibir:'nome',lookupCodigo:'',lookupModo:'select'}, x_pos:14,  y_pos:142, w_px:380, h_px:56 },
+      { _key:'ae9',  nomeCampo:'status_id',   label:'Status',      tipo:'lookup',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:30,  opcoes:{lookupTabela:'agenda_status',lookupExibir:'nome',lookupCodigo:'',lookupModo:'select'}, x_pos:408, y_pos:142, w_px:380, h_px:56 },
+      { _key:'ae10', nomeCampo:'cliente_id',  label:'Cliente',     tipo:'lookup',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:30,  opcoes:{lookupTabela:'entidade_001',lookupExibir:'nome',lookupCodigo:'',lookupModo:'modal'}, x_pos:802, y_pos:142, w_px:384, h_px:56 },
+      { _key:'ae11', nomeCampo:'local',       label:'Local',       tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:206, w_px:1172,h_px:56 },
+      { _key:'ae12', nomeCampo:'descricao',   label:'Descrição',   tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:270, w_px:1172,h_px:80 },
+      { _key:'ae13', nomeCampo:'lembrete',    label:'Lembrete',    tipo:'booleano',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'false',largura:15, opcoes:null,           x_pos:14,  y_pos:358, w_px:200, h_px:56 },
+      { _key:'ae14', nomeCampo:'min_lembrete',label:'Min. antes',  tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'30',  largura:15,  opcoes:null,           x_pos:228, y_pos:358, w_px:200, h_px:56 },
+      { _key:'ae15', nomeCampo:'_ts',         label:'Datas',       tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:372, w_px:1172,h_px:56 },
+    ],
+  },
+  {
+    id: 'agenda_config',
+    tipo: 'duplo',
+    emoji: '⚙️', label: 'Configurações da Agenda', categoria: 'Agenda',
+    descricao: 'Tela dupla: edite Categorias e Status lado a lado, cada um salvando na sua tabela.',
+    titulo: 'Configurações da Agenda',
+    icone: 'settings',
+    paineis: [
+      {
+        titulo: 'Categorias',
+        cor: '#6366F1',
+        tabela: 'agenda_categorias',
+        campos: [
+          { _key:'ac1', nomeCampo:'codigo',    label:'Código',    tipo:'codigo_auto', tamanho:10,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', opcoes:{seqChars:3} },
+          { _key:'ac2', nomeCampo:'nome',      label:'Nome',      tipo:'texto',       tamanho:100, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'' },
+          { _key:'ac3', nomeCampo:'cor',       label:'Cor',       tipo:'cor',         tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'#60A5FA' },
+          { _key:'ac4', nomeCampo:'icone',     label:'Ícone',     tipo:'texto',       tamanho:50,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'' },
+          { _key:'ac5', nomeCampo:'descricao', label:'Descrição', tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'' },
+        ],
+      },
+      {
+        titulo: 'Status',
+        cor: '#F59E0B',
+        tabela: 'agenda_status',
+        campos: [
+          { _key:'as1', nomeCampo:'codigo', label:'Código', tipo:'codigo_auto', tamanho:10,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', opcoes:{seqChars:3} },
+          { _key:'as2', nomeCampo:'nome',   label:'Nome',   tipo:'texto',       tamanho:100, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'' },
+          { _key:'as3', nomeCampo:'cor',    label:'Cor',    tipo:'cor',         tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'#FBD24C' },
+          { _key:'as4', nomeCampo:'ordem',  label:'Ordem',  tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'1' },
+          { _key:'as5', nomeCampo:'icone',  label:'Ícone',  tipo:'texto',       tamanho:50,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'' },
+        ],
+      },
+    ],
+  },
 ]
 
 function TemplateModal({ onSelecionar, onFechar }) {
@@ -1426,17 +1516,29 @@ function TemplateModal({ onSelecionar, onFechar }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                   <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>{t.label}</span>
                   <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 10, background: 'var(--s3)', color: 'var(--t3)', border: '1px solid var(--bd)' }}>{t.categoria}</span>
-                  <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t.campos.length} campos</span>
+                  {t.tipo === 'duplo'
+                    ? <span style={{ fontSize: 10, color: 'var(--or)', fontWeight: 600 }}>tela dupla</span>
+                    : <span style={{ fontSize: 10, color: 'var(--t3)' }}>{t.campos.length} campos</span>}
                 </div>
                 <div style={{ fontSize: 11.5, color: 'var(--t2)', lineHeight: 1.5, marginBottom: 6 }}>{t.descricao}</div>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).slice(0, 8).map(c => (
-                    <span key={c._key} style={{ fontSize: 9.5, fontFamily: 'monospace', background: 'var(--s3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '1px 6px', color: 'var(--t2)' }}>
-                      {c.tipo === 'calculo' ? '⚡' : ''}{c.nomeCampo}
-                    </span>
-                  ))}
-                  {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).length > 8 && (
-                    <span style={{ fontSize: 9.5, color: 'var(--t3)', padding: '1px 4px' }}>+{t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).length - 8}</span>
+                  {t.tipo === 'duplo' ? (
+                    t.paineis.map(p => (
+                      <span key={p.tabela} style={{ fontSize: 9.5, fontFamily: 'monospace', background: p.cor+'22', border: `1px solid ${p.cor}55`, borderRadius: 4, padding: '1px 8px', color: p.cor, fontWeight: 600 }}>
+                        {p.titulo}
+                      </span>
+                    ))
+                  ) : (
+                    <>
+                      {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).slice(0, 8).map(c => (
+                        <span key={c._key} style={{ fontSize: 9.5, fontFamily: 'monospace', background: 'var(--s3)', border: '1px solid var(--bd)', borderRadius: 4, padding: '1px 6px', color: 'var(--t2)' }}>
+                          {c.tipo === 'calculo' ? '⚡' : ''}{c.nomeCampo}
+                        </span>
+                      ))}
+                      {t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).length > 8 && (
+                        <span style={{ fontSize: 9.5, color: 'var(--t3)', padding: '1px 4px' }}>+{t.campos.filter(c => !['divisor','timestamps','favorito'].includes(c.tipo)).length - 8}</span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -1494,6 +1596,17 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (e.key === 'F9') {
+        e.preventDefault()
+        setAba(prev => prev === 'preview' ? 'campos' : 'preview')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   async function carregarColunasLookup(nomeTabela) {
     if (!nomeTabela || lookupColMap[nomeTabela]) return
     try {
@@ -1515,7 +1628,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   const [nomeTabela, setNomeTabela] = useState(tela?.nome_tabela || '')
   const [descricao,  setDescricao]  = useState(tela?.descricao   || '')
   const [icone,      setIcone]      = useState(tela?.icone       || 'layout')
-  const [moduloId,   setModuloId]   = useState(tela?.modulo_id   || '')
+  const [moduloId,   setModuloId]   = useState(tela?.grupo_fixo ? `__${tela.grupo_fixo}` : (tela?.modulo_id || ''))
   const [ordemMenu,  setOrdemMenu]  = useState(tela?.ordem_menu  || 99)
   const [canvasW,       setCanvasW]       = useState(tela?.canvas_w       || 780)
   const [canvasH,       setCanvasH]       = useState(tela?.canvas_h       || 480)
@@ -1875,7 +1988,9 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     }
     const payload = {
       nomeTela, nomeTabela, descricao, icone,
-      moduloId: moduloId || null, ordemMenu: ordemMenu || 99,
+      moduloId:  (moduloId && !moduloId.startsWith('__')) ? moduloId : null,
+      grupoFixo: moduloId?.startsWith('__') ? moduloId.slice(2) : null,
+      ordemMenu: ordemMenu || 99,
       canvasW: canvasW || 780, canvasH: canvasH || 480,
       colFavorito:   campos.some(c => c.tipo === 'favorito')   || (tela?.col_favorito   === true),
       colTimestamps: campos.some(c => c.tipo === 'timestamps') || (tela?.col_timestamps === true),
@@ -1891,6 +2006,8 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   }
 
   function aplicarTemplate(tmpl) {
+    setShowTemplates(false)
+    if (tmpl.tipo === 'duplo') return
     setNomeTela(tmpl.nomeTela)
     setNomeTabela(tmpl.nomeTabela || slugify(tmpl.nomeTela) + '_001')
     setIcone(tmpl.icone || 'paperclip')
@@ -1898,7 +2015,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     setCanvasH(tmpl.canvasH || 620)
     setCampos(tmpl.campos.map(c => ({ ...c, _key: Math.random().toString(36).slice(2) })))
     setExpandedKeys(new Set())
-    setShowTemplates(false)
     setAba('designer')
   }
 
@@ -2572,7 +2688,14 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
             <label className="form-label">Módulo</label>
             <select className="form-select" style={h ? { height: h } : {}} value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={salvando}>
               <option value="">— Nenhum —</option>
-              {modulos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              <optgroup label="Nativos">
+                <option value="__inicio">Início</option>
+                <option value="__gestao">Gestão</option>
+                <option value="__ferramentas">Ferramentas</option>
+              </optgroup>
+              {modulos.length > 0 && <optgroup label="Meus Módulos">
+                {modulos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              </optgroup>}
             </select>
           </div>
           {!compact && (
@@ -2616,6 +2739,440 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
             </div>
           </div>
         )}
+      </div>
+    )
+  }
+
+  // ── Painel de edição de campo (reutilizado na aba Campos e no Designer) ──
+  function renderCampoPainel(campo) {
+    if (!campo) return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--t3)', padding: 32 }}>
+        <Search size={28} strokeWidth={1.2} style={{ opacity: .3 }} />
+        <span style={{ fontSize: 13 }}>Selecione um campo para editar</span>
+      </div>
+    )
+    const meta = TIPO_META[campo.tipo] || { short: '?', color: '#94A3B8' }
+
+    if (campo.tipo === 'favorito' || campo.tipo === 'timestamps') {
+      const isFav = campo.tipo === 'favorito'
+      return (
+        <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: isFav ? 'var(--or)' : '#60A5FA' }}>{isFav ? '♥ Favorito' : '🕐 Timestamps'}</span>
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--t3)' }}>{isFav ? 'Campo de favorito. Não requer configuração.' : 'Gera colunas criado_em e atualizado_em automaticamente.'}</span>
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'divisor') {
+      return (
+        <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Título (opcional)</label>
+            <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Endereço" disabled={salvando} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Orientação</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[{ label: 'Horizontal', val: 'horizontal' }, { label: 'Vertical', val: 'vertical' }].map(({ label, val }) => (
+                <button key={val} className={`btn ${(campo.valorPadrao || 'horizontal') === val ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ flex: 1, height: 32 }}
+                  onClick={() => setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, valorPadrao: val, w_px: val === 'vertical' ? 24 : Math.max(c.h_px || 24, 120), h_px: val === 'vertical' ? Math.max(c.w_px || 120, 120) : 24 }))}
+                  disabled={salvando}>{label}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'copiar') {
+      const camposTexto = campos.filter(c => c._key !== campo._key && ['texto', 'texto_longo'].includes(c.tipo) && c.nomeCampo)
+      return (
+        <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Texto do botão</label>
+            <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Copiar" disabled={salvando} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Campo a copiar</label>
+            <select className="form-select" value={campo.valorPadrao || ''} onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
+              <option value="">— selecione —</option>
+              {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
+            </select>
+          </div>
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'botao') {
+      let cfg = {}
+      try { cfg = JSON.parse(campo.valorPadrao || '{}') } catch {}
+      const fn = cfg.fn || 'copiarTexto', param = cfg.param || '', variant = cfg.variant || 'ghost'
+      const camposRef = campos.filter(c => c._key !== campo._key && !['divisor','botao'].includes(c.tipo) && c.nomeCampo)
+      function updateCfg(u) { atualizarCampo(campo._key, 'valorPadrao', JSON.stringify({ ...cfg, ...u })) }
+      function trocarFn(novaFn) { updateCfg({ fn: novaFn, param: '' }) }
+      const fnDef = FUNCOES_BOTAO.find(f => f.valor === fn)
+      const semParam = ['limparFormulario','exportarPDF','voltarTela'].includes(fn)
+      const fnCampoRef = ['abrirArquivo','previewArquivo','copiarArquivoLocal','copiarArquivoClipboard','buscarCNPJ','buscarCEP']
+      const tiposFiltro = { abrirArquivo: 'arquivo', previewArquivo: 'arquivo', copiarArquivoLocal: 'arquivo', copiarArquivoClipboard: 'arquivo', buscarCNPJ: 'cnpj', buscarCEP: 'cep' }
+      const camposPorTipo = fnCampoRef.includes(fn) ? campos.filter(c => c._key !== campo._key && c.tipo === tiposFiltro[fn] && c.nomeCampo) : []
+      const grupos = [
+        { id: 'geral',    label: '— Geral' },
+        { id: 'arquivo',  label: '— Arquivo' },
+        { id: 'registro', label: '— Registro' },
+        { id: 'consulta', label: '— Consultas externas' },
+      ]
+      return (
+        <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="form-group">
+            <label className="form-label">Texto do botão</label>
+            <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Salvar, Abrir..." disabled={salvando} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Ação</label>
+            <select className="form-select" value={fn} onChange={e => trocarFn(e.target.value)} disabled={salvando}>
+              {grupos.map(g => {
+                const fns = FUNCOES_BOTAO.filter(f => f.grupo === g.id)
+                if (!fns.length) return null
+                return <optgroup key={g.id} label={g.label}>{fns.map(f => <option key={f.valor} value={f.valor}>{f.label}</option>)}</optgroup>
+              })}
+            </select>
+            {fnDef?.paramLabel && !semParam && <span style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, display: 'block' }}>{fnDef.paramLabel}</span>}
+          </div>
+          {fnCampoRef.includes(fn) && (
+            <div className="form-group">
+              <label className="form-label">Campo {tiposFiltro[fn]}</label>
+              {camposPorTipo.length
+                ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
+                    <option value="">— selecione —</option>
+                    {camposPorTipo.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
+                  </select>
+                : <div style={{ fontSize: 11, color: '#fb923c', padding: '6px 0' }}>Adicione um campo do tipo "{tiposFiltro[fn]}" primeiro.</div>
+              }
+            </div>
+          )}
+          {fn === 'copiarTexto' && (
+            <div className="form-group">
+              <label className="form-label">Campo</label>
+              {camposRef.length
+                ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
+                    <option value="">— campo —</option>
+                    {camposRef.map(c => <option key={c._key} value={`{${c.nomeCampo}}`}>{c.label || c.nomeCampo}</option>)}
+                  </select>
+                : <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })} placeholder="Texto fixo ou {campo}" disabled={salvando} />
+              }
+            </div>
+          )}
+          {['mostrarAlerta','mostrarSucesso','mostrarErro','mostrarAviso','abrirTela','abrirEmNovaAba','excluirRegistro'].includes(fn) && (
+            <div className="form-group">
+              <label className="form-label">{fn === 'abrirTela' ? 'Tela destino' : fn === 'abrirEmNovaAba' ? 'URL' : fn === 'excluirRegistro' ? 'Confirmação' : 'Mensagem'}</label>
+              <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })}
+                placeholder={fn === 'abrirEmNovaAba' ? 'https://...' : fn === 'abrirTela' ? 'dashboard · fb__tabela' : fn === 'excluirRegistro' ? 'Confirma exclusão?' : 'Mensagem'}
+                disabled={salvando} />
+            </div>
+          )}
+          <div className="form-group">
+            <label className="form-label">Estilo</label>
+            <select className="form-select" value={variant} onChange={e => updateCfg({ variant: e.target.value })} disabled={salvando}>
+              <option value="primary">Laranja</option>
+              <option value="ghost">Cinza</option>
+              <option value="danger">Vermelho</option>
+            </select>
+          </div>
+        </div>
+      )
+    }
+
+    if (campo.tipo === 'lookup') {
+      const cfg = (campo.opcoes && !Array.isArray(campo.opcoes)) ? campo.opcoes : { lookupTabela: '', lookupExibir: '', lookupCodigo: '', lookupModo: 'select' }
+      const cols = lookupColMap[cfg.lookupTabela] || []
+      function setLkp(updates) { setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, opcoes: { ...cfg, ...updates } })) }
+      return (
+        <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="form-group">
+              <label className="form-label">Label *</label>
+              <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} disabled={salvando} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Nome no banco (sem _id) *</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input className="form-input" style={{ fontFamily: 'monospace', fontSize: 11 }} value={campo.nomeCampo.replace(/_id$/, '')}
+                  onChange={e => atualizarCampo(campo._key, 'nomeCampo', e.target.value.replace(/_id$/, ''))} placeholder="banco" disabled={salvando} />
+                <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--t3)', flexShrink: 0 }}>_id</span>
+              </div>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Tabela de origem *</label>
+            <select className="form-select" value={cfg.lookupTabela} disabled={salvando}
+              onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
+              <option value="">— selecione —</option>
+              {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="form-group">
+              <label className="form-label">Campo a exibir *</label>
+              <select className="form-select" value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela} onChange={e => setLkp({ lookupExibir: e.target.value })}>
+                <option value="">— selecione a tabela primeiro —</option>
+                {cols.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Campo de código (prefixo)</label>
+              <select className="form-select" value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela} onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
+                <option value="">— nenhum —</option>
+                {cols.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Modo</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[{ val: 'select', label: 'Select simples' }, { val: 'modal', label: 'Modal de pesquisa' }].map(m => (
+                <label key={m.val} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer' }}>
+                  <input type="radio" name={`lkp_modo_${campo._key}`} value={m.val} checked={cfg.lookupModo === m.val} onChange={() => setLkp({ lookupModo: m.val })} disabled={salvando} style={{ accentColor: meta.color }} />
+                  {m.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
+            <input type="checkbox" checked={!!campo.obrigatorio} onChange={e => atualizarCampo(campo._key, 'obrigatorio', e.target.checked)} disabled={salvando} style={{ accentColor: 'var(--or)' }} />
+            Obrigatório
+          </label>
+        </div>
+      )
+    }
+
+    // ── Campo normal ──
+    const upC = (k, v) => atualizarCampo(campo._key, k, v)
+    const numInput = (key, val, min, max, w = 56) => (
+      <input type="number" className="form-input" min={min} max={max}
+        value={val ?? ''} disabled={salvando}
+        onChange={e => upC(key, e.target.value === '' ? null : Number(e.target.value))}
+        onBlur={e => {
+          if (e.target.value === '') return
+          const n = Number(e.target.value)
+          const clamped = Math.max(min, Math.min(max, n))
+          if (clamped !== n) upC(key, clamped)
+        }}
+        style={{ width: w, height: 26, fontSize: 11, padding: '0 6px' }} />
+    )
+    const chk = (key, label, val, dis) => (
+      <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: dis ? 'not-allowed' : 'pointer', color: 'var(--t2)', userSelect: 'none' }}>
+        <input type="checkbox" checked={!!val} onChange={e => upC(key, e.target.checked)} disabled={salvando || dis} style={{ accentColor: 'var(--or)' }} />
+        {label}
+      </label>
+    )
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', fontSize: 11 }}>
+
+        {/* ESSENCIAIS */}
+        <div style={{ padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 10, borderBottom: '1px solid var(--bd)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Label *</label>
+              <input className="form-input" value={campo.label} onChange={e => upC('label', e.target.value)}
+                placeholder="Ex: Razao Social" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 12 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Nome banco *</label>
+              <input className="form-input" value={campo.nomeCampo} onChange={e => upC('nomeCampo', e.target.value)}
+                placeholder="razao_social" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11, fontFamily: 'monospace' }} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Tipo</label>
+              <select className="form-select" value={campo.tipo}
+                onChange={e => { upC('tipo', e.target.value); setTipInfoIdx(campos.findIndex(c => c._key === campo._key)) }}
+                disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }}>
+                {TIPOS.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Valor padrão</label>
+              {TIPOS_COM_OPCOES.includes(campo.tipo) && Array.isArray(campo.opcoes) && campo.opcoes.length > 0
+                ? <select className="form-select" value={campo.valorPadrao || ''} onChange={e => upC('valorPadrao', e.target.value)} disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }}>
+                    <option value="">— nenhum —</option>
+                    {campo.opcoes.map((op, i) => <option key={i} value={op.valor}>{op.label}</option>)}
+                  </select>
+                : <input className="form-input" value={campo.valorPadrao} onChange={e => upC('valorPadrao', e.target.value)}
+                    placeholder="opcional" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }} />}
+            </div>
+          </div>
+          {tipInfoIdx === campos.findIndex(c => c._key === campo._key) && <TipoCampoInfo tipo={campo.tipo} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            {chk('obrigatorio', 'Obrigatório', campo.obrigatorio)}
+            {chk('campoBusca',  'Campo de busca', campo.campoBusca)}
+            {chk('sequencial',  'Sequencial', campo.sequencial, !!editando)}
+          </div>
+        </div>
+
+        {/* CONFIGS POR TIPO */}
+        {(campo.tipo === 'documento' || campo.tipo === 'calculo' || campo.tipo === 'avaliacao' || TIPOS_COM_OPCOES.includes(campo.tipo)) && (
+          <Sec title="Configuração do tipo">
+            {campo.tipo === 'documento' && (
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Campo tipo PF/PJ</label>
+                <input className="form-input" style={{ fontFamily: 'monospace', fontSize: 11, width: '100%', height: 28 }}
+                  value={campo.opcoes?.tipoRef || ''} onChange={e => upC('opcoes', { ...(campo.opcoes || {}), tipoRef: e.target.value.trim() })}
+                  placeholder="tipo_pessoa" disabled={salvando} />
+                <span style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, display: 'block' }}>Campo Radio com opções F/J que controla a máscara.</span>
+              </div>
+            )}
+            {campo.tipo === 'calculo' && (
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Fórmula</label>
+                <input className="form-input" style={{ fontFamily: 'monospace', fontSize: 11, width: '100%', height: 28 }}
+                  value={campo.opcoes?.formula || ''} onChange={e => upC('opcoes', { ...(campo.opcoes || {}), formula: e.target.value })}
+                  placeholder="{preco} * {qtd}" disabled={salvando} />
+                <span style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, display: 'block' }}>Use {'{nome_campo}'} para referenciar campos.</span>
+              </div>
+            )}
+            {campo.tipo === 'avaliacao' && (
+              <Row label="Máx. estrelas">
+                {numInput('opcoes', campo.opcoes?.max || 5, 1, 10, 60)}
+                <span style={{ color: '#FBD24C' }}>{Array.from({ length: campo.opcoes?.max || 5 }, () => '★').join('')}</span>
+              </Row>
+            )}
+            {(campo.tipo === 'radio' || campo.tipo === 'flags') && (
+              <Row label="Layout">
+                {['linha', 'coluna'].map(v => (
+                  <button key={v} type="button"
+                    className={`btn btn-${(campo.opcoesLayout || 'linha') === v ? 'primary' : 'ghost'}`}
+                    style={{ fontSize: 11, padding: '2px 10px', height: 26 }}
+                    onClick={() => upC('opcoesLayout', v)} disabled={salvando}>
+                    {v === 'linha' ? '→ Linha' : '↓ Coluna'}
+                  </button>
+                ))}
+              </Row>
+            )}
+            {TIPOS_COM_OPCOES.includes(campo.tipo) && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)' }}>{campo.tipo === 'flags' ? 'Flags' : 'Opções'}</span>
+                  <button type="button" className="btn btn-ghost" style={{ height: 22, fontSize: 10, padding: '0 8px' }}
+                    onClick={() => {
+                      const ops = campo.opcoes || []
+                      const n = ops.length + 1
+                      const nova = campo.tipo === 'flags' ? { label: `Flag ${n}`, valor: '' } : { label: `Opção ${n}`, valor: `opcao_${n}`, cor: COR_PALETTE[ops.length % COR_PALETTE.length] }
+                      upC('opcoes', [...ops, nova])
+                    }} disabled={salvando}><Plus size={10} /> Adicionar</button>
+                </div>
+                <OpcoesList opcoes={campo.opcoes || []} tipo={campo.tipo} salvando={salvando} onChange={ops => upC('opcoes', ops)} />
+              </>
+            )}
+          </Sec>
+        )}
+
+        {/* POSICAO & TAMANHO */}
+        <Sec title="Posição &amp; Tamanho">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+            {[['X', 'x_pos', 0, 2000], ['Y', 'y_pos', 0, 2000], ['Larg.', 'w_px', 20, 2000], ['Alt.', 'h_px', 16, 400]].map(([lbl2, key, min, max]) => (
+              <div key={key}>
+                <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 2 }}>{lbl2}</div>
+                <input type="number" className="form-input" min={min} max={max}
+                  value={campo[key] ?? ''} disabled={salvando}
+                  onChange={e => upC(key, e.target.value === '' ? null : Number(e.target.value))}
+                  onBlur={e => {
+                    if (e.target.value === '') return
+                    const n = Number(e.target.value)
+                    const clamped = Math.max(min, Math.min(max, n))
+                    if (clamped !== n) upC(key, clamped)
+                  }}
+                  style={{ width: '100%', height: 28, fontSize: 11 }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <Row label="Largura % lista">
+              {numInput('largura', campo.largura, 10, 100, 56)}
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>%</span>
+            </Row>
+            <Row label="Tamanho BD">
+              {numInput('tamanho', campo.tamanho, 1, 5000, 56)}
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>ch</span>
+            </Row>
+          </div>
+        </Sec>
+
+        {/* ESTILO */}
+        <Sec title="Estilo">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, borderBottom: '1px solid var(--bd)', paddingBottom: 4, marginBottom: 2 }}>Label</div>
+              <Row label="Fonte">{numInput('fontSize', campo.fontSize, 7, 48, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
+              <Row label="Negrito">{chk('semNegrito', 'Sem negrito', campo.semNegrito)}</Row>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="color" value={campo.labelCor || '#888888'} disabled={salvando}
+                    onChange={e => upC('labelCor', e.target.value)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
+                  <input className="form-input" value={campo.labelCor || ''} onChange={e => upC('labelCor', e.target.value)}
+                    placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, borderBottom: '1px solid var(--bd)', paddingBottom: 4, marginBottom: 2 }}>Conteúdo</div>
+              <Row label="Fonte">{numInput('inputFontSize', campo.inputFontSize, 7, 48, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
+              <Row label="Negrito">{chk('inputNegrito', 'Negrito', campo.inputNegrito)}</Row>
+              <Row label="Alinhamento">
+                <div style={{ display: 'flex', gap: 2 }}>
+                  {[['left','←'],['center','↔'],['right','→']].map(([v, ico]) => (
+                    <button key={v} className={`btn ${(campo.inputAlign || 'left') === v ? 'btn-primary' : 'btn-ghost'}`}
+                      style={{ height: 24, width: 28, fontSize: 12, padding: 0 }} disabled={salvando}
+                      onClick={() => upC('inputAlign', v)}>{ico}</button>
+                  ))}
+                </div>
+              </Row>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor texto</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="color" value={campo.inputCor || '#000000'} disabled={salvando}
+                    onChange={e => upC('inputCor', e.target.value)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
+                  <input className="form-input" value={campo.inputCor || ''} onChange={e => upC('inputCor', e.target.value)}
+                    placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor fundo</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="color" value={campo.inputBg || '#ffffff'} disabled={salvando}
+                    onChange={e => upC('inputBg', e.target.value)}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
+                  <input className="form-input" value={campo.inputBg || ''} onChange={e => upC('inputBg', e.target.value)}
+                    placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 10, marginTop: 2 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, marginBottom: 8 }}>Borda</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <Row label="Raio">{numInput('borderRadius', campo.borderRadius, 0, 40, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
+              <Row label="Espessura">{numInput('borderWidth', campo.borderWidth, 0, 10, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input type="color" value={campo.borderColor || '#cccccc'} disabled={salvando}
+                  onChange={e => upC('borderColor', e.target.value)}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
+                <input className="form-input" value={campo.borderColor || ''} onChange={e => upC('borderColor', e.target.value)}
+                  placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
+              </div>
+            </div>
+          </div>
+        </Sec>
+
       </div>
     )
   }
@@ -2732,7 +3289,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
             ]},
           ]
 
-          // Painel de edição do campo selecionado
           function renderPainel() {
             if (!selCampo) return (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--t3)', padding: 32 }}>
@@ -2740,433 +3296,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
                 <span style={{ fontSize: 13 }}>Selecione um campo para editar</span>
               </div>
             )
-            const campo = selCampo
-            const meta = TIPO_META[campo.tipo] || { short: '?', color: '#94A3B8' }
-            const lbl = { fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }
-
-            // ── tipos especiais sem edição normal ──
-            if (campo.tipo === 'favorito' || campo.tipo === 'timestamps') {
-              const isFav = campo.tipo === 'favorito'
-              return (
-                <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: isFav ? 'var(--or)' : '#60A5FA' }}>{isFav ? '♥ Favorito' : '🕐 Timestamps'}</span>
-                  </div>
-                  <span style={{ fontSize: 12, color: 'var(--t3)' }}>{isFav ? 'Campo de favorito. Não requer configuração.' : 'Gera colunas criado_em e atualizado_em automaticamente.'}</span>
-                </div>
-              )
-            }
-
-            if (campo.tipo === 'divisor') {
-              return (
-                <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="form-group">
-                    <label className="form-label">Título (opcional)</label>
-                    <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Endereço" disabled={salvando} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Orientação</label>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {[{ label: 'Horizontal', val: 'horizontal' }, { label: 'Vertical', val: 'vertical' }].map(({ label, val }) => (
-                        <button key={val} className={`btn ${(campo.valorPadrao || 'horizontal') === val ? 'btn-primary' : 'btn-ghost'}`}
-                          style={{ flex: 1, height: 32 }}
-                          onClick={() => setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, valorPadrao: val, w_px: val === 'vertical' ? 24 : Math.max(c.h_px || 24, 120), h_px: val === 'vertical' ? Math.max(c.w_px || 120, 120) : 24 }))}
-                          disabled={salvando}>{label}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-
-            if (campo.tipo === 'copiar') {
-              const camposTexto = campos.filter(c => c._key !== campo._key && ['texto', 'texto_longo'].includes(c.tipo) && c.nomeCampo)
-              return (
-                <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="form-group">
-                    <label className="form-label">Texto do botão</label>
-                    <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Copiar" disabled={salvando} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Campo a copiar</label>
-                    <select className="form-select" value={campo.valorPadrao || ''} onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
-                      <option value="">— selecione —</option>
-                      {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
-                    </select>
-                  </div>
-                </div>
-              )
-            }
-
-            if (campo.tipo === 'botao') {
-              let cfg = {}
-              try { cfg = JSON.parse(campo.valorPadrao || '{}') } catch {}
-              const fn = cfg.fn || 'copiarTexto', param = cfg.param || '', variant = cfg.variant || 'ghost'
-              const camposRef = campos.filter(c => c._key !== campo._key && !['divisor','botao'].includes(c.tipo) && c.nomeCampo)
-              function updateCfg(u) { atualizarCampo(campo._key, 'valorPadrao', JSON.stringify({ ...cfg, ...u })) }
-              function trocarFn(novaFn) { updateCfg({ fn: novaFn, param: '' }) }
-              const fnDef = FUNCOES_BOTAO.find(f => f.valor === fn)
-              const semParam = ['limparFormulario','exportarPDF','voltarTela'].includes(fn)
-              const fnCampoRef = ['abrirArquivo','previewArquivo','copiarArquivoLocal','copiarArquivoClipboard','buscarCNPJ','buscarCEP']
-              const tiposFiltro = { abrirArquivo: 'arquivo', previewArquivo: 'arquivo', copiarArquivoLocal: 'arquivo', copiarArquivoClipboard: 'arquivo', buscarCNPJ: 'cnpj', buscarCEP: 'cep' }
-              const camposPorTipo = fnCampoRef.includes(fn) ? campos.filter(c => c._key !== campo._key && c.tipo === tiposFiltro[fn] && c.nomeCampo) : []
-              const grupos = [
-                { id: 'geral',    label: '— Geral' },
-                { id: 'arquivo',  label: '— Arquivo' },
-                { id: 'registro', label: '— Registro' },
-                { id: 'consulta', label: '— Consultas externas' },
-              ]
-              return (
-                <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div className="form-group">
-                    <label className="form-label">Texto do botão</label>
-                    <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Salvar, Abrir..." disabled={salvando} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Ação</label>
-                    <select className="form-select" value={fn} onChange={e => trocarFn(e.target.value)} disabled={salvando}>
-                      {grupos.map(g => {
-                        const fns = FUNCOES_BOTAO.filter(f => f.grupo === g.id)
-                        if (!fns.length) return null
-                        return <optgroup key={g.id} label={g.label}>{fns.map(f => <option key={f.valor} value={f.valor}>{f.label}</option>)}</optgroup>
-                      })}
-                    </select>
-                    {fnDef?.paramLabel && !semParam && <span style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, display: 'block' }}>{fnDef.paramLabel}</span>}
-                  </div>
-                  {fnCampoRef.includes(fn) && (
-                    <div className="form-group">
-                      <label className="form-label">Campo {tiposFiltro[fn]}</label>
-                      {camposPorTipo.length
-                        ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
-                            <option value="">— selecione —</option>
-                            {camposPorTipo.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
-                          </select>
-                        : <div style={{ fontSize: 11, color: '#fb923c', padding: '6px 0' }}>Adicione um campo do tipo "{tiposFiltro[fn]}" primeiro.</div>
-                      }
-                    </div>
-                  )}
-                  {fn === 'copiarTexto' && (
-                    <div className="form-group">
-                      <label className="form-label">Campo</label>
-                      {camposRef.length
-                        ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
-                            <option value="">— campo —</option>
-                            {camposRef.map(c => <option key={c._key} value={`{${c.nomeCampo}}`}>{c.label || c.nomeCampo}</option>)}
-                          </select>
-                        : <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })} placeholder="Texto fixo ou {campo}" disabled={salvando} />
-                      }
-                    </div>
-                  )}
-                  {['mostrarAlerta','mostrarSucesso','mostrarErro','mostrarAviso','abrirTela','abrirEmNovaAba','excluirRegistro'].includes(fn) && (
-                    <div className="form-group">
-                      <label className="form-label">{fn === 'abrirTela' ? 'Tela destino' : fn === 'abrirEmNovaAba' ? 'URL' : fn === 'excluirRegistro' ? 'Confirmação' : 'Mensagem'}</label>
-                      <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })}
-                        placeholder={fn === 'abrirEmNovaAba' ? 'https://...' : fn === 'abrirTela' ? 'dashboard · fb__tabela' : fn === 'excluirRegistro' ? 'Confirma exclusão?' : 'Mensagem'}
-                        disabled={salvando} />
-                    </div>
-                  )}
-                  <div className="form-group">
-                    <label className="form-label">Estilo</label>
-                    <select className="form-select" value={variant} onChange={e => updateCfg({ variant: e.target.value })} disabled={salvando}>
-                      <option value="primary">Laranja</option>
-                      <option value="ghost">Cinza</option>
-                      <option value="danger">Vermelho</option>
-                    </select>
-                  </div>
-                </div>
-              )
-            }
-
-            if (campo.tipo === 'lookup') {
-              const cfg = (campo.opcoes && !Array.isArray(campo.opcoes)) ? campo.opcoes : { lookupTabela: '', lookupExibir: '', lookupCodigo: '', lookupModo: 'select' }
-              const cols = lookupColMap[cfg.lookupTabela] || []
-              function setLkp(updates) { setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, opcoes: { ...cfg, ...updates } })) }
-              return (
-                <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="form-group">
-                      <label className="form-label">Label *</label>
-                      <input className="form-input" value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} disabled={salvando} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Nome no banco (sem _id) *</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <input className="form-input" style={{ fontFamily: 'monospace', fontSize: 11 }} value={campo.nomeCampo.replace(/_id$/, '')}
-                          onChange={e => atualizarCampo(campo._key, 'nomeCampo', e.target.value.replace(/_id$/, ''))} placeholder="banco" disabled={salvando} />
-                        <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--t3)', flexShrink: 0 }}>_id</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Tabela de origem *</label>
-                    <select className="form-select" value={cfg.lookupTabela} disabled={salvando}
-                      onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
-                      <option value="">— selecione —</option>
-                      {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    <div className="form-group">
-                      <label className="form-label">Campo a exibir *</label>
-                      <select className="form-select" value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela} onChange={e => setLkp({ lookupExibir: e.target.value })}>
-                        <option value="">— selecione a tabela primeiro —</option>
-                        {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Campo de código (prefixo)</label>
-                      <select className="form-select" value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela} onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
-                        <option value="">— nenhum —</option>
-                        {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Modo</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {[{ val: 'select', label: 'Select simples' }, { val: 'modal', label: 'Modal de pesquisa' }].map(m => (
-                        <label key={m.val} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, cursor: 'pointer' }}>
-                          <input type="radio" name={`lkp_modo_${campo._key}`} value={m.val} checked={cfg.lookupModo === m.val} onChange={() => setLkp({ lookupModo: m.val })} disabled={salvando} style={{ accentColor: meta.color }} />
-                          {m.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={!!campo.obrigatorio} onChange={e => atualizarCampo(campo._key, 'obrigatorio', e.target.checked)} disabled={salvando} style={{ accentColor: 'var(--or)' }} />
-                    Obrigatório
-                  </label>
-                </div>
-              )
-            }
-
-            // ── Campo normal ──
-            const upC = (k, v) => atualizarCampo(campo._key, k, v)
-            const numInput = (key, val, min, max, w = 56) => (
-              <input type="number" className="form-input" min={min} max={max}
-                value={val ?? ''} disabled={salvando}
-                onChange={e => upC(key, e.target.value === '' ? null : Number(e.target.value))}
-                onBlur={e => {
-                  if (e.target.value === '') return
-                  const n = Number(e.target.value)
-                  const clamped = Math.max(min, Math.min(max, n))
-                  if (clamped !== n) upC(key, clamped)
-                }}
-                style={{ width: w, height: 26, fontSize: 11, padding: '0 6px' }} />
-            )
-            const chk = (key, label, val, dis) => (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: dis ? 'not-allowed' : 'pointer', color: 'var(--t2)', userSelect: 'none' }}>
-                <input type="checkbox" checked={!!val} onChange={e => upC(key, e.target.checked)} disabled={salvando || dis} style={{ accentColor: 'var(--or)' }} />
-                {label}
-              </label>
-            )
-            return (
-              <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', fontSize: 11 }}>
-
-                {/* ESSENCIAIS */}
-                <div style={{ padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 10, borderBottom: '1px solid var(--bd)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Label *</label>
-                      <input className="form-input" value={campo.label} onChange={e => upC('label', e.target.value)}
-                        placeholder="Ex: Razao Social" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 12 }} />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Nome banco *</label>
-                      <input className="form-input" value={campo.nomeCampo} onChange={e => upC('nomeCampo', e.target.value)}
-                        placeholder="razao_social" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11, fontFamily: 'monospace' }} />
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Tipo</label>
-                      <select className="form-select" value={campo.tipo}
-                        onChange={e => { upC('tipo', e.target.value); setTipInfoIdx(campos.findIndex(c => c._key === campo._key)) }}
-                        disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }}>
-                        {TIPOS.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Valor padr&atilde;o</label>
-                      {TIPOS_COM_OPCOES.includes(campo.tipo) && Array.isArray(campo.opcoes) && campo.opcoes.length > 0
-                        ? <select className="form-select" value={campo.valorPadrao || ''} onChange={e => upC('valorPadrao', e.target.value)} disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }}>
-                            <option value="">— nenhum —</option>
-                            {campo.opcoes.map((op, i) => <option key={i} value={op.valor}>{op.label}</option>)}
-                          </select>
-                        : <input className="form-input" value={campo.valorPadrao} onChange={e => upC('valorPadrao', e.target.value)}
-                            placeholder="opcional" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }} />}
-                    </div>
-                  </div>
-                  {tipInfoIdx === campos.findIndex(c => c._key === campo._key) && <TipoCampoInfo tipo={campo.tipo} />}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    {chk('obrigatorio', 'Obrigatório', campo.obrigatorio)}
-                    {chk('campoBusca',  'Campo de busca', campo.campoBusca)}
-                    {chk('sequencial',  'Sequencial', campo.sequencial, !!editando)}
-                  </div>
-                </div>
-
-                {/* CONFIGS POR TIPO */}
-                {(campo.tipo === 'documento' || campo.tipo === 'calculo' || campo.tipo === 'avaliacao' || TIPOS_COM_OPCOES.includes(campo.tipo)) && (
-                  <Sec title="Configuração do tipo">
-                    {campo.tipo === 'documento' && (
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Campo tipo PF/PJ</label>
-                        <input className="form-input" style={{ fontFamily: 'monospace', fontSize: 11, width: '100%', height: 28 }}
-                          value={campo.opcoes?.tipoRef || ''} onChange={e => upC('opcoes', { ...(campo.opcoes || {}), tipoRef: e.target.value.trim() })}
-                          placeholder="tipo_pessoa" disabled={salvando} />
-                        <span style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, display: 'block' }}>Campo Radio com op&ccedil;&otilde;es F/J que controla a m&aacute;scara.</span>
-                      </div>
-                    )}
-                    {campo.tipo === 'calculo' && (
-                      <div>
-                        <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>F&oacute;rmula</label>
-                        <input className="form-input" style={{ fontFamily: 'monospace', fontSize: 11, width: '100%', height: 28 }}
-                          value={campo.opcoes?.formula || ''} onChange={e => upC('opcoes', { ...(campo.opcoes || {}), formula: e.target.value })}
-                          placeholder="{preco} * {qtd}" disabled={salvando} />
-                        <span style={{ fontSize: 10, color: 'var(--t3)', marginTop: 4, display: 'block' }}>Use {'{nome_campo}'} para referenciar campos.</span>
-                      </div>
-                    )}
-                    {campo.tipo === 'avaliacao' && (
-                      <Row label="M&aacute;x. estrelas">
-                        {numInput('opcoes', campo.opcoes?.max || 5, 1, 10, 60)}
-                        <span style={{ color: '#FBD24C' }}>{Array.from({ length: campo.opcoes?.max || 5 }, () => '★').join('')}</span>
-                      </Row>
-                    )}
-                    {(campo.tipo === 'radio' || campo.tipo === 'flags') && (
-                      <Row label="Layout">
-                        {['linha', 'coluna'].map(v => (
-                          <button key={v} type="button"
-                            className={`btn btn-${(campo.opcoesLayout || 'linha') === v ? 'primary' : 'ghost'}`}
-                            style={{ fontSize: 11, padding: '2px 10px', height: 26 }}
-                            onClick={() => upC('opcoesLayout', v)} disabled={salvando}>
-                            {v === 'linha' ? '→ Linha' : '↓ Coluna'}
-                          </button>
-                        ))}
-                      </Row>
-                    )}
-                    {TIPOS_COM_OPCOES.includes(campo.tipo) && (
-                      <>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)' }}>{campo.tipo === 'flags' ? 'Flags' : 'Opções'}</span>
-                          <button type="button" className="btn btn-ghost" style={{ height: 22, fontSize: 10, padding: '0 8px' }}
-                            onClick={() => {
-                              const ops = campo.opcoes || []
-                              const n = ops.length + 1
-                              const nova = campo.tipo === 'flags' ? { label: `Flag ${n}`, valor: '' } : { label: `Opção ${n}`, valor: `opcao_${n}`, cor: COR_PALETTE[ops.length % COR_PALETTE.length] }
-                              upC('opcoes', [...ops, nova])
-                            }} disabled={salvando}><Plus size={10} /> Adicionar</button>
-                        </div>
-                        <OpcoesList opcoes={campo.opcoes || []} tipo={campo.tipo} salvando={salvando} onChange={ops => upC('opcoes', ops)} />
-                      </>
-                    )}
-                  </Sec>
-                )}
-
-                {/* POSICAO & TAMANHO */}
-                <Sec title="Posi&ccedil;&atilde;o &amp; Tamanho">
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-                    {[['X', 'x_pos', 0, 2000], ['Y', 'y_pos', 0, 2000], ['Larg.', 'w_px', 20, 2000], ['Alt.', 'h_px', 16, 400]].map(([lbl2, key, min, max]) => (
-                      <div key={key}>
-                        <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 2 }}>{lbl2}</div>
-                        <input type="number" className="form-input" min={min} max={max}
-                          value={campo[key] ?? ''} disabled={salvando}
-                          onChange={e => upC(key, e.target.value === '' ? null : Number(e.target.value))}
-                          onBlur={e => {
-                            if (e.target.value === '') return
-                            const n = Number(e.target.value)
-                            const clamped = Math.max(min, Math.min(max, n))
-                            if (clamped !== n) upC(key, clamped)
-                          }}
-                          style={{ width: '100%', height: 28, fontSize: 11 }} />
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <Row label="Largura % lista">
-                      {numInput('largura', campo.largura, 10, 100, 56)}
-                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>%</span>
-                    </Row>
-                    <Row label="Tamanho BD">
-                      {numInput('tamanho', campo.tamanho, 1, 5000, 56)}
-                      <span style={{ fontSize: 10, color: 'var(--t3)' }}>ch</span>
-                    </Row>
-                  </div>
-                </Sec>
-
-                {/* ESTILO */}
-                <Sec title="Estilo">
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, borderBottom: '1px solid var(--bd)', paddingBottom: 4, marginBottom: 2 }}>Label</div>
-                      <Row label="Fonte">{numInput('fontSize', campo.fontSize, 7, 48, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-                      <Row label="Negrito">{chk('semNegrito', 'Sem negrito', campo.semNegrito)}</Row>
-                      <div>
-                        <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <input type="color" value={campo.labelCor || '#888888'} disabled={salvando}
-                            onChange={e => upC('labelCor', e.target.value)}
-                            style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                          <input className="form-input" value={campo.labelCor || ''} onChange={e => upC('labelCor', e.target.value)}
-                            placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, borderBottom: '1px solid var(--bd)', paddingBottom: 4, marginBottom: 2 }}>Conteúdo</div>
-                      <Row label="Fonte">{numInput('inputFontSize', campo.inputFontSize, 7, 48, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-                      <Row label="Negrito">{chk('inputNegrito', 'Negrito', campo.inputNegrito)}</Row>
-                      <Row label="Alinhamento">
-                        <div style={{ display: 'flex', gap: 2 }}>
-                          {[['left','←'],['center','↔'],['right','→']].map(([v, ico]) => (
-                            <button key={v} className={`btn ${(campo.inputAlign || 'left') === v ? 'btn-primary' : 'btn-ghost'}`}
-                              style={{ height: 24, width: 28, fontSize: 12, padding: 0 }} disabled={salvando}
-                              onClick={() => upC('inputAlign', v)}>{ico}</button>
-                          ))}
-                        </div>
-                      </Row>
-                      <div>
-                        <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor texto</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <input type="color" value={campo.inputCor || '#000000'} disabled={salvando}
-                            onChange={e => upC('inputCor', e.target.value)}
-                            style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                          <input className="form-input" value={campo.inputCor || ''} onChange={e => upC('inputCor', e.target.value)}
-                            placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor fundo</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <input type="color" value={campo.inputBg || '#ffffff'} disabled={salvando}
-                            onChange={e => upC('inputBg', e.target.value)}
-                            style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                          <input className="form-input" value={campo.inputBg || ''} onChange={e => upC('inputBg', e.target.value)}
-                            placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 10, marginTop: 2 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, marginBottom: 8 }}>Borda</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                      <Row label="Raio">{numInput('borderRadius', campo.borderRadius, 0, 40, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-                      <Row label="Espessura">{numInput('borderWidth', campo.borderWidth, 0, 10, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-                    </div>
-                    <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <input type="color" value={campo.borderColor || '#cccccc'} disabled={salvando}
-                          onChange={e => upC('borderColor', e.target.value)}
-                          style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                        <input className="form-input" value={campo.borderColor || ''} onChange={e => upC('borderColor', e.target.value)}
-                          placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-                      </div>
-                    </div>
-                  </div>
-                </Sec>
-
-              </div>
-            )
+            return renderCampoPainel(selCampo)
           }
 
           return (
@@ -3291,6 +3421,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
             showRulers={dsShowRulers}     onShowRulers={setDsShowRulers}
             snapSz={dsSnapSz}             onSnapSz={setDsSnapSz}
             canvasMargins={canvasMargins} onCanvasMargins={setCanvasMargins}
+            renderFieldPanel={renderCampoPainel}
           />
         )}
 
@@ -3433,6 +3564,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
               canvasConfigW={canvasW}
               canvasConfigH={canvasH}
               onCanvasConfig={(w, h) => { setCanvasW(w); setCanvasH(h) }}
+              renderFieldPanel={renderCampoPainel}
             />
           )}
 
