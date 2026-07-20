@@ -1,8 +1,10 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import { safeStorage } from 'electron'
+import { safeStorage, app } from 'electron'
 
-const BASE_DIR = 'C:\\KronTech'
+const IS_DEV = !app.isPackaged
+
+const BASE_DIR = IS_DEV ? 'C:\\KronTech' : app.getPath('userData')
 const INI_PATH = join(BASE_DIR, 'krontech.ini')
 const ENC_PFX  = 'ENC:'
 
@@ -28,9 +30,9 @@ const DEFAULTS = {
   Banco: {
     host:     'localhost',
     port:     '5432',
-    database: 'krontech',
+    database: IS_DEV ? 'krontech_dev' : 'krontech',
     usuario:  'postgres',
-    senha:    '9832',
+    senha:    process.env.KRONTECH_DEV_DB_PASSWORD || 'postgres',
   },
   Caminhos: {
     arquivos: join(BASE_DIR, 'arquivos'),
@@ -120,6 +122,15 @@ export function encryptSensitiveConfig() {
 // Retorna configuração do banco com a senha já descriptografada
 export function getDecryptedBancoConfig() {
   const cfg = getConfig()
+  if (IS_DEV) {
+    return {
+      host:     'localhost',
+      port:     5432,
+      database: 'krontech_dev',
+      user:     'postgres',
+      password: process.env.KRONTECH_DEV_DB_PASSWORD || 'postgres',
+    }
+  }
   return {
     host:     cfg.Banco.host,
     port:     Number(cfg.Banco.port),

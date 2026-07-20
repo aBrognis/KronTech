@@ -1,4 +1,5 @@
 import { Pool } from 'pg'
+import bcrypt from 'bcrypt'
 import { getDecryptedBancoConfig } from './config'
 
 let pool = null
@@ -6,12 +7,14 @@ let pool = null
 export function getPool() {
   if (!pool) {
     const banco = getDecryptedBancoConfig()
+    const isRemote = banco.host !== 'localhost' && banco.host !== '127.0.0.1'
     pool = new Pool({
       host:     banco.host,
       port:     banco.port,
       database: banco.database,
       user:     banco.user,
       password: banco.password,
+      ssl:      isRemote ? { rejectUnauthorized: false } : false,
     })
     pool.on('error', (err) => {
       console.error('PostgreSQL error:', err.message)
@@ -52,19 +55,19 @@ async function syncSequencias() {
           PERFORM setval('${tbl}_codigo_seq', cur_max);
         END IF;
       END $$;
-    `).catch(() => {})
+    `).catch(e => console.warn(`[migration] syncSequencias(${tbl}):`, e.message))
   }
 }
 
 // Pré-registra ou atualiza uma tela de sistema no banco (idempotente)
 async function registrarTelaSistema({ slug, nomeTela, nomeTabela, icone, moduloSlug, campos }) {
-  const modulo = await queryOne('SELECT id FROM kr_modulos WHERE nome=$1', [moduloSlug]).catch(() => null)
+  const modulo = await queryOne('SELECT id FROM kr_modulos WHERE nome=$1', [moduloSlug]).catch(e => { console.warn('[migration] buscar módulo:', e.message); return null })
   const moduloId = modulo?.id || null
 
   let existing = await queryOne(
     `SELECT id, slug FROM kr_telas WHERE slug=$1 OR nome_tabela=$2 LIMIT 1`,
     [slug, nomeTabela]
-  ).catch(() => null)
+  ).catch(e => { console.warn('[migration] buscar tela existente:', e.message); return null })
 
   let telaId = existing?.id
 
@@ -73,10 +76,10 @@ async function registrarTelaSistema({ slug, nomeTela, nomeTabela, icone, moduloS
       `INSERT INTO kr_telas (nome_tela, nome_tabela, icone, modulo_id, sistema, slug, ativo)
        VALUES ($1,$2,$3,$4,TRUE,$5,TRUE) RETURNING id`,
       [nomeTela, nomeTabela, icone, moduloId, slug]
-    ).catch(() => null)
+    ).catch(e => { console.warn('[migration] inserir tela de sistema:', e.message); return null })
     telaId = row?.id
     if (!telaId) {
-      const fallback = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1', [nomeTabela]).catch(() => null)
+      const fallback = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1', [nomeTabela]).catch(e => { console.warn('[migration] fallback buscar tela:', e.message); return null })
       telaId = fallback?.id
     }
   }
@@ -87,20 +90,20 @@ async function registrarTelaSistema({ slug, nomeTela, nomeTabela, icone, moduloS
     `UPDATE kr_telas SET slug=$1, sistema=TRUE, icone=$2, modulo_id=$3
      WHERE id=$4 AND (slug IS NULL OR slug != $1)`,
     [slug, icone, moduloId, telaId]
-  ).catch(() => {})
+  ).catch(e => console.warn('[migration] atualizar tela de sistema:', e.message))
 
   for (const [idx, c] of campos.entries()) {
     const exists = await queryOne(
       'SELECT id FROM kr_tela_campos WHERE tela_id=$1 AND nome_campo=$2',
       [telaId, c.nome]
-    ).catch(() => null)
+    ).catch(e => { console.warn('[migration] verificar campo existente:', e.message); return null })
     if (!exists) {
       await query(
         `INSERT INTO kr_tela_campos
            (tela_id,nome_campo,label,tipo,tamanho,obrigatorio,sequencial,campo_busca,valor_padrao,ordem,largura,x_pos,y_pos,w_px,h_px)
          VALUES ($1,$2,$3,$4,100,FALSE,FALSE,FALSE,NULL,$5,50,$6,$7,$8,$9)`,
         [telaId, c.nome, c.label, c.tipo, idx + 1, c.x, c.y, c.w, c.h]
-      ).catch(() => {})
+      ).catch(e => console.warn('[migration] inserir campo de tela:', e.message))
     }
   }
 }
@@ -110,11 +113,11 @@ async function migration1() {
 
   // ── Remove tabelas legadas que não devem mais existir como tabelas de sistema
   // CASCADE remove FKs dependentes (ex: age_001.cliente_id, os_001.cliente_id)
-  await query(`DROP TABLE IF EXISTS os_001       CASCADE`).catch(() => {})
-  await query(`DROP TABLE IF EXISTS clientes_001 CASCADE`).catch(() => {})
-  await query(`DROP TABLE IF EXISTS solucoes_001 CASCADE`).catch(() => {})
-  await query(`DROP TABLE IF EXISTS scr_001      CASCADE`).catch(() => {})
-  await query(`DROP TABLE IF EXISTS rel_001      CASCADE`).catch(() => {})
+  await query(`DROP TABLE IF EXISTS os_001       CASCADE`).catch(e => console.warn('[migration] drop os_001:', e.message))
+  await query(`DROP TABLE IF EXISTS clientes_001 CASCADE`).catch(e => console.warn('[migration] drop clientes_001:', e.message))
+  await query(`DROP TABLE IF EXISTS solucoes_001 CASCADE`).catch(e => console.warn('[migration] drop solucoes_001:', e.message))
+  await query(`DROP TABLE IF EXISTS scr_001      CASCADE`).catch(e => console.warn('[migration] drop scr_001:', e.message))
+  await query(`DROP TABLE IF EXISTS rel_001      CASCADE`).catch(e => console.warn('[migration] drop rel_001:', e.message))
 
   // ── Tabelas de sistema ────────────────────────────────────────────────────
 
@@ -178,7 +181,7 @@ async function migration1() {
     `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS grid_w       INTEGER      DEFAULT 3`,
     `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS grid_h       INTEGER      DEFAULT 4`,
     `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS icone_lucide VARCHAR(100)`,
-  ]) { await query(col).catch(() => {}) }
+  ]) { await query(col).catch(e => console.warn('[migration] alter dash_001:', e.message)) }
 
   // ── Criador de Telas ──────────────────────────────────────────────────────
 
@@ -194,10 +197,10 @@ async function migration1() {
   await query(`
     DELETE FROM kr_modulos
     WHERE id NOT IN (SELECT MIN(id) FROM kr_modulos GROUP BY nome)
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] deduplicar kr_modulos:', e.message))
   await query(`
     ALTER TABLE kr_modulos ADD CONSTRAINT kr_modulos_nome_unique UNIQUE (nome)
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] constraint unique kr_modulos:', e.message))
   await query(`
     INSERT INTO kr_modulos (nome, icone, ordem)
     SELECT v.nome, v.icone, v.ordem FROM (VALUES
@@ -209,7 +212,7 @@ async function migration1() {
       ('Gestão',      'layout',      6)
     ) AS v(nome, icone, ordem)
     WHERE NOT EXISTS (SELECT 1 FROM kr_modulos)
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] seed kr_modulos:', e.message))
 
   await query(`
     CREATE TABLE IF NOT EXISTS kr_telas (
@@ -238,7 +241,8 @@ async function migration1() {
     `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS canvas_h      INTEGER  DEFAULT 480`,
     `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS col_favorito   BOOLEAN DEFAULT TRUE`,
     `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS col_timestamps BOOLEAN DEFAULT TRUE`,
-  ]) { await query(col).catch(() => {}) }
+    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS grupo_fixo    VARCHAR(30)`,
+  ]) { await query(col).catch(e => console.warn('[migration] alter kr_telas:', e.message)) }
 
   await query(`
     CREATE TABLE IF NOT EXISTS kr_tela_campos (
@@ -283,13 +287,13 @@ async function migration1() {
     `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_width   SMALLINT     DEFAULT NULL`,
     `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_color   VARCHAR(20)  DEFAULT NULL`,
     `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS opcoes_layout  VARCHAR(10)  DEFAULT NULL`,
-  ]) { await query(col).catch(() => {}) }
+  ]) { await query(col).catch(e => console.warn('[migration] alter kr_tela_campos:', e.message)) }
   await query(`
     ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_tipo_check
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] drop constraint tipo_check:', e.message))
   await query(`
     ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] drop constraint largura_check:', e.message))
 
   // ── Tabela de usuários ────────────────────────────────────────────────────
   await query(`
@@ -303,17 +307,23 @@ async function migration1() {
       criado_em   TIMESTAMP    DEFAULT NOW(),
       alterado_em TIMESTAMP    DEFAULT NOW()
     )
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] criar tabela kr_usuarios:', e.message))
   await query(`
     INSERT INTO kr_usuarios (usuario, nome, senha_hash, perfil)
-    VALUES ('admin', 'Administrador', 'admin', 'admin')
+    VALUES ('admin', 'Administrador', $1, 'admin')
     ON CONFLICT (usuario) DO NOTHING
-  `).catch(() => {})
+  `, [bcrypt.hashSync('admin', 10)]).catch(e => console.warn('[migration] insert admin:', e.message))
+
+  // Migração: bancos existentes tinham senha_hash='admin' em texto plano — re-grava com hash
+  await query(
+    `UPDATE kr_usuarios SET senha_hash = $1 WHERE usuario = 'admin' AND senha_hash = 'admin'`,
+    [bcrypt.hashSync('admin', 10)]
+  ).catch(e => console.warn('[migration] rehash admin legado:', e.message))
 
   // ── Sequências para tabelas de sistema (após todos os CREATE TABLE) ────────
   for (const tbl of ['age_001', 'arq_001']) {
-    await query(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) DEFAULT ''`).catch(() => {})
-    await query(`CREATE SEQUENCE IF NOT EXISTS ${tbl}_codigo_seq START 1`).catch(() => {})
+    await query(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) DEFAULT ''`).catch(e => console.warn(`[migration] alter ${tbl} coluna codigo:`, e.message))
+    await query(`CREATE SEQUENCE IF NOT EXISTS ${tbl}_codigo_seq START 1`).catch(e => console.warn(`[migration] criar sequência ${tbl}:`, e.message))
   }
 
   // ── Funções PostgreSQL ────────────────────────────────────────────────────
@@ -347,7 +357,7 @@ async function migration1() {
         ELSE 'VARCHAR(100)'
       END;
     END; $$
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] criar função fn_tipo_para_pg:', e.message))
 
   await query(`
     CREATE OR REPLACE FUNCTION fn_criar_tabela_usuario(p_tela_id INTEGER)
@@ -433,7 +443,7 @@ async function migration1() {
       END LOOP;
       RETURN 'CRIADA: ' || v_nome_tabela;
     END; $$
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] criar função fn_criar_tabela_usuario:', e.message))
 
   await query(`
     CREATE OR REPLACE FUNCTION fn_excluir_tabela_usuario(p_tela_id INTEGER)
@@ -447,7 +457,7 @@ async function migration1() {
       DELETE FROM kr_telas       WHERE id      = p_tela_id;
       RETURN 'EXCLUIDA: ' || v_nome_tabela;
     END; $$
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] criar função fn_excluir_tabela_usuario:', e.message))
 
   // ── Limpezas ──────────────────────────────────────────────────────────────
 
@@ -456,10 +466,10 @@ async function migration1() {
     DELETE FROM kr_tela_campos WHERE tela_id IN (
       SELECT id FROM kr_telas WHERE slug IN ('scripts','agenda') OR nome_tabela IN ('scr_001','age_001')
     )
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] limpar campos de telas de sistema:', e.message))
   await query(`
     DELETE FROM kr_telas WHERE slug IN ('scripts','agenda') OR nome_tabela IN ('scr_001','age_001')
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] limpar telas de sistema:', e.message))
 
   // Garante ativo+criado_em+alterado_em+favorito em TODAS as tabelas dinâmicas
   await query(`
@@ -480,7 +490,7 @@ async function migration1() {
         EXECUTE 'ALTER TABLE ' || quote_ident(rec.nome_tabela) || ' ADD COLUMN IF NOT EXISTS favorito    BOOLEAN   DEFAULT FALSE';
       END LOOP;
     END $$;
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] garantir colunas padrão nas tabelas dinâmicas:', e.message))
 
   // Migra colunas sequenciais antigas (INTEGER) para VARCHAR(50)
   await query(`
@@ -505,14 +515,14 @@ async function migration1() {
              || ' TYPE VARCHAR(50) USING ' || quote_ident(rec.nome_campo) || '::TEXT';
       END LOOP;
     END $$;
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] migrar colunas sequenciais para VARCHAR:', e.message))
 }
 
 // ── Migração 2 — remove campo cliente_id da agenda ───────────────────────────
 async function migration2() {
   await query(`
     ALTER TABLE age_001 DROP COLUMN IF EXISTS cliente_id
-  `).catch(() => {})
+  `).catch(e => console.warn('[migration] remover coluna cliente_id de age_001:', e.message))
 }
 
 // ── Inicialização principal ───────────────────────────────────────────────────
@@ -545,7 +555,7 @@ export async function initDb() {
   }
 
   // Remove constraints problemáticos a cada startup (idempotente)
-  await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(() => {})
+  await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
 
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()
