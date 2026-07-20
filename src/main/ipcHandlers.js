@@ -1,5 +1,4 @@
-import { ipcMain, BrowserWindow, dialog, app, shell, clipboard } from 'electron'
-import bcrypt from 'bcrypt'
+import { ipcMain, BrowserWindow, dialog, app, shell } from 'electron'
 import { getConfig, saveConfig, saveSectionConfig, getConfigForFrontend, INI_PATH, getDecryptedBancoConfig } from './config'
 import { readFileSync, writeFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync } from 'fs'
 import { join, extname, basename, dirname, relative } from 'path'
@@ -12,12 +11,18 @@ import { registerJanelaHandlers } from './handlers/janela'
 import { registerSqlHandlers } from './handlers/sql'
 import { registerAgendaHandlers } from './handlers/agenda'
 import { registerDashboardHandlers } from './handlers/dashboard'
+import { registerClipboardHandlers } from './handlers/clipboard'
+import { registerEntidadeHandlers } from './handlers/entidade'
+import { registerAuthHandlers } from './handlers/auth'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
   registerSqlHandlers({ ipcMain, wrap, query, queryOne, getPool })
   registerAgendaHandlers({ ipcMain, wrap, query, queryOne })
   registerDashboardHandlers({ ipcMain, wrap, query, queryOne })
+  registerClipboardHandlers({ ipcMain, wrap })
+  registerEntidadeHandlers({ ipcMain })
+  registerAuthHandlers({ ipcMain, query, queryOne })
 
   // ── Arquivos ──────────────────────────────────────────────────────────────
   ipcMain.handle('arquivos:getAll', async () => {
@@ -551,164 +556,6 @@ export function registerHandlers() {
   ipcMain.handle('update:download', () => downloadUpdate().catch(e => ({ error: e.message })))
   ipcMain.handle('update:install',  () => installUpdate())
   ipcMain.handle('update:version',  () => app.getVersion())
-
-  // ── Clipboard ────────────────────────────────────────────────────────────────
-  ipcMain.handle('clipboard:write', (_e, texto) => {
-    clipboard.writeText(String(texto ?? ''))
-    return true
-  })
-  ipcMain.handle('clipboard:read', () => clipboard.readText())
-
-  // ── Entidade — consulta CNPJ e CEP ───────────────────────────────────────
-  ipcMain.handle('entidade:buscarCnpj', async (_e, cnpj) => {
-    const digits = String(cnpj ?? '').replace(/\D/g, '')
-    if (digits.length !== 14) return { ok: false, erro: 'CNPJ deve ter 14 dígitos.' }
-
-    // Tenta BrasilAPI primeiro (sem limite agressivo de requisições)
-    async function tryBrasilApi() {
-      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
-      if (!res.ok) throw new Error(res.status === 404 ? 'CNPJ não encontrado.' : `Erro ${res.status}`)
-      const d = await res.json()
-      return {
-        razao_social:                 d.razao_social,
-        nome_fantasia:                d.nome_fantasia,
-        logradouro:                   d.logradouro,
-        numero:                       d.numero,
-        complemento:                  (d.complemento || '').trim(),
-        bairro:                       d.bairro,
-        municipio:                    d.municipio,
-        uf:                           d.uf,
-        cep:                          (d.cep || '').replace(/\D/g, ''),
-        ddd_telefone_1:               d.ddd_telefone_1 || '',
-        ddd_telefone_2:               d.ddd_telefone_2 || '',
-        email:                        d.email,
-        descricao_situacao_cadastral: d.descricao_situacao_cadastral,
-        cnae_fiscal_descricao:        d.cnae_fiscal_descricao,
-        natureza_juridica:            d.natureza_juridica,
-        porte:                        d.porte,
-      }
-    }
-
-    // Fallback: publica.cnpj.ws
-    async function tryPublicaCnpjWs() {
-      const res = await fetch(`https://publica.cnpj.ws/cnpj/${digits}`)
-      if (!res.ok) throw new Error(res.status === 404 ? 'CNPJ não encontrado.' : `Erro ${res.status}`)
-      const d = await res.json()
-      const est = d.estabelecimento || {}
-      return {
-        razao_social:                 d.razao_social,
-        nome_fantasia:                est.nome_fantasia,
-        logradouro:                   est.logradouro,
-        numero:                       est.numero,
-        complemento:                  (est.complemento || '').trim(),
-        bairro:                       est.bairro,
-        municipio:                    est.cidade?.nome,
-        uf:                           est.estado?.sigla,
-        cep:                          (est.cep || '').replace(/\D/g, ''),
-        ddd_telefone_1:               est.ddd1 && est.telefone1 ? `(${est.ddd1}) ${est.telefone1}` : '',
-        ddd_telefone_2:               est.ddd2 && est.telefone2 ? `(${est.ddd2}) ${est.telefone2}` : '',
-        email:                        est.email,
-        descricao_situacao_cadastral: est.situacao_cadastral,
-        cnae_fiscal_descricao:        est.atividade_principal?.descricao,
-        natureza_juridica:            d.natureza_juridica?.descricao || d.natureza_juridica,
-        porte:                        d.porte?.descricao || d.porte,
-      }
-    }
-
-    try {
-      const data = await tryBrasilApi().catch(() => tryPublicaCnpjWs())
-      return { ok: true, data }
-    } catch (e) {
-      return { ok: false, erro: e.message || 'Sem conexão ou serviço indisponível.' }
-    }
-  })
-
-  ipcMain.handle('entidade:buscarCep', async (_e, cep) => {
-    const digits = String(cep ?? '').replace(/\D/g, '')
-    if (digits.length !== 8) return { ok: false, erro: 'CEP deve ter 8 dígitos.' }
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
-      if (!res.ok) return { ok: false, erro: `Erro ${res.status}` }
-      const data = await res.json()
-      if (data.erro) return { ok: false, erro: 'CEP não encontrado.' }
-      return { ok: true, data }
-    } catch (e) {
-      return { ok: false, erro: 'Sem conexão ou serviço indisponível.' }
-    }
-  })
-
-  // ── Autenticação ─────────────────────────────────────────────────────────
-  ipcMain.handle('auth:login', async (_, usuario, senha) => {
-    const login = String(usuario).toLowerCase().trim()
-    const pwd   = String(senha)
-    try {
-      // 1) Tenta tabela usuario_001 se existir
-      const tabelaExiste = await queryOne(
-        `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='usuario_001'`
-      )
-      if (tabelaExiste) {
-        // Descobre qual coluna é o campo login (tipo='login') e qual é a senha
-        const colLogin = await queryOne(
-          `SELECT nome_campo FROM kr_tela_campos tc
-           JOIN kr_telas t ON t.id=tc.tela_id
-           WHERE t.nome_tabela='usuario_001' AND tc.tipo='login' AND tc.ativo=TRUE LIMIT 1`
-        )
-        const colSenha = await queryOne(
-          `SELECT nome_campo FROM kr_tela_campos tc
-           JOIN kr_telas t ON t.id=tc.tela_id
-           WHERE t.nome_tabela='usuario_001' AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`
-        )
-        if (colLogin && colSenha) {
-          const row = await queryOne(
-            `SELECT id, ${colLogin.nome_campo} AS login, nome, status, foto, ${colSenha.nome_campo} AS senha_hash
-             FROM usuario_001
-             WHERE LOWER(${colLogin.nome_campo})=$1 AND ativo=TRUE LIMIT 1`,
-            [login]
-          )
-          if (row) {
-            if (!row.senha_hash) return { ok: false, erro: 'Usuário sem senha definida. Contate o administrador.' }
-            const ok = await bcrypt.compare(pwd, row.senha_hash)
-            if (!ok) return { ok: false, erro: 'Senha incorreta.' }
-            if (row.status === 'inativo')   return { ok: false, erro: 'Usuário inativo.' }
-            if (row.status === 'bloqueado') return { ok: false, erro: 'Usuário bloqueado.' }
-            return { ok: true, user: { id: row.id, usuario: row.login, nome: row.nome, perfil: row.status || 'usuario', foto: row.foto || null, fonte: 'usuario_001' } }
-          }
-        }
-      }
-
-      // 2) Fallback: tabela kr_usuarios (admin/admin)
-      const row = await queryOne(
-        `SELECT id, usuario, nome, perfil, senha_hash FROM kr_usuarios WHERE usuario=$1 AND ativo=TRUE`,
-        [login]
-      )
-      if (!row) return { ok: false, erro: 'Usuário não encontrado ou inativo.' }
-      const okSenha = await bcrypt.compare(pwd, String(row.senha_hash))
-      if (!okSenha) return { ok: false, erro: 'Senha incorreta.' }
-      return { ok: true, user: { id: row.id, usuario: row.usuario, nome: row.nome, perfil: row.perfil, fonte: 'sistema' } }
-    } catch (e) {
-      return { ok: false, erro: 'Erro interno: ' + e.message }
-    }
-  })
-
-  ipcMain.handle('auth:redefinirSenha', async (_, { tabelaUsuario, campoCodigo, id, novaSenha }) => {
-    try {
-      const hash = await bcrypt.hash(String(novaSenha), 10)
-      const colSenha = await queryOne(
-        `SELECT nome_campo FROM kr_tela_campos tc
-         JOIN kr_telas t ON t.id=tc.tela_id
-         WHERE t.nome_tabela=$1 AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`,
-        [tabelaUsuario]
-      )
-      if (!colSenha) return { ok: false, erro: 'Coluna de senha não encontrada.' }
-      const pk = campoCodigo || 'id'
-      const hasTs = await queryOne(`SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name='alterado_em' LIMIT 1`, [tabelaUsuario])
-      const tsClause = hasTs ? `, alterado_em=NOW()` : ''
-      await query(`UPDATE ${tabelaUsuario} SET ${colSenha.nome_campo}=$1${tsClause} WHERE ${pk}=$2`, [hash, id])
-      return { ok: true }
-    } catch (e) {
-      return { ok: false, erro: e.message }
-    }
-  })
 
 }
 

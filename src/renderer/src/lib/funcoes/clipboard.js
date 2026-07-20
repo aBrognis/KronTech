@@ -4,7 +4,9 @@ import { mostrarAlerta } from './ui.js'
 // contextIsolation: true). Fallback para execCommand se rodar fora do Electron.
 async function _escreverClipboard(texto) {
   if (window.api?.clipboard?.write) {
-    return window.api.clipboard.write(String(texto))
+    const res = await window.api.clipboard.write(String(texto))
+    if (!res.ok) throw new Error(res.erro)
+    return res.data
   }
   // fallback DOM — funciona na maioria dos contextos web
   const el = document.createElement('textarea')
@@ -33,7 +35,10 @@ export async function copiarTexto(texto) {
 
 export async function lerClipboard() {
   try {
-    if (window.api?.clipboard?.read) return await window.api.clipboard.read()
+    if (window.api?.clipboard?.read) {
+      const res = await window.api.clipboard.read()
+      return res.ok ? res.data : ''
+    }
     return await navigator.clipboard.readText()
   } catch { return '' }
 }
