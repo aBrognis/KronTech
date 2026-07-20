@@ -70,7 +70,6 @@ export async function excluirModulo(id) {
   const emUso = await queryOne('SELECT id FROM kr_telas WHERE modulo_id=$1 LIMIT 1', [id])
   if (emUso) throw new Error('Módulo está em uso por telas cadastradas. Remova as telas primeiro.')
   await query('DELETE FROM kr_modulos WHERE id=$1', [id])
-  return { sucesso: true }
 }
 
 // ── Telas ─────────────────────────────────────────────────────────────────────
@@ -171,7 +170,7 @@ export async function criarTela(payload) {
     await inserirCampos(client, telaId, payload.campos||[])
     const res = await client.query('SELECT fn_criar_tabela_usuario($1) AS r', [telaId])
     await client.query('COMMIT')
-    return { sucesso: true, telaId, nomeTabela, resultadoSQL: res.rows[0].r }
+    return { telaId, nomeTabela, resultadoSQL: res.rows[0].r }
   } catch(err) { await client.query('ROLLBACK'); throw err }
   finally { client.release() }
 }
@@ -234,24 +233,22 @@ export async function editarTela(telaId, payload) {
     }
     const res = await client.query('SELECT fn_criar_tabela_usuario($1) AS r', [telaId])
     await client.query('COMMIT')
-    return { sucesso: true, resultadoSQL: res.rows[0].r }
+    return { resultadoSQL: res.rows[0].r }
   } catch(err) { await client.query('ROLLBACK'); throw err }
   finally { client.release() }
 }
 
 export async function excluirTela(telaId) {
   const res = await queryOne('SELECT fn_excluir_tabela_usuario($1) AS r', [telaId])
-  return { sucesso: true, resultadoSQL: res.r }
+  return { resultadoSQL: res.r }
 }
 
 export async function inativarTela(telaId) {
   await query('UPDATE kr_telas SET ativo=FALSE WHERE id=$1', [telaId])
-  return { sucesso: true }
 }
 
 export async function reativarTela(telaId) {
   await query('UPDATE kr_telas SET ativo=TRUE WHERE id=$1', [telaId])
-  return { sucesso: true }
 }
 
 // ── CRUD genérico das telas geradas ──────────────────────────────────────────
@@ -325,7 +322,6 @@ export async function reordenarTelas(items) {
       await client.query('UPDATE kr_telas SET ordem_menu=$1 WHERE id=$2', [ordem_menu, id])
     }
     await client.query('COMMIT')
-    return { sucesso: true }
   } catch(err) { await client.query('ROLLBACK'); throw err }
   finally { client.release() }
 }
@@ -333,12 +329,10 @@ export async function reordenarTelas(items) {
 export async function inativarRegistro(nomeTabela, id, hasTs = true) {
   const tsClause = hasTs !== false ? ',alterado_em=NOW()' : ''
   await query(`UPDATE ${tbl(nomeTabela)} SET ativo=FALSE${tsClause} WHERE id=$1`, [id])
-  return { sucesso: true }
 }
 
 export async function excluirRegistro(nomeTabela, id) {
   await query(`DELETE FROM ${tbl(nomeTabela)} WHERE id=$1`, [id])
-  return { sucesso: true }
 }
 
 export async function toggleFavorito(nomeTabela, id, hasTs = true) {
