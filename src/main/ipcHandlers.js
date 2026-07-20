@@ -173,6 +173,24 @@ export function registerHandlers() {
     `, [table])
   })
 
+  // ── Query genérica segura (somente SELECT) ───────────────────────────────
+  const SQL_PALAVRAS_PROIBIDAS = /\b(drop|delete|update|insert|alter|truncate|grant|revoke)\b/i
+  ipcMain.handle('form:query', async (_, { sql, params }) => {
+    const semComentarios = (sql || '').replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    const trimmed = semComentarios.trim().toLowerCase()
+    if (!trimmed.startsWith('select')) throw new Error('Apenas SELECT é permitido em form:query')
+    if (semComentarios.trim().replace(/;\s*$/, '').includes(';')) throw new Error('Apenas um único comando é permitido em form:query')
+    if (SQL_PALAVRAS_PROIBIDAS.test(semComentarios)) throw new Error('Comando não permitido em form:query')
+    return query(sql, params || [])
+  })
+
+  // ── Exec genérico (INSERT/UPDATE/DELETE via TelaDupla) ───────────────────
+  ipcMain.handle('form:exec', async (_, { sql, params }) => {
+    const trimmed = (sql || '').trim().toLowerCase()
+    if (trimmed.startsWith('select')) throw new Error('Use form:query para SELECT')
+    return queryOne(sql, params || [])
+  })
+
   // ── Agenda ────────────────────────────────────────────────────────────────
   ipcMain.handle('agenda:getByMonth', async (_, { mes, ano }) => {
     return query(`

@@ -7,8 +7,14 @@ function normalizarNome(nome) {
     .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').replace(/^[^a-z]+/, '')
 }
 
-function tbl(nome)  { return '"' + nome.replace(/"/g, '') + '"' }
-function col(nome)  { return '"' + nome.replace(/"/g, '') + '"' }
+function assertIdent(nome) {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(nome)) {
+    throw new Error(`Identificador inválido: ${nome}`)
+  }
+  return nome
+}
+function tbl(nome)  { return '"' + assertIdent(nome) + '"' }
+function col(nome)  { return '"' + assertIdent(nome) + '"' }
 
 const TIPOS_SISTEMA = ['favorito', 'timestamps']
 
