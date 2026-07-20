@@ -46,11 +46,13 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
   const carregar = useCallback(async () => {
     setCarregando(true); setErro(null)
     try {
-      const [t, m] = await Promise.all([
+      const [resTelas, resModulos] = await Promise.all([
         window.api.formBuilder.listarTelas(),
         window.api.formBuilder.listarModulos(),
       ])
-      setTelas(t); setModulos(m)
+      if (!resTelas.ok) throw new Error(resTelas.erro)
+      if (!resModulos.ok) throw new Error(resModulos.erro)
+      setTelas(resTelas.data); setModulos(resModulos.data)
     } catch(e) { setErro(e.message) }
     finally    { setCarregando(false) }
   }, [])
@@ -112,8 +114,10 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
     const acao = tela.ativo ? 'Inativar' : 'Reativar'
     if (!confirm(`${acao} a tela "${tela.nome_tela}"?`)) return
     try {
-      if (tela.ativo) await window.api.formBuilder.inativarTela(tela.id)
-      else            await window.api.formBuilder.reativarTela(tela.id)
+      const res = tela.ativo
+        ? await window.api.formBuilder.inativarTela(tela.id)
+        : await window.api.formBuilder.reativarTela(tela.id)
+      if (!res.ok) throw new Error(res.erro)
       await carregar()
       notifyTelasUpdated(onTelasUpdated)
     } catch(e) { alert('Erro: ' + e.message) }
@@ -122,7 +126,8 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
   async function handleExcluir(tela) {
     if (!confirm(`ATENÇÃO: Isso vai EXCLUIR a tabela "${tela.nome_tabela}" e TODOS os dados.\n\nDeseja continuar?`)) return
     try {
-      await window.api.formBuilder.excluirTela(tela.id)
+      const res = await window.api.formBuilder.excluirTela(tela.id)
+      if (!res.ok) throw new Error(res.erro)
       await carregar()
       notifyTelasUpdated(onTelasUpdated)
     } catch(e) { alert('Erro: ' + e.message) }
@@ -130,8 +135,9 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
 
   async function abrirEditar(tela) {
     try {
-      const completa = await window.api.formBuilder.buscarTela(tela.id)
-      setTelaEditando(completa); setModalAberto(true)
+      const res = await window.api.formBuilder.buscarTela(tela.id)
+      if (!res.ok) throw new Error(res.erro)
+      setTelaEditando(res.data); setModalAberto(true)
     } catch(e) { alert('Erro ao carregar tela: ' + e.message) }
   }
 
@@ -190,7 +196,10 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       Object.values(ordemGrupos).forEach(({ telas }) =>
         telas.forEach((t, idx) => items.push({ id: t.id, ordem_menu: idx + 1 }))
       )
-      if (items.length) await window.api.formBuilder.reordenarTelas(items)
+      if (items.length) {
+        const res = await window.api.formBuilder.reordenarTelas(items)
+        if (!res.ok) throw new Error(res.erro)
+      }
       await carregar()
       setMenuSalvo(true)
       setTimeout(() => setMenuSalvo(false), 2500)
@@ -202,7 +211,8 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
     setErroMod('')
     if (!novoMod.nome.trim()) { setErroMod('Informe o nome do módulo.'); return }
     try {
-      await window.api.formBuilder.criarModulo(novoMod)
+      const res = await window.api.formBuilder.criarModulo(novoMod)
+      if (!res.ok) throw new Error(res.erro)
       setNovoMod({ nome: '', icone: 'folder', ordem: 99 })
       await carregar()
     } catch(e) { setErroMod(e.message) }
@@ -211,7 +221,8 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
   async function handleSalvarModulo(id) {
     if (!editandoMod?.nome?.trim()) return
     try {
-      await window.api.formBuilder.editarModulo(id, editandoMod)
+      const res = await window.api.formBuilder.editarModulo(id, editandoMod)
+      if (!res.ok) throw new Error(res.erro)
       setEditandoMod(null)
       await carregar()
     } catch(e) { alert('Erro: ' + e.message) }
@@ -220,7 +231,8 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
   async function handleExcluirModulo(mod) {
     if (!confirm(`Excluir módulo "${mod.nome}"?`)) return
     try {
-      await window.api.formBuilder.excluirModulo(mod.id)
+      const res = await window.api.formBuilder.excluirModulo(mod.id)
+      if (!res.ok) throw new Error(res.erro)
       await carregar()
     } catch(e) { alert('Erro: ' + e.message) }
   }

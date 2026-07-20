@@ -339,7 +339,7 @@ export default function App() {
       if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) aplicarCorSistema(hex)
     }).catch(() => {})
-    window.api.formBuilder.listarTelas(true).then(setTelasDin).catch(() => {})
+    window.api.formBuilder.listarTelas(true).then(res => res.ok && setTelasDin(res.data)).catch(() => {})
   }, [])
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0]
@@ -382,7 +382,7 @@ export default function App() {
 
   function handleTelasUpdated() {
     setTelasVersion(v => v + 1)
-    window.api.formBuilder.listarTelas(true).then(setTelasDin).catch(() => {})
+    window.api.formBuilder.listarTelas(true).then(res => res.ok && setTelasDin(res.data)).catch(() => {})
   }
 
   function closeTab(tabId) {

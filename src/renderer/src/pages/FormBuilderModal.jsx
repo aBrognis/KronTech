@@ -1592,7 +1592,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
 
   useEffect(() => {
     window.api.formBuilder.listarTelas(true)
-      .then(ts => setTelasList(ts.filter(t => !t.sistema)))
+      .then(res => { if (res.ok) setTelasList(res.data.filter(t => !t.sistema)) })
       .catch(() => {})
   }, [])
 
@@ -1610,8 +1610,8 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   async function carregarColunasLookup(nomeTabela) {
     if (!nomeTabela || lookupColMap[nomeTabela]) return
     try {
-      const cols = await window.api.formBuilder.listarColunasTabela(nomeTabela)
-      setLookupColMap(prev => ({ ...prev, [nomeTabela]: cols }))
+      const res = await window.api.formBuilder.listarColunasTabela(nomeTabela)
+      if (res.ok) setLookupColMap(prev => ({ ...prev, [nomeTabela]: res.data }))
     } catch {}
   }
 
@@ -1998,8 +1998,10 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     }
     setSalvando(true)
     try {
-      if (editando) await window.api.formBuilder.editarTela(tela.id, payload)
-      else          await window.api.formBuilder.criarTela(payload)
+      const res = editando
+        ? await window.api.formBuilder.editarTela(tela.id, payload)
+        : await window.api.formBuilder.criarTela(payload)
+      if (!res.ok) throw new Error(res.erro)
       onSalvar()
     } catch(e) { setErro(e.message) }
     finally    { setSalvando(false) }

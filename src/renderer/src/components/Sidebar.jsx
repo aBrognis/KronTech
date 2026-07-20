@@ -139,7 +139,9 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
   async function carregarTelas(showSpin = false) {
     if (showSpin) setReloading(true)
     try {
-      const telas = await window.api.formBuilder.listarTelas(true)
+      const res = await window.api.formBuilder.listarTelas(true)
+      if (!res.ok) throw new Error(res.erro)
+      const telas = res.data
       setTelasDin(telas)
       const extras = {}
       telas.forEach(t => { if (t.modulo_nome) extras[`din_${t.modulo_nome}`] = true })

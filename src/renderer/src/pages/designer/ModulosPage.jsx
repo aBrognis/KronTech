@@ -49,11 +49,13 @@ export default function ModulosPage() {
   const carregar = useCallback(async () => {
     setCarregando(true)
     try {
-      const [t, m] = await Promise.all([
+      const [resTelas, resModulos] = await Promise.all([
         window.api.formBuilder.listarTelas(),
         window.api.formBuilder.listarModulos(),
       ])
-      setTelas(t); setModulos(m)
+      if (!resTelas.ok) throw new Error(resTelas.erro)
+      if (!resModulos.ok) throw new Error(resModulos.erro)
+      setTelas(resTelas.data); setModulos(resModulos.data)
     } catch (e) { console.error(e) }
     finally     { setCarregando(false) }
   }, [])
@@ -154,7 +156,10 @@ export default function ModulosPage() {
       Object.values(ordemGrupos).forEach(({ telas: gr }) =>
         gr.forEach((t, idx) => items.push({ id: t.id, ordem_menu: idx + 1 }))
       )
-      if (items.length) await window.api.formBuilder.reordenarTelas(items)
+      if (items.length) {
+        const res = await window.api.formBuilder.reordenarTelas(items)
+        if (!res.ok) throw new Error(res.erro)
+      }
       await carregar()
       setMenuSalvo(true)
       setTimeout(() => setMenuSalvo(false), 2500)
@@ -166,7 +171,8 @@ export default function ModulosPage() {
     setErroMod('')
     if (!novoMod.nome.trim()) { setErroMod('Informe o nome do módulo.'); return }
     try {
-      await window.api.formBuilder.criarModulo(novoMod)
+      const res = await window.api.formBuilder.criarModulo(novoMod)
+      if (!res.ok) throw new Error(res.erro)
       setNovoMod({ nome: '', icone: 'folder', ordem: 99 })
       await carregar()
     } catch (e) { setErroMod(e.message) }
@@ -175,7 +181,8 @@ export default function ModulosPage() {
   async function handleSalvarModulo(id) {
     if (!editandoMod?.nome?.trim()) return
     try {
-      await window.api.formBuilder.editarModulo(id, editandoMod)
+      const res = await window.api.formBuilder.editarModulo(id, editandoMod)
+      if (!res.ok) throw new Error(res.erro)
       setEditandoMod(null)
       await carregar()
     } catch (e) { alert('Erro: ' + e.message) }
@@ -184,7 +191,8 @@ export default function ModulosPage() {
   async function handleExcluirModulo(mod) {
     if (!confirm(`Excluir módulo "${mod.nome}"?`)) return
     try {
-      await window.api.formBuilder.excluirModulo(mod.id)
+      const res = await window.api.formBuilder.excluirModulo(mod.id)
+      if (!res.ok) throw new Error(res.erro)
       await carregar()
     } catch (e) { alert('Erro: ' + e.message) }
   }

@@ -154,10 +154,13 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   async function init() {
     setLoading(true); setErro(null); setImportando(false)
     try {
-      const todas = await window.api.formBuilder.listarTelas(true)
-      const found = todas.find(t => t.nome_tabela === nomeTabela)
+      const resTelas = await window.api.formBuilder.listarTelas(true)
+      if (!resTelas.ok) throw new Error(resTelas.erro)
+      const found = resTelas.data.find(t => t.nome_tabela === nomeTabela)
       if (!found) throw new Error(`Tela "${nomeTabela}" não encontrada.`)
-      const t = await window.api.formBuilder.buscarTela(found.id)
+      const resTela = await window.api.formBuilder.buscarTela(found.id)
+      if (!resTela.ok) throw new Error(resTela.erro)
+      const t = resTela.data
       setTela(t)
       onTituloChange?.(t.nome_tela, t.nome_tabela)
       // Carrega pasta configurada se a tela tiver campo arquivo
@@ -169,14 +172,18 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       if (camposPasta.length) {
         const map = {}
         await Promise.all(camposPasta.map(async c => {
-          try { map[c.nome_campo] = await window.api.formBuilder.valoresDistintos(nomeTabela, c.nome_campo) }
+          try {
+            const res = await window.api.formBuilder.valoresDistintos(nomeTabela, c.nome_campo)
+            map[c.nome_campo] = res.ok ? res.data : []
+          }
           catch { map[c.nome_campo] = [] }
         }))
         setPastasSugest(map)
       }
       // Carrega a última página para posicionar no último registro
-      const primeiros = await window.api.formBuilder.listarRegistros(nomeTabela, { pagina: 1, porPagina: POR_PAG })
-      const totalReg = primeiros.total
+      const resPrimeiros = await window.api.formBuilder.listarRegistros(nomeTabela, { pagina: 1, porPagina: POR_PAG })
+      if (!resPrimeiros.ok) throw new Error(resPrimeiros.erro)
+      const totalReg = resPrimeiros.data.total
       const ultimaPag = Math.max(1, Math.ceil(totalReg / POR_PAG))
       await carregar(t, ultimaPag, '')
       // Carrega opções de campos lookup
@@ -185,7 +192,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         const map = {}
         await Promise.all(lookupCampos.map(async c => {
           const cfg = c.opcoes
-          map[c.nome_campo] = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
+          const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
+          map[c.nome_campo] = res.ok ? res.data : []
         }))
         setLookupOpcoes(map)
       }
@@ -296,9 +304,11 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
   async function carregar(t = tela, pag = pagina, buscaVal = busca, manterIdReg = null) {
     if (!t) return
-    const res = await window.api.formBuilder.listarRegistros(nomeTabela, {
+    const resp = await window.api.formBuilder.listarRegistros(nomeTabela, {
       pagina: pag, porPagina: POR_PAG, busca: buscaVal || undefined
     })
+    if (!resp.ok) { setErro(resp.erro); return }
+    const res = resp.data
     setRegistros(res.registros)
     setTotal(res.total)
     setPagina(pag)
@@ -362,7 +372,11 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       f[c.nome_campo] = c.tipo === 'flags' ? '' : (c.valor_padrao ?? '')
     })
     for (const c of tela.campos.filter(c => c.ativo && c.sequencial)) {
-      try { f[c.nome_campo] = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars) }
+      try {
+        const res = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars)
+        if (!res.ok) throw new Error(res.erro)
+        f[c.nome_campo] = res.data
+      }
       catch { f[c.nome_campo] = c.valor_padrao || String(1).padStart(c.opcoes?.seqChars || 3, '0') }
     }
     if (tela.col_favorito !== false) f.favorito = false
@@ -388,15 +402,19 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       if (tela.col_favorito !== false) dados.favorito = form.favorito ?? false
       if (mode === 'new') {
         for (const c of tela.campos.filter(c => c.ativo && c.sequencial)) {
-          dados[c.nome_campo] = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars)
+          const resCod = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars)
+          if (!resCod.ok) throw new Error(resCod.erro)
+          dados[c.nome_campo] = resCod.data
         }
-        const novoReg = await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
+        const resNovo = await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
+        if (!resNovo.ok) throw new Error(resNovo.erro)
         const totalPosInsercao = total + 1
         const ultimaPag = Math.max(1, Math.ceil(totalPosInsercao / POR_PAG))
-        await carregar(tela, ultimaPag, busca, novoReg?.id ?? null)
+        await carregar(tela, ultimaPag, busca, resNovo.data?.id ?? null)
       } else {
         const idAtual = registros[currentIdx]?.id
-        await window.api.formBuilder.atualizarRegistro(nomeTabela, idAtual, dados, tela.col_timestamps !== false)
+        const resUpd = await window.api.formBuilder.atualizarRegistro(nomeTabela, idAtual, dados, tela.col_timestamps !== false)
+        if (!resUpd.ok) throw new Error(resUpd.erro)
         await carregar(tela, pagina, busca, idAtual)
       }
       setMode('view')
@@ -412,7 +430,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   async function confirmarExcluir() {
     setConfirmExcluir(false)
     try {
-      await window.api.formBuilder.excluirRegistro(nomeTabela, registros[currentIdx].id)
+      const res = await window.api.formBuilder.excluirRegistro(nomeTabela, registros[currentIdx].id)
+      if (!res.ok) throw new Error(res.erro)
       await carregar(tela, pagina, busca, null)
     } catch (e) {
       alert('Erro ao excluir: ' + (e.message || e))
@@ -427,8 +446,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   async function handleToggleFav() {
     if (!registros.length) return
     try {
-      const upd = await window.api.formBuilder.toggleFavorito(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
-      setRegistros(rs => rs.map((r, i) => i === currentIdx ? { ...r, favorito: upd.favorito } : r))
+      const res = await window.api.formBuilder.toggleFavorito(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
+      if (!res.ok) throw new Error(res.erro)
+      setRegistros(rs => rs.map((r, i) => i === currentIdx ? { ...r, favorito: res.data.favorito } : r))
     } catch(e) { console.error('toggleFavorito:', e) }
   }
 
@@ -440,8 +460,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     setAllLoading(true)
     try {
       const res = await window.api.formBuilder.getAllRegistros(nomeTabela)
-      setAllItems(res.registros)
-      return res.registros
+      if (!res.ok) throw new Error(res.erro)
+      setAllItems(res.data.registros)
+      return res.data.registros
     } catch {
       return []
     } finally {
@@ -514,7 +535,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       let src = allItems
       if (!src.length) {
         const res = await window.api.formBuilder.getAllRegistros(nomeTabela)
-        src = res.registros
+        if (!res.ok) throw new Error(res.erro)
+        src = res.data.registros
         setAllItems(src)
       }
       setMTodos(src)
@@ -678,8 +700,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     setLkpModalBusca('')
     setLkpModalSelId(form[campo.nome_campo] ? Number(form[campo.nome_campo]) : null)
     try {
-      const opts = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
-      setLkpModalTodos(opts)
+      const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
+      if (!res.ok) throw new Error(res.erro)
+      setLkpModalTodos(res.data)
     } catch { setLkpModalTodos([]) }
     finally { setLkpModalLoading(false) }
   }
@@ -865,7 +888,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
             const msg = p || 'Excluir este registro?'
             if (!confirm(msg)) return
             try {
-              await window.api.formBuilder.inativarRegistro(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
+              const res = await window.api.formBuilder.inativarRegistro(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
+              if (!res.ok) throw new Error(res.erro)
               await carregar(tela, pagina, busca, null)
               mostrarAlerta('Registro excluído.', 'sucesso')
             } catch(e) { mostrarAlerta(e.message, 'erro') }
@@ -1192,7 +1216,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
               // Recarrega sugestões ao digitar se ainda não carregado
               if (!pastasSugest[campo.nome_campo]) {
                 window.api.formBuilder.valoresDistintos(nomeTabela, campo.nome_campo)
-                  .then(v => setPastasSugest(p => ({ ...p, [campo.nome_campo]: v })))
+                  .then(res => res.ok && setPastasSugest(p => ({ ...p, [campo.nome_campo]: res.data })))
                   .catch(() => {})
               }
             }}

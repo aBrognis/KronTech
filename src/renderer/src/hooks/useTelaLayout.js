@@ -17,7 +17,8 @@ export function useTelaLayout(slug) {
     if (!slug) { setLoading(false); return }
     setLoading(true)
     window.api.formBuilder.getTelaPorSlug(slug)
-      .then(tela => {
+      .then(res => {
+        const tela = res.ok ? res.data : null
         if (tela?.campos?.length) {
           setTelaId(tela.id)
           setCampos(tela.campos.filter(c => c.ativo !== false))
