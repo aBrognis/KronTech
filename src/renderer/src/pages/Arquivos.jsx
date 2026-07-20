@@ -304,7 +304,7 @@ export default function Arquivos({ newTrigger }) {
     })
     const res = await window.api.arquivos.importarPasta()
     if (res?.cancelado || !res?.ok) { unsub(); if (!res?.ok && res?.erro) setErro(res.erro) }
-    if (res?.ok && res?.fase !== 'cancelado') await loadAll()
+    if (res?.ok && !res?.cancelado) await loadAll()
   }
 
   async function handleConfigurarPasta() {

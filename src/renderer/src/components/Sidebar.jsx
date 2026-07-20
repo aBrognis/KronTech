@@ -75,7 +75,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
   const [ordemGlobal,      setOrdemGlobal]      = useState([])
 
   useEffect(() => {
-    window.api.update?.version().then(v => setVersion(v)).catch(() => {})
+    window.api.update?.version().then(res => res.ok && setVersion(res.data)).catch(() => {})
     carregarTelas()
     carregarPersonalizacao()
 
