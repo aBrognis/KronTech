@@ -186,7 +186,8 @@ export default function EditorSQL() {
   useEffect(() => { loadTables() }, [])
 
   async function loadTables() {
-    try { setTables(await window.api.sql.getTables()) } catch {}
+    const res = await window.api.sql.getTables()
+    if (res.ok) setTables(res.data)
   }
 
   async function selectTableDetail(name) {
@@ -195,12 +196,12 @@ export default function EditorSQL() {
     setDetailTab('campos')
     setLoadingDetail(true)
     try {
-      const [cols, idxs] = await Promise.all([
+      const [colsRes, idxsRes] = await Promise.all([
         window.api.sql.getColumns(name),
         window.api.sql.getIndexes(name),
       ])
-      setColumns(cols)
-      setIndexes(idxs)
+      setColumns(colsRes.ok ? colsRes.data : [])
+      setIndexes(idxsRes.ok ? idxsRes.data : [])
     } finally {
       setLoadingDetail(false)
     }
@@ -222,9 +223,9 @@ export default function EditorSQL() {
       await window.api.sql.saveFile(currentFile, sql)
     } else {
       const res = await window.api.sql.openFile()
-      if (!res) return
-      setSql(res.content)
-      setCurrentFile(res.path)
+      if (!res.ok || !res.data) return
+      setSql(res.data.content)
+      setCurrentFile(res.data.path)
       setResult(null)
     }
   }, [currentFile, sql])
@@ -236,6 +237,7 @@ export default function EditorSQL() {
     setLastRunSql(q.trim())
     setResultTab('resultado')
     const res = await window.api.sql.execute(q.trim())
+    // sql:execute mantém formato estendido: {ok,data:{rows,fields,rowCount,command},ms} ou {ok:false,erro,ms}
     setResult(res)
     setRunning(false)
     const entry = {
@@ -244,8 +246,8 @@ export default function EditorSQL() {
       ts:       new Date().toISOString(),
       ok:       res.ok,
       ms:       res.ms,
-      command:  res.command,
-      rowCount: res.rowCount ?? (res.rows?.length ?? 0),
+      command:  res.data?.command,
+      rowCount: res.data?.rowCount ?? (res.data?.rows?.length ?? 0),
     }
     setHistory(prev => {
       const next = [entry, ...prev].slice(0, HIST_MAX)
@@ -298,9 +300,9 @@ export default function EditorSQL() {
     !tableSearch || t.table_name.toLowerCase().includes(tableSearch.toLowerCase())
   )
 
-  const isSelect = result?.command === 'SELECT'
-  const rows     = result?.rows   ?? []
-  const fields   = result?.fields ?? []
+  const isSelect = result?.data?.command === 'SELECT'
+  const rows     = result?.data?.rows   ?? []
+  const fields   = result?.data?.fields ?? []
 
   return (
     <div className="sql-layout">
@@ -500,7 +502,7 @@ export default function EditorSQL() {
                 ? <><CheckCircle2 size={12} strokeWidth={2} />
                     {isSelect
                       ? `${rows.length} linha${rows.length !== 1 ? 's' : ''}`
-                      : `${result.command} — ${result.rowCount ?? 0} afetada${(result.rowCount ?? 0) !== 1 ? 's' : ''}`}
+                      : `${result.data?.command} — ${result.data?.rowCount ?? 0} afetada${(result.data?.rowCount ?? 0) !== 1 ? 's' : ''}`}
                   </>
                 : <><AlertCircle size={12} strokeWidth={2} />Erro</>
               }
@@ -532,7 +534,7 @@ export default function EditorSQL() {
           <div className="sql-result-tabs">
             <button className={`sql-result-tab${resultTab === 'resultado' ? ' active' : ''}`} onClick={() => setResultTab('resultado')}>
               Resultado
-              {result && <span className={`sql-result-tab-badge ${result.ok ? 'ok' : 'err'}`}>{result.ok ? (isSelect ? rows.length : result.rowCount ?? 0) : '!'}</span>}
+              {result && <span className={`sql-result-tab-badge ${result.ok ? 'ok' : 'err'}`}>{result.ok ? (isSelect ? rows.length : result.data?.rowCount ?? 0) : '!'}</span>}
             </button>
             <button className={`sql-result-tab${resultTab === 'historico' ? ' active' : ''}`} onClick={() => setResultTab('historico')}>
               <History size={11} strokeWidth={1.75} /> Histórico
@@ -565,13 +567,13 @@ export default function EditorSQL() {
               {result?.ok === false && (
                 <div className="sql-error">
                   <AlertCircle size={14} strokeWidth={2} />
-                  <pre>{result.error}</pre>
+                  <pre>{result.erro}</pre>
                 </div>
               )}
               {result?.ok && !isSelect && (
                 <div className="sql-success">
                   <CheckCircle2 size={14} strokeWidth={2} />
-                  <span><strong>{result.command}</strong> — {result.rowCount ?? 0} linha{(result.rowCount ?? 0) !== 1 ? 's' : ''} afetada{(result.rowCount ?? 0) !== 1 ? 's' : ''} em {result.ms}ms</span>
+                  <span><strong>{result.data?.command}</strong> — {result.data?.rowCount ?? 0} linha{(result.data?.rowCount ?? 0) !== 1 ? 's' : ''} afetada{(result.data?.rowCount ?? 0) !== 1 ? 's' : ''} em {result.ms}ms</span>
                 </div>
               )}
               {result?.ok && isSelect && rows.length === 0 && (

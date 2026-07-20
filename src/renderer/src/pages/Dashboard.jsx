@@ -81,11 +81,11 @@ export default function Dashboard({ onNavigate }) {
       const sql = (w.sql_query || '').trim()
       if (!sql) return { ...w, _rows: [], _fields: [] }
       const res = await window.api.sql.execute(sql)
-      if (res.error) {
-        setErrorMap(m => ({ ...m, [w.id]: res.error.split('\n')[0].slice(0, 80) }))
+      if (!res.ok) {
+        setErrorMap(m => ({ ...m, [w.id]: res.erro.split('\n')[0].slice(0, 80) }))
         return { ...w, _rows: [], _fields: [] }
       }
-      return { ...w, _rows: res.rows || [], _fields: res.fields?.map(f => f.name) || [] }
+      return { ...w, _rows: res.data.rows || [], _fields: res.data.fields || [] }
     } catch (e) {
       setErrorMap(m => ({ ...m, [w.id]: String(e).slice(0, 80) }))
       return { ...w, _rows: [], _fields: [] }

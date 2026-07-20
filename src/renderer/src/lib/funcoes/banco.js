@@ -18,8 +18,8 @@ function _buildWhere(filtros = {}) {
 
 export async function executarSQL(sql) {
   const res = await window.api.sql.execute(sql)
-  if (!res.ok) throw new Error(res.error ?? 'Erro desconhecido')
-  return res
+  if (!res.ok) throw new Error(res.erro ?? 'Erro desconhecido')
+  return res.data
 }
 
 export async function buscar(tabela, filtros = {}) {

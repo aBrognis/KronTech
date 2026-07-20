@@ -117,8 +117,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     setTesting(true); resetPreview()
     try {
       const res = await window.api.sql.execute(sql)
-      if (res.error) { setPreviewErr(res.error.split('\n')[0]) }
-      else { setPreviewRows(res.rows || []); setPreviewFields(res.fields?.map(f => f.name) || []) }
+      if (!res.ok) { setPreviewErr(res.erro.split('\n')[0]) }
+      else { setPreviewRows(res.data.rows || []); setPreviewFields(res.data.fields || []) }
     } catch(e) { setPreviewErr(String(e)) }
     finally     { setTesting(false) }
   }
