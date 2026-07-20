@@ -652,9 +652,9 @@ export default function Agenda({ newTrigger }) {
         window.api.form.query('SELECT id, nome, cor FROM agenda_status ORDER BY ordem, nome'),
         window.api.form.query('SELECT id, nome FROM entidade_001 WHERE ativo IS DISTINCT FROM false ORDER BY nome LIMIT 500'),
       ])
-      if (cats.status==='fulfilled') setCategorias(cats.value||[])
-      if (sts.status==='fulfilled')  setStatuses(sts.value||[])
-      if (clts.status==='fulfilled') setClientes(clts.value||[])
+      if (cats.status==='fulfilled' && cats.value.ok) setCategorias(cats.value.data||[])
+      if (sts.status==='fulfilled'  && sts.value.ok)  setStatuses(sts.value.data||[])
+      if (clts.status==='fulfilled' && clts.value.ok) setClientes(clts.value.data||[])
     } catch {}
   }
 
@@ -672,8 +672,8 @@ export default function Agenda({ newTrigger }) {
         mes = month+1
         ano = year
       }
-      const data = await window.api.agenda.getByMonth({ mes, ano })
-      setEvents(data||[])
+      const res = await window.api.agenda.getByMonth({ mes, ano })
+      setEvents(res.ok ? res.data||[] : [])
     } catch { setEvents([]) }
     finally { setLoading(false) }
   }
