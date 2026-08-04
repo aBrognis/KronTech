@@ -14,6 +14,7 @@ import {
 } from '../lib/funcoes/index.js'
 import { useFormBuilderArquivos } from './formBuilderView/hooks/useFormBuilderArquivos.js'
 import { useAutoFillCnpjCep } from './formBuilderView/hooks/useAutoFillCnpjCep.js'
+import { useLookupModal } from './formBuilderView/hooks/useLookupModal.js'
 import { maskCPF, maskCNPJ, maskCEP, maskCPFStr, maskCNPJStr, maskCEPStr } from '../lib/utils/masks.js'
 import '../App.css'
 
@@ -99,12 +100,6 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
   // Lookup
   const [lookupOpcoes,    setLookupOpcoes]    = useState({}) // { nome_campo: [{id, label}] }
-  const [lkpModalOpen,    setLkpModalOpen]    = useState(false)
-  const [lkpModalCampo,   setLkpModalCampo]   = useState(null)
-  const [lkpModalTodos,   setLkpModalTodos]   = useState([])
-  const [lkpModalBusca,   setLkpModalBusca]   = useState('')
-  const [lkpModalLoading, setLkpModalLoading] = useState(false)
-  const [lkpModalSelId,   setLkpModalSelId]   = useState(null)
   const [lkpPopover,      setLkpPopover]      = useState(null) // { label, x, y }
 
   // Filtros aba Acesso
@@ -147,6 +142,12 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   } = useFormBuilderArquivos({ tela, nomeTabela, form, setForm, setErro, pagina, busca, carregar, setAllItems, setPastaConfig })
 
   const { docLoading, docErro, buscarCNPJ, buscarCEP } = useAutoFillCnpjCep({ form, setForm })
+
+  const {
+    lkpModalOpen, setLkpModalOpen, lkpModalCampo, lkpModalTodos,
+    lkpModalBusca, setLkpModalBusca, lkpModalLoading, lkpModalSelId, setLkpModalSelId,
+    openLookupModal, confirmarLookupModal,
+  } = useLookupModal({ form, setField })
 
   useEffect(() => { init() }, [nomeTabela])
 
@@ -446,26 +447,6 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   }
 
   function setField(nome, val) { setForm(f => ({ ...f, [nome]: val })) }
-
-  async function openLookupModal(campo) {
-    const cfg = campo.opcoes || {}
-    setLkpModalCampo(campo)
-    setLkpModalOpen(true)
-    setLkpModalLoading(true)
-    setLkpModalBusca('')
-    setLkpModalSelId(form[campo.nome_campo] ? Number(form[campo.nome_campo]) : null)
-    try {
-      const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
-      if (!res.ok) throw new Error(res.erro)
-      setLkpModalTodos(res.data)
-    } catch { setLkpModalTodos([]) }
-    finally { setLkpModalLoading(false) }
-  }
-
-  function confirmarLookupModal() {
-    if (lkpModalCampo) setField(lkpModalCampo.nome_campo, lkpModalSelId || null)
-    setLkpModalOpen(false)
-  }
 
   // ── Renderiza input ────────────────────────────────────────────────────────
   function renderInput(campo, compact = false) {
