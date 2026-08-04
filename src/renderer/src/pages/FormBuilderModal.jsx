@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Eye, Settings, Save, AlertCircle, Info, Layout, Circle
 import * as LucideIcons from 'lucide-react'
 import FormDesigner, { autoPos, CANVAS_W } from '../components/FormDesigner'
 import { TIPOS, TIPOS_COM_OPCOES, FUNCOES_BOTAO, COR_PALETTE, LARGURAS } from './formBuilderModal/constants.js'
+import { CampoCardDivisor, CampoCardCopiar, CampoCardFavoritoTimestamps } from './formBuilderModal/cards/CampoCardSimples.jsx'
 import {
   campoVazio, botaoVazio, divisorVazio, favoritoVazio, timestampsVazio,
   copiarVazio, lookupVazio, pastaVazio, arquivoVazio, imagemVazio,
@@ -459,71 +460,22 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     )
 
     // ── DIVISOR ────────────────────────────────────────────────────────────
-    if (campo.tipo === 'divisor') {
-      const isVert = (campo.valorPadrao || 'horizontal') === 'vertical'
-      return (
-        <div key={campo._key}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 10px', background: 'var(--s2)', border: '1px solid var(--bd)', borderLeft: '3px solid var(--bd2)', borderRadius: 8 }}>
-          <Minus size={12} color="var(--t3)" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: 'var(--t3)', flexShrink: 0 }}>Divisor</span>
-          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-            {[{ label: 'Horizontal', val: 'horizontal' }, { label: 'Vertical', val: 'vertical' }].map(({ label, val }) => {
-              const active = (campo.valorPadrao || 'horizontal') === val
-              return (
-                <button key={val} className={`btn ${active ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{ height: 22, fontSize: 10, padding: '0 8px' }}
-                  onClick={() => { if (active) return; setCampos(prev => prev.map(c => { if (c._key !== campo._key) return c; const w = c.w_px||CANVAS_W, h = c.h_px||24; return { ...c, valorPadrao: val, w_px: val==='vertical'?24:Math.max(h,120), h_px: val==='vertical'?Math.max(w,120):24 } })) }}
-                  disabled={salvando}>{label}</button>
-              )
-            })}
-          </div>
-          <div style={{ flex: 1, height: 1, background: 'var(--bd)' }} />
-          <input className="form-input" style={{ height: 26, width: 160, fontSize: 11 }}
-            value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)}
-            placeholder="Título (opcional)" disabled={salvando} />
-          {del()}
-        </div>
-      )
-    }
+    if (campo.tipo === 'divisor') return (
+      <CampoCardDivisor campo={campo} idx={idx} setCampos={setCampos} atualizarCampo={atualizarCampo}
+        tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
+    )
 
     // ── COPIAR ────────────────────────────────────────────────────────────
-    if (campo.tipo === 'copiar') {
-      const camposTexto = campos.filter(c => c._key !== campo._key && ['texto', 'texto_longo'].includes(c.tipo) && c.nomeCampo)
-      return (
-        <div key={campo._key}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 10px', background: 'rgba(96,165,250,.05)', border: '1px solid rgba(96,165,250,.2)', borderLeft: '3px solid #60A5FA', borderRadius: 8 }}>
-          <Copy size={13} color="#60A5FA" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Campo</span>
-          <select className="form-select" style={{ height: 26, fontSize: 11, flex: 1, minWidth: 0 }}
-            value={campo.valorPadrao||''} onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
-            <option value="">— selecione —</option>
-            {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label||c.nomeCampo}</option>)}
-          </select>
-          <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Texto</span>
-          <input className="form-input" style={{ height: 26, fontSize: 11, width: 100 }}
-            value={campo.label} onChange={e => atualizarCampo(campo._key, 'label', e.target.value)}
-            placeholder="Copiar" disabled={salvando} />
-          {del()}
-        </div>
-      )
-    }
+    if (campo.tipo === 'copiar') return (
+      <CampoCardCopiar campo={campo} idx={idx} campos={campos} setCampos={setCampos} atualizarCampo={atualizarCampo}
+        tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
+    )
 
     // ── FAVORITO / TIMESTAMPS ─────────────────────────────────────────────
-    if (campo.tipo === 'favorito' || campo.tipo === 'timestamps') {
-      const isFav = campo.tipo === 'favorito'
-      const Icon  = isFav ? Star : Clock
-      const color = isFav ? 'var(--or)' : '#60A5FA'
-      return (
-        <div key={campo._key}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 10px', background: isFav ? 'rgba(255,107,43,.04)' : 'rgba(96,165,250,.05)', border: `1px solid ${isFav ? 'rgba(255,107,43,.2)' : 'rgba(96,165,250,.2)'}`, borderLeft: `3px solid ${color}`, borderRadius: 8 }}>
-          <Icon size={13} color={color} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{isFav ? 'Favorito' : 'Timestamps'}</span>
-          <span style={{ fontSize: 10, color: 'var(--t3)' }}>— {isFav ? 'estrela de favorito' : 'criado em · atualizado em'}</span>
-          <div style={{ flex: 1 }} />
-          {del()}
-        </div>
-      )
-    }
+    if (campo.tipo === 'favorito' || campo.tipo === 'timestamps') return (
+      <CampoCardFavoritoTimestamps campo={campo} idx={idx} setCampos={setCampos}
+        tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
+    )
 
     // ── BOTÃO (accordion) ─────────────────────────────────────────────────
     if (campo.tipo === 'botao') {
