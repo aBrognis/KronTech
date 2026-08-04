@@ -1,7 +1,7 @@
 import { Minus, Copy, Star, Clock, Trash2 } from 'lucide-react'
 import { CANVAS_W } from '../../../components/FormDesigner'
 
-function DelBtn({ campo, idx, setCampos, tipInfoIdx, setTipInfoIdx, salvando }) {
+export function DelBtn({ campo, idx, setCampos, tipInfoIdx, setTipInfoIdx, salvando }) {
   return (
     <button className="btn btn-danger" style={{ height: 28, width: 28, padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={e => { e.stopPropagation(); setCampos(p => p.filter(c => c._key !== campo._key)); if (tipInfoIdx === idx) setTipInfoIdx(null) }}
