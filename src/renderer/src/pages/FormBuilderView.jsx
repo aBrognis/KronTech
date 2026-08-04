@@ -13,6 +13,8 @@ import {
   abrirTela, abrirEmNovaAba, voltarTela, limparFormulario, exportarPDF,
 } from '../lib/funcoes/index.js'
 import { useFormBuilderArquivos } from './formBuilderView/hooks/useFormBuilderArquivos.js'
+import { useAutoFillCnpjCep } from './formBuilderView/hooks/useAutoFillCnpjCep.js'
+import { maskCPF, maskCNPJ, maskCEP, maskCPFStr, maskCNPJStr, maskCEPStr } from '../lib/utils/masks.js'
 import '../App.css'
 
 const POR_PAG = 50
@@ -93,9 +95,6 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   const [pastaConfig, setPastaConfig] = useState('')
   const [pastasSugest, setPastasSugest] = useState({}) // { nome_campo: ['val1','val2',...] }
 
-  // CPF / CNPJ / CEP — busca automática
-  const [docLoading, setDocLoading] = useState({}) // { nome_campo: true/false }
-  const [docErro,    setDocErro]    = useState({}) // { nome_campo: 'mensagem' }
   const [confirmExcluir, setConfirmExcluir] = useState(false)
 
   // Lookup
@@ -146,6 +145,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     handleAbrirArquivo, handleCopiarLocal, handleCopiarClipboard,
     handleImportarPasta, setArquivoComSatellites, handleConfigurarPasta,
   } = useFormBuilderArquivos({ tela, nomeTabela, form, setForm, setErro, pagina, busca, carregar, setAllItems, setPastaConfig })
+
+  const { docLoading, docErro, buscarCNPJ, buscarCEP } = useAutoFillCnpjCep({ form, setForm })
 
   useEffect(() => { init() }, [nomeTabela])
 
@@ -246,21 +247,6 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     })
     if (t.col_favorito !== false) f.favorito = reg.favorito ?? false
     setForm(f)
-  }
-
-  // Máscaras puras (sem depender de estado, usadas no carregarForm antes das funções internas)
-  function maskCNPJStr(v) {
-    return v.replace(/\D/g,'').slice(0,14)
-      .replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2')
-      .replace(/(\d{3})(\d)/,'$1/$2').replace(/(\d{4})(\d{1,2})$/,'$1-$2')
-  }
-  function maskCPFStr(v) {
-    return v.replace(/\D/g,'').slice(0,11)
-      .replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/,'$1-$2')
-  }
-  function maskCEPStr(v) {
-    return v.replace(/\D/g,'').slice(0,8).replace(/(\d{5})(\d{1,3})$/,'$1-$2')
   }
 
   function navTo(idx) {
@@ -460,140 +446,6 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   }
 
   function setField(nome, val) { setForm(f => ({ ...f, [nome]: val })) }
-
-  // ── Máscaras CPF / CNPJ / CEP ───────────────────────────────────────────
-  function maskCPF(v) {
-    return v.replace(/\D/g,'').slice(0,11)
-      .replace(/(\d{3})(\d)/,'$1.$2')
-      .replace(/(\d{3})(\d)/,'$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/,'$1-$2')
-  }
-  function maskCNPJ(v) {
-    return v.replace(/\D/g,'').slice(0,14)
-      .replace(/(\d{2})(\d)/,'$1.$2')
-      .replace(/(\d{3})(\d)/,'$1.$2')
-      .replace(/(\d{3})(\d)/,'$1/$2')
-      .replace(/(\d{4})(\d{1,2})$/,'$1-$2')
-  }
-  function maskCEP(v) {
-    return v.replace(/\D/g,'').slice(0,8).replace(/(\d{5})(\d)/,'$1-$2')
-  }
-
-  function validarCPF(cpf) {
-    const d = cpf.replace(/\D/g,'')
-    if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false
-    let s = 0
-    for (let i = 0; i < 9; i++) s += Number(d[i]) * (10 - i)
-    let r = (s * 10) % 11; if (r >= 10) r = 0
-    if (r !== Number(d[9])) return false
-    s = 0
-    for (let i = 0; i < 10; i++) s += Number(d[i]) * (11 - i)
-    r = (s * 10) % 11; if (r >= 10) r = 0
-    return r === Number(d[10])
-  }
-  function validarCNPJ(cnpj) {
-    const d = cnpj.replace(/\D/g,'')
-    if (d.length !== 14 || /^(\d)\1+$/.test(d)) return false
-    const calc = (l) => {
-      let s = 0, p = l - 7
-      for (let i = 0; i < l; i++) { s += Number(d[i]) * p--; if (p < 2) p = 9 }
-      const r = s % 11
-      return r < 2 ? 0 : 11 - r
-    }
-    return calc(12) === Number(d[12]) && calc(13) === Number(d[13])
-  }
-
-  // Mapeamento direto: nome_campo → valor extraído da API
-  function buildCnpjUpdates(data, formKeys) {
-    const set = new Set(formKeys)
-    const up = {}
-    const try_ = (campo, val) => { if (set.has(campo) && val != null && val !== '') up[campo] = String(val) }
-    // nome principal (razão social)
-    try_('nome',         data.razao_social)
-    try_('razao_social', data.razao_social)
-    // nome fantasia / apelido
-    try_('apelido',      data.nome_fantasia || data.razao_social)
-    try_('nome_fantasia',data.nome_fantasia || data.razao_social)
-    // endereço
-    try_('logradouro',   data.logradouro)
-    try_('numero',       data.numero)
-    try_('complemento',  data.complemento)
-    try_('bairro',       data.bairro)
-    try_('municipio',    data.municipio)
-    try_('cidade',       data.municipio)
-    try_('uf',           data.uf)
-    try_('cep',          maskCEPStr(data.cep || ''))
-    // contato
-    try_('telefone',     data.ddd_telefone_1)
-    try_('fone',         data.ddd_telefone_1)
-    try_('celular',      data.ddd_telefone_2)
-    try_('email',        data.email)
-    // outros
-    try_('situacao',     data.descricao_situacao_cadastral)
-    try_('cnae',         data.cnae_fiscal_descricao)
-    try_('natureza',     data.natureza_juridica)
-    try_('natureza_juridica', data.natureza_juridica)
-    try_('porte',        data.porte)
-    // ie/rg limpa ao buscar PJ
-    try_('ie_rg',        '')
-    try_('ie',           '')
-    return up
-  }
-
-  function buildCepUpdates(data, formKeys) {
-    const set = new Set(formKeys)
-    const up = {}
-    const try_ = (campo, val) => { if (set.has(campo) && val != null && val !== '') up[campo] = String(val) }
-    try_('logradouro',  data.logradouro)
-    try_('endereco',    data.logradouro)
-    try_('rua',         data.logradouro)
-    try_('complemento', data.complemento)
-    try_('bairro',      data.bairro)
-    try_('municipio',   data.localidade)
-    try_('cidade',      data.localidade)
-    try_('uf',          data.uf)
-    try_('ibge',        data.ibge)
-    try_('ddd',         data.ddd)
-    return up
-  }
-
-  function autoFill(data, buildFn) {
-    setForm(f => ({ ...f, ...buildFn(data, Object.keys(f)) }))
-  }
-
-  async function buscarCNPJ(campo, valOverride) {
-    const val = valOverride ?? form[campo.nome_campo] ?? ''
-    const digits = val.replace(/\D/g,'')
-    if (digits.length !== 14) return
-    if (!validarCNPJ(val)) {
-      setDocErro(e => ({ ...e, [campo.nome_campo]: 'CNPJ inválido.' }))
-      return
-    }
-    setDocErro(e => ({ ...e, [campo.nome_campo]: null }))
-    setDocLoading(l => ({ ...l, [campo.nome_campo]: true }))
-    try {
-      const res = await window.api.entidade.buscarCnpj(digits)
-      if (!res.ok) { setDocErro(e => ({ ...e, [campo.nome_campo]: res.erro })); return }
-      setForm(f => ({ ...f, ...buildCnpjUpdates(res.data, Object.keys(f)) }))
-    } finally {
-      setDocLoading(l => ({ ...l, [campo.nome_campo]: false }))
-    }
-  }
-
-  async function buscarCEP(campo) {
-    const val = form[campo.nome_campo] || ''
-    const digits = val.replace(/\D/g,'')
-    if (digits.length !== 8) return
-    setDocErro(e => ({ ...e, [campo.nome_campo]: null }))
-    setDocLoading(l => ({ ...l, [campo.nome_campo]: true }))
-    try {
-      const res = await window.api.entidade.buscarCep(digits)
-      if (!res.ok) { setDocErro(e => ({ ...e, [campo.nome_campo]: res.erro })); return }
-      autoFill(res.data, buildCepUpdates)
-    } finally {
-      setDocLoading(l => ({ ...l, [campo.nome_campo]: false }))
-    }
-  }
 
   async function openLookupModal(campo) {
     const cfg = campo.opcoes || {}
