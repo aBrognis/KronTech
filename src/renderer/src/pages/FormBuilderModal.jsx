@@ -2,9 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 import { X, Plus, Trash2, Eye, Settings, Save, AlertCircle, Info, Layout, CircleDot, ExternalLink, Minus, ChevronLeft, ChevronDown, Star, Clock, Copy, Search } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import FormDesigner, { autoPos, CANVAS_W } from '../components/FormDesigner'
-import { TIPOS, TIPOS_COM_OPCOES, FUNCOES_BOTAO, COR_PALETTE, LARGURAS } from './formBuilderModal/constants.js'
+import { TIPOS, TIPOS_COM_OPCOES, FUNCOES_BOTAO, COR_PALETTE, LARGURAS, TIPO_META } from './formBuilderModal/constants.js'
 import { CampoCardDivisor, CampoCardCopiar, CampoCardFavoritoTimestamps } from './formBuilderModal/cards/CampoCardSimples.jsx'
 import { CampoCardBotao } from './formBuilderModal/cards/CampoCardBotao.jsx'
+import { CampoCardLookup } from './formBuilderModal/cards/CampoCardLookup.jsx'
 import {
   campoVazio, botaoVazio, divisorVazio, favoritoVazio, timestampsVazio,
   copiarVazio, lookupVazio, pastaVazio, arquivoVazio, imagemVazio,
@@ -414,39 +415,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     { id: 'preview',  Icon: Eye,      label: 'Preview'  },
   ]
 
-  // ── tipo meta (badge colorido) ────────────────────────────────────────────
-  const TIPO_META = {
-    texto:       { short: 'TXT', color: '#60A5FA' },
-    numero:      { short: 'NUM', color: '#A78BFA' },
-    moeda:       { short: 'R$',  color: '#4ADE80' },
-    data:        { short: 'DAT', color: '#34D399' },
-    booleano:    { short: 'S/N', color: '#94A3B8' },
-    texto_longo: { short: 'TLG', color: '#818CF8' },
-    select:      { short: 'SEL', color: '#FB923C' },
-    radio:       { short: 'RAD', color: '#FB923C' },
-    tags:        { short: 'TAG', color: '#F472B6' },
-    codigo_auto: { short: 'COD', color: '#A78BFA' },
-    email:       { short: '@',   color: '#60A5FA' },
-    telefone:    { short: 'TEL', color: '#34D399' },
-    lookup:      { short: 'LNK', color: '#818CF8' },
-    cpf:         { short: 'CPF', color: '#34D399' },
-    cnpj:        { short: 'CNPJ',color: '#34D399' },
-    cep:         { short: 'CEP', color: '#34D399' },
-    documento:   { short: 'DOC', color: '#34D399' },
-    flags:       { short: 'FLG', color: '#F472B6' },
-    pasta:       { short: 'PST', color: '#34D399' },
-    arquivo:     { short: 'ARQ', color: '#60A5FA' },
-    imagem:      { short: 'IMG', color: '#F472B6' },
-    avaliacao:   { short: '★',   color: '#FBD24C' },
-    progresso:   { short: '%',   color: '#4ADE80' },
-    cor:         { short: 'COR', color: '#E879F9' },
-    url:         { short: 'URL', color: '#60A5FA' },
-    data_hora:   { short: 'D+H', color: '#34D399' },
-    hora:        { short: 'HOR', color: '#34D399' },
-    percentual:  { short: 'PCT', color: '#A78BFA' },
-    calculo:     { short: 'FX',  color: '#FB923C' },
-  }
-
   // ── Campo card ────────────────────────────────────────────────────────────
   function renderCampoCard(campo, idx) {
     const isExp = expandedKeys.has(campo._key)
@@ -485,99 +453,11 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     )
 
     // ── LOOKUP (accordion) ────────────────────────────────────────────────
-    if (campo.tipo === 'lookup') {
-      const meta = TIPO_META.lookup
-      const cfg = (campo.opcoes && !Array.isArray(campo.opcoes)) ? campo.opcoes : { lookupTabela: '', lookupExibir: '', lookupCodigo: '', lookupModo: 'select' }
-      const cols = lookupColMap[cfg.lookupTabela] || []
-      const dbName = campo.nomeCampo ? campo.nomeCampo.replace(/_id$/, '') + '_id' : '—'
-      const lbl = { fontSize: 9, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }
-      function setLkp(updates) {
-        setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, opcoes: { ...cfg, ...updates } }))
-      }
-      const aviso = cfg.lookupTabela && !cfg.lookupExibir
-      return (
-        <div key={campo._key}
-          style={{ background: isExp ? 'var(--s2)' : 'var(--s1)', border: `1px solid ${aviso ? '#fb923c' : isExp ? meta.color : 'var(--bd)'}`, borderLeft: `3px solid ${aviso ? '#fb923c' : meta.color}`, borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--sh-xs)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 10px', cursor: 'pointer' }}
-            onClick={() => toggleExpand(campo._key)}>
-            <span style={{ fontSize: 9, fontWeight: 700, background: meta.color + '22', color: meta.color, padding: '3px 6px', borderRadius: 5, flexShrink: 0, minWidth: 30, textAlign: 'center', border: `1px solid ${meta.color}44`, lineHeight: 1 }}>{meta.short}</span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: campo.label ? 'var(--t1)' : 'var(--t3)', fontStyle: campo.label ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {campo.label || 'Lookup'}
-            </span>
-            <code style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--t3)', background: 'var(--s3)', padding: '2px 6px', borderRadius: 3, flexShrink: 0 }}>{dbName}</code>
-            {cfg.lookupTabela
-              ? <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>→ {cfg.lookupTabela}</span>
-              : <span style={{ fontSize: 9, color: '#fb923c', flexShrink: 0 }}>não configurado</span>}
-            <ChevronDown size={12} color="var(--t3)" style={{ transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }} />
-            {del()}
-          </div>
-          {isExp && (
-            <div style={{ padding: '12px', borderTop: `1px solid ${meta.color}33`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div className="form-group">
-                  <label className="form-label">Label *</label>
-                  <input className="form-input" style={{ height: 32 }} value={campo.label}
-                    onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Banco" disabled={salvando} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Nome no Banco (sem _id) *</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <input className="form-input" style={{ height: 32, flex: 1, fontFamily: 'monospace', fontSize: 11 }} value={campo.nomeCampo.replace(/_id$/, '')}
-                      onChange={e => atualizarCampo(campo._key, 'nomeCampo', e.target.value.replace(/_id$/, ''))}
-                      placeholder="banco" disabled={salvando} />
-                    <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--t3)', flexShrink: 0 }}>_id</span>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                <div className="form-group">
-                  <label className="form-label">Tabela de origem *</label>
-                  <select className="form-select" style={{ height: 32 }} value={cfg.lookupTabela} disabled={salvando}
-                    onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
-                    <option value="">— selecione —</option>
-                    {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Campo a exibir *</label>
-                  <select className="form-select" style={{ height: 32 }} value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela}
-                    onChange={e => setLkp({ lookupExibir: e.target.value })}>
-                    <option value="">— selecione a tabela primeiro —</option>
-                    {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Campo de código (prefixo)</label>
-                  <select className="form-select" style={{ height: 32 }} value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela}
-                    onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
-                    <option value="">— nenhum —</option>
-                    {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <span style={lbl}>Modo de exibição</span>
-                {[{ val: 'select', label: 'Select simples' }, { val: 'modal', label: 'Modal de pesquisa' }].map(m => (
-                  <label key={m.val} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none' }}>
-                    <input type="radio" name={`lkp_modo_${campo._key}`} value={m.val} checked={cfg.lookupModo === m.val}
-                      onChange={() => setLkp({ lookupModo: m.val })} disabled={salvando}
-                      style={{ accentColor: meta.color, cursor: 'pointer' }} />
-                    {m.label}
-                  </label>
-                ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none', marginLeft: 16 }}>
-                  <input type="checkbox" checked={!!campo.obrigatorio} onChange={e => atualizarCampo(campo._key, 'obrigatorio', e.target.checked)} disabled={salvando} style={{ accentColor: 'var(--or)' }} />
-                  Obrigatório
-                </label>
-              </div>
-              {aviso && <div style={{ fontSize: 11, color: '#fb923c', padding: '6px 10px', background: 'rgba(251,146,60,.08)', borderRadius: 6, border: '1px solid rgba(251,146,60,.25)' }}>
-                ⚠ Configure a tabela e o campo a exibir antes de salvar.
-              </div>}
-            </div>
-          )}
-        </div>
-      )
-    }
+    if (campo.tipo === 'lookup') return (
+      <CampoCardLookup campo={campo} idx={idx} setCampos={setCampos} atualizarCampo={atualizarCampo}
+        isExp={isExp} toggleExpand={toggleExpand} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando}
+        lookupColMap={lookupColMap} carregarColunasLookup={carregarColunasLookup} telasList={telasList} />
+    )
 
     // ── CAMPO NORMAL (accordion) ──────────────────────────────────────────
     const meta = TIPO_META[campo.tipo] || { short: '?', color: '#94A3B8' }
