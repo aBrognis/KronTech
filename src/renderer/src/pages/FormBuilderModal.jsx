@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { X, Plus, Trash2, Eye, Settings, Save, AlertCircle, Info, Layout, CircleDot, ExternalLink, Minus, ChevronLeft, ChevronDown, Star, Clock, Copy, Search } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import FormDesigner, { autoPos, CANVAS_W } from '../components/FormDesigner'
@@ -12,6 +12,7 @@ import {
 import { IconPreview, TipoCampoInfo, Sec, Row, lucideName } from './formBuilderModal/_shared.jsx'
 import OpcoesList from './formBuilderModal/OpcoesList.jsx'
 import TemplateModal from './formBuilderModal/TemplateModal.jsx'
+import { useFormBuilderCampos } from './formBuilderModal/useFormBuilderCampos.js'
 
 export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, inline = false }) {
   const editando = !!tela
@@ -63,11 +64,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   function toggleExpand(key) {
     setExpandedKeys(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n })
   }
-  function addCampo(factory) {
-    const novo = factory(campos)
-    setCampos(p => [...p, novo])
-    setExpandedKeys(prev => new Set([...prev, novo._key]))
-  }
 
   const [nomeTela,   setNomeTela]   = useState(tela?.nome_tela   || '')
   const [nomeTabela, setNomeTabela] = useState(tela?.nome_tabela || '')
@@ -77,67 +73,10 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   const [ordemMenu,  setOrdemMenu]  = useState(tela?.ordem_menu  || 99)
   const [canvasW,       setCanvasW]       = useState(tela?.canvas_w       || 780)
   const [canvasH,       setCanvasH]       = useState(tela?.canvas_h       || 480)
-  const [campos, setCampos] = useState(
-    tela?.campos?.length
-      ? tela.campos.map(c => ({
-          id: c.id, _key: String(c.id),
-          nomeCampo: c.nome_campo, label: c.label, tipo: c.tipo,
-          tamanho: c.tamanho, obrigatorio: c.obrigatorio, sequencial: c.sequencial,
-          campoBusca: c.campo_busca, valorPadrao: c.valor_padrao || '', largura: c.largura,
-          x_pos: c.x_pos || 0, y_pos: c.y_pos || 0,
-          w_px:  c.w_px  || 280, h_px: c.h_px  || 60,
-          opcoes: c.opcoes || null, semNegrito: c.sem_negrito || false, fontSize: c.font_size || null,
-          inputNegrito: c.input_negrito || false, inputFontSize: c.input_font_size || null,
-          labelCor: c.label_cor || null, inputAlign: c.input_align || null,
-          inputCor: c.input_cor || null, inputBg: c.input_bg || null,
-          borderRadius: c.border_radius ?? null, borderWidth: c.border_width ?? null, borderColor: c.border_color || null,
-          opcoesLayout: c.opcoes_layout || null,
-        }))
-      : []
-  )
 
-  const dragIdx = useRef(null)
-
-  function onDragStart(e, idx) {
-    dragIdx.current = idx
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(idx))
-  }
-
-  function onDragOver(e, idx) {
-    e.preventDefault()
-    const from = dragIdx.current
-    if (from === null || from === idx) return
-    dragIdx.current = idx
-    setCampos(prev => {
-      const arr = [...prev]
-      const [moved] = arr.splice(from, 1)
-      arr.splice(idx, 0, moved)
-      return arr
-    })
-  }
-
-  function onDragEnd() { dragIdx.current = null }
-
-  function atualizarCampo(key, field, value) {
-    setCampos(prev => prev.map(c => {
-      if (c._key !== key) return c
-      const up = { ...c, [field]: value }
-      if (field === 'label' && !editando && !c._nomeManual) up.nomeCampo = slugify(value)
-      if (field === 'nomeCampo') { up._nomeManual = true; up.nomeCampo = slugify(value) }
-      if (field === 'tipo') {
-        const hDefault = { texto_longo: 120, booleano: 44, radio: 56, tags: 56, codigo_auto: 56, imagem: 180, avaliacao: 56, progresso: 56, calculo: 56, cor: 56, url: 56 }
-        up.h_px = hDefault[value] || 56
-        up.w_px = value === 'texto_longo' ? CANVAS_W : (c.w_px || 280)
-        if (TIPOS_COM_OPCOES.includes(value) && !c.opcoes) up.opcoes = opcoesVazias()
-        if (!TIPOS_COM_OPCOES.includes(value)) up.opcoes = null
-      }
-      if (field === 'opcoes' && Array.isArray(value) && (c.tipo === 'flags' || c.tipo === 'radio')) {
-        // header(28) + padding(20) + per-item(26) * n + bottom-padding(8)
-        up.h_px = Math.max(56, 28 + 20 + value.length * 26 + 8)
-      }
-      return up
-    }))
+  const { campos, setCampos, addCampo: addCampoBase, atualizarCampo, onDragStart, onDragOver, onDragEnd } = useFormBuilderCampos(tela, editando)
+  function addCampo(factory) {
+    addCampoBase(factory, (novoKey) => setExpandedKeys(prev => new Set([...prev, novoKey])))
   }
 
   const handleDesignerChange = useCallback((updater) => {
