@@ -293,6 +293,14 @@ export async function getAllRegistros(nomeTabela) {
   return { registros, total: registros.length }
 }
 
+export async function valoresDistintos(nomeTabela, nomeColuna) {
+  const c = col(nomeColuna)
+  const rows = await query(
+    `SELECT DISTINCT ${c} AS v FROM ${tbl(nomeTabela)} WHERE ${c} IS NOT NULL AND ${c} <> '' ORDER BY ${c}`
+  )
+  return rows.map(r => r.v)
+}
+
 export async function inserirRegistro(nomeTabela, dados) {
   const colunas = Object.keys(dados).map(col)
   const valores = Object.values(dados)

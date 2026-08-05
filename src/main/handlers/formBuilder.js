@@ -39,10 +39,7 @@ export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSe
   ipcMain.handle('fb:toggleFavorito',      wrap((_, tbl, id, hasTs)      => fb.toggleFavorito(tbl, id, hasTs)))
   ipcMain.handle('fb:listarOpcoesLookup',  wrap((_, tbl, exibir, codigo) => fb.listarOpcoesLookup(tbl, exibir, codigo)))
   ipcMain.handle('fb:listarColunasTabela', wrap((_, tbl)                 => fb.listarColunasTabela(tbl)))
-  ipcMain.handle('fb:valoresDistintos', wrap(async (_, tbl, coluna) => {
-    const rows = await query(`SELECT DISTINCT ${coluna} FROM ${tbl} WHERE ${coluna} IS NOT NULL AND ${coluna} <> '' ORDER BY ${coluna}`)
-    return rows.map(r => r[coluna])
-  }))
+  ipcMain.handle('fb:valoresDistintos', wrap((_, tbl, coluna) => fb.valoresDistintos(tbl, coluna)))
 
   // Importação em massa para tabela do FormBuilder — sem cópia de arquivo, INSERT em lote
   ipcMain.handle('fb:importarPasta', async (e, { tbl, mapeamento, hasTs = false, seqChars = 3 }) => {
