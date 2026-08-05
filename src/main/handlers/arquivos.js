@@ -14,6 +14,40 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
     return rows.map(r => r.pasta)
   }))
 
+  // Listagem filtrada + paginada da aba Acesso — não roda automaticamente,
+  // só quando o usuário clica "Buscar" (schema fixo, não precisa do motor
+  // dinâmico do FormBuilder).
+  ipcMain.handle('arquivos:listarFiltrado', wrap(async (_, {
+    nome = '', categoria = '', pasta = '', tags = '', ext = '',
+    pagina = 1, porPagina = 50, ordenar = 'dt_criacao', direcao = 'DESC',
+  } = {}) => {
+    const COLS_ORDENAVEIS = new Set(['codigo', 'nome', 'categoria', 'pasta', 'arquivo_ext', 'arquivo_tamanho', 'dt_criacao', 'dt_atualizacao'])
+    const params = []
+    const conds = []
+    if (nome.trim())      { params.push(`%${nome.trim()}%`);      conds.push(`nome ILIKE $${params.length}`) }
+    if (categoria)         { params.push(categoria);               conds.push(`categoria = $${params.length}`) }
+    if (pasta)              { params.push(pasta);                    conds.push(`pasta = $${params.length}`) }
+    if (tags.trim())      { params.push(`%${tags.trim()}%`);      conds.push(`tags ILIKE $${params.length}`) }
+    if (ext)                { params.push(ext);                      conds.push(`arquivo_ext = $${params.length}`) }
+
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
+    const pag = Math.max(1, pagina)
+    const porPag = Math.min(200, Math.max(1, porPagina))
+    const offset = (pag - 1) * porPag
+    const colOrdem = COLS_ORDENAVEIS.has(ordenar) ? ordenar : 'dt_criacao'
+    const dir = direcao === 'ASC' ? 'ASC' : 'DESC'
+
+    const countParams = [...params]
+    params.push(porPag, offset)
+    const pL = params.length - 1, pO = params.length
+
+    const [registros, total] = await Promise.all([
+      query(`SELECT * FROM arq_001 ${where} ORDER BY favorito DESC, ${colOrdem} ${dir} LIMIT $${pL} OFFSET $${pO}`, params),
+      queryOne(`SELECT COUNT(*) AS n FROM arq_001 ${where}`, countParams),
+    ])
+    return { registros, total: parseInt(total.n), pagina: pag, porPagina: porPag, totalPaginas: Math.ceil(parseInt(total.n) / porPag) || 1 }
+  }))
+
   ipcMain.handle('arquivos:selecionar', wrap(async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {

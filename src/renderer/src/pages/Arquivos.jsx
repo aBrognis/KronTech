@@ -4,9 +4,11 @@ import {
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
   Plus, Save, X, Trash2, Edit2, RotateCcw, ExternalLink, Upload,
   Settings, FolderInput, CheckCircle2, XCircle, Loader2,
-  Download, Clipboard, Check,
+  Download, Clipboard, Check, SlidersHorizontal, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import '../App.css'
+import { thS, tdS } from './formBuilderView/gridStyles.js'
+import PaginacaoBar from './formBuilderView/PaginacaoBar.jsx'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const CATEGORIAS = ['Contrato', 'Manual', 'Financeiro', 'Relatório', 'Script', 'Imagem', 'Apresentação', 'Outro']
@@ -95,11 +97,18 @@ export default function Arquivos({ newTrigger }) {
   const [mSelId,       setMSelId]       = useState(null)
   const mBuscaRef = useRef(null)
 
-  // Filtros aba Acesso
-  const [fCategoria, setFCategoria] = useState('Todos')
-  const [fPasta,     setFPasta]     = useState('Todos')
-  const [fBusca,     setFBusca]     = useState('')
-  const [resultados, setResultados] = useState(null)
+  // Filtros aba Acesso (server-side, paginado — só roda ao clicar Buscar)
+  const [fCategoria,  setFCategoria]  = useState('')
+  const [fPasta,      setFPasta]      = useState('')
+  const [fNome,       setFNome]       = useState('')
+  const [fTags,       setFTags]       = useState('')
+  const [fPainelAberto, setFPainelAberto] = useState(true)
+  const [fResultados, setFResultados] = useState(null) // { registros, total, totalPaginas } | null
+  const [fLoading,    setFLoading]    = useState(false)
+  const [fPagina,     setFPagina]     = useState(1)
+  const [fPorPagina,  setFPorPagina]  = useState(50)
+  const [fOrdenar,    setFOrdenar]    = useState('dt_criacao')
+  const [fDirecao,    setFDirecao]    = useState('DESC')
 
   const [pastaAtual,  setPastaAtual]  = useState('')
 
@@ -251,18 +260,57 @@ export default function Arquivos({ newTrigger }) {
     else handleAbrir(item)
   }
 
-  // ── Consulta Acesso ───────────────────────────────────────────────────────
-  function executarConsulta() {
-    const q = fBusca.toLowerCase().trim()
-    let list = [...items]
-    if (fCategoria !== 'Todos') list = list.filter(i => i.categoria === fCategoria)
-    if (fPasta     !== 'Todos') list = list.filter(i => i.pasta     === fPasta)
-    if (q) list = list.filter(i => filtrarStr(i.nome, q, 'contendo') || filtrarStr(i.tags, q, 'contendo'))
-    setResultados(list)
+  // ── Consulta Acesso (server-side, paginado) ─────────────────────────────────
+  async function executarConsultaAcesso(overrides = {}) {
+    setFLoading(true)
+    try {
+      const res = await window.api.arquivos.listarFiltrado({
+        nome: overrides.fNome ?? fNome,
+        categoria: overrides.fCategoria ?? fCategoria,
+        pasta: overrides.fPasta ?? fPasta,
+        tags: overrides.fTags ?? fTags,
+        pagina: overrides.fPagina ?? fPagina,
+        porPagina: overrides.fPorPagina ?? fPorPagina,
+        ordenar: overrides.fOrdenar !== undefined ? overrides.fOrdenar : fOrdenar,
+        direcao: overrides.fDirecao ?? fDirecao,
+      })
+      if (!res.ok) throw new Error(res.erro)
+      setFResultados(res.data)
+    } catch {
+      setFResultados({ registros: [], total: 0, pagina: 1, porPagina: fPorPagina, totalPaginas: 1 })
+    } finally {
+      setFLoading(false)
+    }
   }
 
+  function handleBuscarAcesso() {
+    setFPagina(1)
+    executarConsultaAcesso({ fPagina: 1 })
+  }
+
+  // Só limpa os campos — mantém os registros já exibidos, sem reconsultar.
   function limparFiltros() {
-    setFCategoria('Todos'); setFPasta('Todos'); setFBusca(''); setResultados(null)
+    setFCategoria(''); setFPasta(''); setFNome(''); setFTags('')
+  }
+
+  function irParaPaginaAcesso(p) {
+    const max = fResultados?.totalPaginas || 1
+    const alvo = Math.max(1, Math.min(max, p))
+    setFPagina(alvo)
+    executarConsultaAcesso({ fPagina: alvo })
+  }
+
+  function mudarPorPaginaAcesso(n) {
+    setFPorPagina(n)
+    setFPagina(1)
+    executarConsultaAcesso({ fPorPagina: n, fPagina: 1 })
+  }
+
+  function setOrdenacaoAcesso(campo) {
+    const novaDir = fOrdenar === campo && fDirecao === 'ASC' ? 'DESC' : 'ASC'
+    setFOrdenar(campo)
+    setFDirecao(novaDir)
+    executarConsultaAcesso({ fOrdenar: campo, fDirecao: novaDir })
   }
 
   function selecionarDaConsulta(item) {
@@ -339,10 +387,6 @@ export default function Arquivos({ newTrigger }) {
   const isRO       = mode === 'view'
   const currentItem = items[currentIdx]
 
-  // estilos de tabela
-  const thS = { padding: '7px 12px', fontSize: 9, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1.2, textTransform: 'uppercase', borderBottom: '1px solid var(--bd)', background: 'var(--s1)', textAlign: 'left', whiteSpace: 'nowrap' }
-  const tdS = { padding: '7px 12px', fontSize: 11.5, color: 'var(--t2)', borderBottom: '1px solid var(--bd)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: 220 }
-
   return (
     <div className="page-with-footer">
 
@@ -379,77 +423,96 @@ export default function Arquivos({ newTrigger }) {
         {/* ════ ABA ACESSO ════ */}
         {activeTab === 'acesso' && (
           <>
-            {/* Barra de filtros + botão Consultar */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)', pointerEvents: 'none' }} />
-                <input
-                  className="form-input"
-                  style={{ paddingLeft: 30, height: 34 }}
-                  placeholder="Buscar por nome ou tags..."
-                  value={fBusca}
-                  onChange={e => setFBusca(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && executarConsulta()}
-                  autoFocus
-                />
+            {/* Painel de filtros, retrátil */}
+            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', marginBottom: 10, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => setFPainelAberto(a => !a)}>
+                <SlidersHorizontal size={13} color="var(--t2)" />
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
+                {(fCategoria || fPasta || fNome || fTags) && (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>ativo</span>
+                )}
+                <div style={{ flex: 1 }} />
+                {(fCategoria || fPasta || fNome || fTags) && (
+                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                    onClick={e => { e.stopPropagation(); limparFiltros() }}>
+                    <RotateCcw size={11} /> Limpar
+                  </button>
+                )}
+                {fPainelAberto ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
               </div>
-              <select className="form-select" style={{ width: 150, height: 34 }} value={fCategoria} onChange={e => setFCategoria(e.target.value)}>
-                <option value="Todos">Todas categorias</option>
-                {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
-              </select>
-              <select className="form-select" style={{ width: 130, height: 34 }} value={fPasta} onChange={e => setFPasta(e.target.value)}>
-                <option value="Todos">Todas as pastas</option>
-                {pastas.map(p => <option key={p}>{p}</option>)}
-              </select>
-              <button className="btn btn-primary" style={{ height: 34, padding: '0 14px', flexShrink: 0 }} onClick={executarConsulta}>
-                <Search size={13} /> Consultar
-              </button>
-              <button className="btn btn-ghost" style={{ height: 34, padding: '0 10px', flexShrink: 0 }} onClick={limparFiltros} title="Limpar">
-                <RotateCcw size={13} />
-              </button>
+
+              {fPainelAberto && (
+                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
+                  onKeyDown={e => e.key === 'Enter' && handleBuscarAcesso()}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Nome</label>
+                      <input className="form-input" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                        value={fNome} onChange={e => setFNome(e.target.value)} placeholder="filtrar por nome..." autoFocus />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Categoria</label>
+                      <select className="form-select" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                        value={fCategoria} onChange={e => setFCategoria(e.target.value)}>
+                        <option value="">Todas</option>
+                        {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Pasta</label>
+                      <select className="form-select" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                        value={fPasta} onChange={e => setFPasta(e.target.value)}>
+                        <option value="">Todas</option>
+                        {pastas.map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Tags</label>
+                      <input className="form-input" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                        value={fTags} onChange={e => setFTags(e.target.value)} placeholder="filtrar por tag..." />
+                    </div>
+                  </div>
+                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
+                    onClick={handleBuscarAcesso} disabled={fLoading}>
+                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Estado inicial — aguardando consulta */}
-            {resultados === null && (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)' }}>
-                <FolderOpen size={32} strokeWidth={1.25} style={{ marginBottom: 10, opacity: .4 }} />
-                <div style={{ fontSize: 13 }}>Configure os filtros e clique em Consultar</div>
+            {fResultados === null ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
+                <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
-            )}
-
-            {/* Tabela de resultados */}
-            {resultados !== null && (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--sh-xs)' }}>
-                <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 270px)', minHeight: 100 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            ) : (
+              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)' }}>
+                <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 340px)', minHeight: 100 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--s1)' }}>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
-                        <th style={{ ...thS, width: 18, padding: '7px 0 7px 8px' }}></th>
                         <th style={{ ...thS, textAlign: 'center', width: 36 }}>#</th>
-                        <th style={{ ...thS, textAlign: 'center', width: 60 }}>Código</th>
-                        <th style={{ ...thS, width: '33%' }}>Nome</th>
-                        <th style={thS}>Categoria</th>
-                        <th style={thS}>Pasta</th>
-                        <th style={{ ...thS, textAlign: 'center' }}>Ext.</th>
-                        <th style={thS}>Tamanho</th>
+                        <th style={{ ...thS, textAlign: 'center', width: 60, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('codigo')}>Código</th>
+                        <th style={{ ...thS, width: '33%', cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('nome')}>Nome</th>
+                        <th style={{ ...thS, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('categoria')}>Categoria</th>
+                        <th style={{ ...thS, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('pasta')}>Pasta</th>
+                        <th style={{ ...thS, textAlign: 'center', cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('arquivo_ext')}>Ext.</th>
+                        <th style={{ ...thS, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('arquivo_tamanho')}>Tamanho</th>
                         <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {resultados.map((r, ri) => {
-                        const isCur = items[currentIdx]?.id === r.id
+                      {(fResultados.registros ?? []).map((r, ri) => {
                         return (
                           <tr key={r.id}
                             onDoubleClick={() => selecionarDaConsulta(r)}
                             onClick={() => { const idx = items.findIndex(i => i.id === r.id); if (idx >= 0) { setCurrentIdx(idx); loadForm(r) } }}
-                            style={{ cursor: 'pointer', background: isCur ? 'rgba(255,107,43,.06)' : ri % 2 !== 0 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                            onMouseEnter={e => { if (!isCur) e.currentTarget.style.background = 'var(--s3)' }}
-                            onMouseLeave={e => { if (!isCur) e.currentTarget.style.background = ri % 2 !== 0 ? 'rgba(0,0,0,.015)' : 'transparent' }}
+                            style={{ cursor: 'pointer', background: 'var(--s1)' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--s2)' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--s1)' }}
                           >
-                            <td style={{ padding: '7px 0 7px 8px', width: 18, color: 'var(--or)', fontSize: 13, fontWeight: 700 }}>
-                              {isCur ? '›' : ''}
-                            </td>
-                            <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{ri + 1}</td>
+                            <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
                             <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || '—'}</td>
                             <td style={{ ...tdS, color: 'var(--t1)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                               <ExtIcon ext={r.arquivo_ext} size={13} />{r.nome}
@@ -464,15 +527,14 @@ export default function Arquivos({ newTrigger }) {
                           </tr>
                         )
                       })}
-                      {resultados.length === 0 && (
-                        <tr><td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum arquivo encontrado</td></tr>
+                      {!fLoading && (fResultados.registros ?? []).length === 0 && (
+                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum arquivo encontrado</td></tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-                <div style={{ padding: '6px 12px', borderTop: '1px solid var(--bd)', background: 'var(--s1)', fontSize: 10, color: 'var(--t3)' }}>
-                  Total: <strong style={{ color: 'var(--t2)' }}>{resultados.length}</strong>
-                </div>
+                <PaginacaoBar pagina={fPagina} totalPaginas={fResultados.totalPaginas} total={fResultados.total} porPagina={fPorPagina}
+                  onPagina={irParaPaginaAcesso} onPorPagina={mudarPorPaginaAcesso} />
               </div>
             )}
           </>

@@ -155,9 +155,11 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   } = useConsultaModal({ tela, nomeTabela, registros, currentIdx, allItems, setAllItems, filtrarStr, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab })
 
   const {
-    fConsultando, fFiltros, setFFiltros, fBusca, setFBusca, fResultados, allLoading,
-    handleConsultarAcesso, limparFiltrosAcesso, selecionarDaAcesso,
-  } = useFormBuilderAcesso({ nomeTabela, tela, registros, allItems, setAllItems, tiposSistema: TIPOS_SISTEMA, filtrarStr, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab })
+    fFiltros, setFiltroCampo, fBusca, setFBusca, fResultados, fLoading,
+    fPagina, fPorPagina, irParaPagina, mudarPorPagina,
+    fOrdenar, fDirecao, setOrdenacao,
+    limparFiltrosAcesso, selecionarDaAcesso, handleBuscar,
+  } = useFormBuilderAcesso({ nomeTabela, tela, registros, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab })
 
   useEffect(() => { init() }, [nomeTabela])
 
@@ -674,13 +676,15 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         {/* ── Aba Acesso ── */}
         {activeTab === 'acesso' && (
           <AbaAcesso
-            tela={tela} camposData={camposData} total={total} registros={registros}
+            tela={tela} camposData={camposData} nomeTabela={nomeTabela} total={total} registros={registros}
             currentIdx={currentIdx} setCurrentIdx={setCurrentIdx} carregarForm={carregarForm}
             lookupOpcoes={lookupOpcoes} pastasSugest={pastasSugest} fmtSize={fmtSize} ExtIcon={ExtIcon}
-            fFiltros={fFiltros} setFFiltros={setFFiltros} fBusca={fBusca} setFBusca={setFBusca}
-            fResultados={fResultados} fConsultando={fConsultando} allLoading={allLoading}
-            handleConsultarAcesso={handleConsultarAcesso} limparFiltrosAcesso={limparFiltrosAcesso}
-            selecionarDaAcesso={selecionarDaAcesso}
+            fFiltros={fFiltros} setFiltroCampo={setFiltroCampo} fBusca={fBusca} setFBusca={setFBusca}
+            fResultados={fResultados} fLoading={fLoading}
+            fPagina={fPagina} fPorPagina={fPorPagina} irParaPagina={irParaPagina} mudarPorPagina={mudarPorPagina}
+            fOrdenar={fOrdenar} fDirecao={fDirecao} setOrdenacao={setOrdenacao}
+            limparFiltrosAcesso={limparFiltrosAcesso}
+            selecionarDaAcesso={selecionarDaAcesso} handleBuscar={handleBuscar}
           />
         )}
 

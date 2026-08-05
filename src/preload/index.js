@@ -36,6 +36,7 @@ const api = {
   arquivos: {
     getAll:     ()    => ipcRenderer.invoke('arquivos:getAll'),
     getPastas:  ()    => ipcRenderer.invoke('arquivos:getPastas'),
+    listarFiltrado: (opts) => ipcRenderer.invoke('arquivos:listarFiltrado', opts),
     selecionar: ()    => ipcRenderer.invoke('arquivos:selecionar'),
     create:     (d)   => ipcRenderer.invoke('arquivos:create', d),
     update:     (d)   => ipcRenderer.invoke('arquivos:update', d),

@@ -1,20 +1,25 @@
-import { Search, Loader2, RotateCcw, Download, Star } from 'lucide-react'
+import { Download, Star, ChevronUp, ChevronDown } from 'lucide-react'
 import { exportarCSV } from '../../lib/funcoes/index.js'
+import { thS, tdS } from './gridStyles.js'
+import PaginacaoBar from './PaginacaoBar.jsx'
+import PainelFiltros from './PainelFiltros.jsx'
 
-const thS = { padding: '7px 12px', fontSize: 9, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1.2, textTransform: 'uppercase', borderBottom: '1px solid var(--bd)', background: 'var(--s1)', textAlign: 'left' }
-const tdS = { padding: '7px 12px', fontSize: 11.5, color: 'var(--t2)', borderBottom: '1px solid var(--bd)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: 180 }
-
-// Aba "Acesso": filtros dinâmicos + tabela de todos os registros da tela.
-// Só lê tela/registros/dados de acesso via props — não toca no form de edição.
+// Aba "Acesso": filtro por coluna (server-side) + tabela paginada de
+// registros da tela. Só lê tela/registros/dados de acesso via props — não
+// toca no form de edição.
 export default function AbaAcesso({
-  tela, camposData, total, registros, currentIdx, setCurrentIdx, carregarForm,
+  tela, camposData, nomeTabela, total, registros, currentIdx, setCurrentIdx, carregarForm,
   lookupOpcoes, pastasSugest, fmtSize, ExtIcon,
-  fFiltros, setFFiltros, fBusca, setFBusca, fResultados, fConsultando, allLoading,
-  handleConsultarAcesso, limparFiltrosAcesso, selecionarDaAcesso,
+  fFiltros, setFiltroCampo, fBusca, setFBusca, fResultados, fLoading,
+  fPagina, fPorPagina, irParaPagina, mudarPorPagina,
+  fOrdenar, fDirecao, setOrdenacao,
+  limparFiltrosAcesso, selecionarDaAcesso, handleBuscar,
 }) {
-  const camposFiltro = camposData.filter(c => ['select','radio','pasta'].includes(c.tipo))
-  const listaExibir  = fResultados ?? []
-  const renderCell   = (c, reg) => {
+  const listaExibir = fResultados?.registros ?? []
+  const totalGeral  = fResultados?.total ?? total
+  const totalPaginas = fResultados?.totalPaginas ?? 1
+
+  const renderCell = (c, reg) => {
     const v   = reg[c.nome_campo]
     const ops = Array.isArray(c.opcoes) ? c.opcoes : []
     if (c.tipo === 'booleano') return v ? '✓' : '—'
@@ -42,108 +47,94 @@ export default function AbaAcesso({
     }
     return String(v ?? '—')
   }
+
+  function handleExportCSV() {
+    window.api.formBuilder.listarRegistrosFiltrado(nomeTabela, {
+      filtros: Object.entries(fFiltros).filter(([, f]) => f).map(([campo, f]) => ({ campo, ...f })),
+      busca: fBusca,
+      pagina: 1,
+      porPagina: 5000,
+      ordenar: fOrdenar,
+      direcao: fDirecao,
+    }).then(res => {
+      if (!res.ok) return
+      const dados = res.data.registros.map(reg => {
+        const obj = {}
+        camposData.forEach(c => { obj[c.label] = reg[c.nome_campo] ?? '' })
+        return obj
+      })
+      exportarCSV(dados, `${tela?.nome_tela || 'dados'}.csv`)
+    })
+  }
+
   return (
     <>
-      {/* Barra de filtros */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--t3)', pointerEvents: 'none' }} />
-          <input className="form-input" style={{ paddingLeft: 30, height: 34 }}
-            placeholder={`Buscar${camposData.filter(c=>c.campo_busca).length ? ' (' + camposData.filter(c=>c.campo_busca).map(c=>c.label).join(', ') + ')' : '...'}...`}
-            value={fBusca} onChange={e => setFBusca(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleConsultarAcesso()} autoFocus />
-        </div>
-        {camposFiltro.map(c => {
-          const vals = pastasSugest[c.nome_campo] || []
-          const ops  = Array.isArray(c.opcoes) ? c.opcoes : []
-          return (
-            <select key={c.id} className="form-select" style={{ height: 34, minWidth: 130, maxWidth: 180 }}
-              value={fFiltros[c.nome_campo] || '__todos__'}
-              onChange={e => setFFiltros(f => ({ ...f, [c.nome_campo]: e.target.value }))}>
-              <option value="__todos__">Todos — {c.label}</option>
-              {ops.length
-                ? ops.map(o => <option key={o.valor} value={o.valor}>{o.label}</option>)
-                : vals.map(v => <option key={v} value={v}>{v || '(vazio)'}</option>)
-              }
-            </select>
-          )
-        })}
-        <button className="btn btn-primary" style={{ height: 34, padding: '0 14px', flexShrink: 0 }} onClick={handleConsultarAcesso} disabled={fConsultando || allLoading}>
-          {(fConsultando || allLoading) ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Search size={13} />} {(fConsultando || allLoading) ? 'Carregando...' : 'Consultar'}
-        </button>
-        <button className="btn btn-ghost" style={{ height: 34, padding: '0 10px', flexShrink: 0 }} onClick={limparFiltrosAcesso} title="Limpar filtros">
-          <RotateCcw size={13} />
-        </button>
-        <button className="btn btn-ghost" style={{ height: 34, padding: '0 10px', flexShrink: 0, marginLeft: 'auto' }}
-          disabled={!fResultados?.length}
-          onClick={() => {
-            const dados = listaExibir.map(reg => {
-              const obj = {}
-              camposData.forEach(c => { obj[c.label] = reg[c.nome_campo] ?? '' })
-              return obj
-            })
-            exportarCSV(dados, `${tela?.nome_tela || 'dados'}.csv`)
-          }}>
+      {/* Painel de filtros por coluna + busca global, retrátil */}
+      <PainelFiltros camposData={camposData} fFiltros={fFiltros} setFiltroCampo={setFiltroCampo}
+        fBusca={fBusca} setFBusca={setFBusca}
+        pastasSugest={pastasSugest} lookupOpcoes={lookupOpcoes}
+        limparFiltrosAcesso={limparFiltrosAcesso} onBuscar={handleBuscar} fLoading={fLoading} />
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+        <button className="btn btn-ghost" style={{ height: 30, padding: '0 10px' }}
+          disabled={!totalGeral}
+          onClick={handleExportCSV}>
           <Download size={13} /> Exportar CSV
         </button>
       </div>
 
-      {/* Estado inicial */}
-      {fResultados === null && (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)' }}>
-          <Search size={32} strokeWidth={1.25} style={{ marginBottom: 10, opacity: .4 }} />
-          <div style={{ fontSize: 13 }}>Configure os filtros e clique em Consultar</div>
-          <div style={{ fontSize: 11, marginTop: 4 }}>{total.toLocaleString('pt-BR')} registro{total !== 1 ? 's' : ''} no total</div>
+      {/* Tabela */}
+      {fResultados === null ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
+          <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
         </div>
-      )}
-
-      {/* Tabela de resultados */}
-      {fResultados !== null && (
-        <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--sh-xs)' }}>
-          <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 270px)', minHeight: 100 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      ) : (
+        <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)' }}>
+          <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 300px)', minHeight: 100 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--s1)' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
-                  <th style={{ ...thS, width: 18, padding: '7px 0 7px 8px' }}></th>
                   <th style={{ ...thS, textAlign: 'center', width: 36 }}>#</th>
-                  {camposData.map(c => <th key={c.id} style={thS}>{c.label}</th>)}
+                  {camposData.map(c => (
+                    <th key={c.id} style={{ ...thS, cursor: 'pointer', userSelect: 'none' }}
+                      onClick={() => setOrdenacao(c.nome_campo)}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        {c.label}
+                        {fOrdenar === c.nome_campo && (fDirecao === 'ASC' ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
+                      </span>
+                    </th>
+                  ))}
                   {tela.col_favorito !== false && <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>}
                 </tr>
               </thead>
               <tbody>
-                {listaExibir.map((reg, ri) => {
-                  const isCur = registros[currentIdx]?.id === reg.id
-                  return (
-                    <tr key={reg.id}
-                      onClick={() => { const idx = registros.findIndex(r => r.id === reg.id); if (idx >= 0) { setCurrentIdx(idx); carregarForm(tela, registros[idx]) } }}
-                      onDoubleClick={() => selecionarDaAcesso(reg)}
-                      style={{ cursor: 'pointer', background: isCur ? 'rgba(255,107,43,.06)' : ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                      onMouseEnter={e => { if (!isCur) e.currentTarget.style.background = 'var(--s3)' }}
-                      onMouseLeave={e => { if (!isCur) e.currentTarget.style.background = ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                    >
-                      <td style={{ padding: '7px 0 7px 8px', width: 18, color: 'var(--or)', fontSize: 13, fontWeight: 700 }}>{isCur ? '›' : ''}</td>
-                      <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10 }}>{ri + 1}</td>
-                      {camposData.map(c => (
-                        <td key={c.id} style={tdS}>{renderCell(c, reg)}</td>
-                      ))}
-                      {tela.col_favorito !== false && (
-                        <td style={{ ...tdS, textAlign: 'center' }}>
-                          {reg.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-                {listaExibir.length === 0 && (
-                  <tr><td colSpan={camposData.length + 2} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
+                {listaExibir.map((reg, ri) => (
+                  <tr key={reg.id}
+                    onClick={() => { const idx = registros.findIndex(r => r.id === reg.id); if (idx >= 0) { setCurrentIdx(idx); carregarForm(tela, registros[idx]) } }}
+                    onDoubleClick={() => selecionarDaAcesso(reg)}
+                    style={{ cursor: 'pointer', background: 'var(--s1)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--s2)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--s1)' }}
+                  >
+                    <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
+                    {camposData.map(c => (
+                      <td key={c.id} style={tdS}>{renderCell(c, reg)}</td>
+                    ))}
+                    {tela.col_favorito !== false && (
+                      <td style={{ ...tdS, textAlign: 'center' }}>
+                        {reg.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {!fLoading && listaExibir.length === 0 && (
+                  <tr><td colSpan={camposData.length + 1 + (tela.col_favorito !== false ? 1 : 0)} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-          <div style={{ padding: '6px 12px', borderTop: '1px solid var(--bd)', background: 'var(--s1)', fontSize: 10, color: 'var(--t3)' }}>
-            Total: <strong style={{ color: 'var(--t2)' }}>{listaExibir.length}</strong>
-            {listaExibir.length !== total && <span> (de {total.toLocaleString('pt-BR')} carregados)</span>}
-          </div>
+          <PaginacaoBar pagina={fPagina} totalPaginas={totalPaginas} total={totalGeral} porPagina={fPorPagina}
+            onPagina={irParaPagina} onPorPagina={mudarPorPagina} />
         </div>
       )}
     </>

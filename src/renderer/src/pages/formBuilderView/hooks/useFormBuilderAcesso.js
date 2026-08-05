@@ -1,59 +1,86 @@
 import { useState } from 'react'
 
-// Encapsula a aba "Acesso": filtros dinamicos por campo, busca textual e
-// listagem de todos os registros da tela, carregados sob demanda.
-export function useFormBuilderAcesso({ nomeTabela, tela, registros, allItems, setAllItems, tiposSistema, filtrarStr, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab }) {
-  const [fConsultando, setFConsultando] = useState(false)
-  const [fFiltros,    setFFiltros]    = useState({})   // { nome_campo: valor_selecionado }
+// Encapsula a aba "Acesso": filtros por coluna (server-side, via
+// fb:listarRegistrosFiltrado) e paginação real. Nenhuma consulta roda
+// automaticamente — só ao clicar "Buscar" (tabelas grandes não devem ser
+// carregadas por padrão ao abrir a aba). Paginação e ordenação, uma vez que
+// já existe um resultado carregado, aplicam de imediato.
+export function useFormBuilderAcesso({ nomeTabela, tela, registros, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab }) {
+  const [fFiltros,    setFFiltrosState] = useState({})   // { nome_campo: {op,valor,valor2} }
   const [fBusca,      setFBusca]      = useState('')
-  const [fResultados, setFResultados] = useState(null) // null = aguardando, [] = consultado
-  const [allLoading,  setAllLoading]  = useState(false)
+  const [fPagina,     setFPagina]     = useState(1)
+  const [fPorPagina,  setFPorPagina]  = useState(50)
+  const [fOrdenar,    setFOrdenar]    = useState(null)
+  const [fDirecao,    setFDirecao]    = useState('ASC')
+  const [fResultados, setFResultados] = useState(null) // { registros, total, totalPaginas } | null
+  const [fLoading,    setFLoading]    = useState(false)
 
-  async function loadAllAcesso() {
-    setAllLoading(true)
+  function serializeFiltros(filtrosObj) {
+    return Object.entries(filtrosObj)
+      .filter(([, f]) => f)
+      .map(([campo, f]) => ({ campo, ...f }))
+  }
+
+  async function executarConsulta(overrides = {}) {
+    if (!nomeTabela) return
+    setFLoading(true)
     try {
-      const res = await window.api.formBuilder.getAllRegistros(nomeTabela)
+      const res = await window.api.formBuilder.listarRegistrosFiltrado(nomeTabela, {
+        filtros: serializeFiltros(overrides.fFiltros ?? fFiltros),
+        busca: overrides.fBusca ?? fBusca,
+        pagina: overrides.fPagina ?? fPagina,
+        porPagina: overrides.fPorPagina ?? fPorPagina,
+        ordenar: overrides.fOrdenar !== undefined ? overrides.fOrdenar : fOrdenar,
+        direcao: overrides.fDirecao ?? fDirecao,
+      })
       if (!res.ok) throw new Error(res.erro)
-      setAllItems(res.data.registros)
-      return res.data.registros
+      setFResultados(res.data)
     } catch {
-      return []
+      setFResultados({ registros: [], total: 0, pagina: 1, porPagina: fPorPagina, totalPaginas: 1 })
     } finally {
-      setAllLoading(false)
+      setFLoading(false)
     }
   }
 
-  function executarConsultaAcesso(srcItems) {
-    const src = Array.isArray(srcItems) ? srcItems : allItems
-    const q = fBusca.toLowerCase().trim()
-    const camposData = (tela?.campos?.filter(c => c.ativo) || []).filter(c => !tiposSistema.includes(c.tipo))
-    const camposBusca = camposData.filter(c => c.campo_busca).map(c => c.nome_campo)
-    let list = [...src]
-    if (q) {
-      if (camposBusca.length) {
-        list = list.filter(r => camposBusca.some(nc => filtrarStr(String(r[nc] ?? ''), q, 'contendo')))
-      } else {
-        list = list.filter(r => Object.values(r).some(v => filtrarStr(String(v ?? ''), q, 'contendo')))
-      }
-    }
-    for (const [nomeCampo, val] of Object.entries(fFiltros)) {
-      if (val && val !== '__todos__') list = list.filter(r => String(r[nomeCampo] ?? '') === val)
-    }
-    setFResultados(list)
+  // Filtro/busca só atualizam estado local — a query roda ao clicar "Buscar".
+  function setFiltroCampo(nomeCampo, filtro) {
+    setFFiltrosState(f => ({ ...f, [nomeCampo]: filtro }))
   }
 
-  async function handleConsultarAcesso() {
-    let src = allItems
-    if (!src.length) {
-      setFConsultando(true)
-      src = await loadAllAcesso()
-      setFConsultando(false)
-    }
-    executarConsultaAcesso(src)
+  function limparFiltroCampo(nomeCampo) {
+    setFiltroCampo(nomeCampo, null)
   }
 
+  function handleBuscar() {
+    setFPagina(1)
+    executarConsulta({ fPagina: 1 })
+  }
+
+  function irParaPagina(p) {
+    const max = fResultados?.totalPaginas || 1
+    const alvo = Math.max(1, Math.min(max, p))
+    setFPagina(alvo)
+    executarConsulta({ fPagina: alvo })
+  }
+
+  function mudarPorPagina(n) {
+    setFPorPagina(n)
+    setFPagina(1)
+    executarConsulta({ fPorPagina: n, fPagina: 1 })
+  }
+
+  function setOrdenacao(nomeCampo) {
+    const novaDir = fOrdenar === nomeCampo && fDirecao === 'ASC' ? 'DESC' : 'ASC'
+    setFOrdenar(nomeCampo)
+    setFDirecao(novaDir)
+    executarConsulta({ fOrdenar: nomeCampo, fDirecao: novaDir })
+  }
+
+  // Só limpa os campos de filtro — não reconsulta. Os registros já exibidos
+  // permanecem na tela até o usuário clicar "Buscar" de novo.
   function limparFiltrosAcesso() {
-    setFFiltros({}); setFBusca(''); setFResultados(null)
+    setFFiltrosState({})
+    setFBusca('')
   }
 
   function selecionarDaAcesso(r) {
@@ -64,7 +91,11 @@ export function useFormBuilderAcesso({ nomeTabela, tela, registros, allItems, se
   }
 
   return {
-    fConsultando, fFiltros, setFFiltros, fBusca, setFBusca, fResultados, allLoading,
-    handleConsultarAcesso, limparFiltrosAcesso, selecionarDaAcesso,
+    fFiltros, setFiltroCampo, limparFiltroCampo,
+    fBusca, setFBusca,
+    fResultados, fLoading,
+    fPagina, fPorPagina, irParaPagina, mudarPorPagina,
+    fOrdenar, fDirecao, setOrdenacao,
+    limparFiltrosAcesso, selecionarDaAcesso, handleBuscar,
   }
 }
