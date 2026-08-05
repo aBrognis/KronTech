@@ -439,7 +439,7 @@ function ViewLista({ events, categorias, statuses, clientes, onOpenEdit, onOpenN
 
 // ── MODAL CRIAR / EDITAR ──────────────────────────────────────────────────────
 
-function EventoModal({ modal, form, setForm, categorias, statuses, clientes, saving, onSave, onDelete, onClose }) {
+function EventoModal({ modal, form, setForm, categorias, statuses, clientes, saving, erro, onSave, onDelete, onClose }) {
   const isNew = modal === 'new'
   function set(k,v) { setForm(f=>({...f,[k]:v})) }
 
@@ -538,6 +538,12 @@ function EventoModal({ modal, form, setForm, categorias, statuses, clientes, sav
             )}
           </div>
 
+          {erro && (
+            <div style={{ background:'rgba(248,113,113,.1)', border:'1px solid rgba(239,68,68,.4)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--red)' }}>
+              {erro}
+            </div>
+          )}
+
         </div>
         <div className="modal-footer">
           {!isNew && <button className="btn btn-danger" onClick={onDelete} style={{ display:'inline-flex', alignItems:'center', gap:6 }}><Trash2 size={13}/> Excluir</button>}
@@ -623,6 +629,7 @@ export default function Agenda({ newTrigger }) {
   const [modal, setModal]         = useState(null)
   const [form, setForm]           = useState(EMPTY_FORM)
   const [saving, setSaving]       = useState(false)
+  const [erro, setErro]           = useState(null)
   const prevTrigger = useRef(0)
 
   const weekDays = getWeekDays(currentDate)
@@ -722,6 +729,7 @@ export default function Agenda({ newTrigger }) {
 
   function openNew(dt) {
     setForm({...EMPTY_FORM, dt_evento: dt||''})
+    setErro(null)
     setModal('new')
   }
 
@@ -741,12 +749,14 @@ export default function Agenda({ newTrigger }) {
       min_lembrete: ev.min_lembrete??30,
       recorrencia:  ev.recorrencia||'nenhuma',
     })
+    setErro(null)
     setModal(ev)
   }
 
   async function handleSave() {
     if (!form.titulo.trim()) return
     setSaving(true)
+    setErro(null)
     try {
       const payload = {
         ...form,
@@ -756,8 +766,10 @@ export default function Agenda({ newTrigger }) {
         hr_inicio:    form.hr_inicio||null,
         hr_fim:       form.hr_fim||null,
       }
-      if (modal==='new') await window.api.agenda.create(payload)
-      else await window.api.agenda.update({id:modal.id, ...payload})
+      const res = modal==='new'
+        ? await window.api.agenda.create(payload)
+        : await window.api.agenda.update({id:modal.id, ...payload})
+      if (!res.ok) { setErro(res.erro); return }
       setModal(null)
       await loadEvents()
     } finally { setSaving(false) }
@@ -765,7 +777,8 @@ export default function Agenda({ newTrigger }) {
 
   async function handleDelete() {
     if (!modal?.id) return
-    await window.api.agenda.delete(modal.id)
+    const res = await window.api.agenda.delete(modal.id)
+    if (!res.ok) { setErro(res.erro); return }
     setModal(null)
     await loadEvents()
   }
@@ -865,7 +878,7 @@ export default function Agenda({ newTrigger }) {
         <EventoModal
           modal={modal} form={form} setForm={setForm}
           categorias={categorias} statuses={statuses} clientes={clientes}
-          saving={saving} onSave={handleSave} onDelete={handleDelete} onClose={()=>setModal(null)}
+          saving={saving} erro={erro} onSave={handleSave} onDelete={handleDelete} onClose={()=>setModal(null)}
         />
       )}
     </div>
