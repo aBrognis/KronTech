@@ -1,7 +1,9 @@
-import { Notification } from 'electron'
+import { Notification, nativeImage } from 'electron'
+import { join } from 'path'
 import { query } from '../db'
 
 const notified = new Set()
+const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.ico'))
 
 async function check() {
   try {
@@ -25,8 +27,9 @@ async function check() {
       if (nowMin >= triggerMin && nowMin < triggerMin + 2) {
         notified.add(r.id)
         new Notification({
-          title: `⏰ KronTech — Lembrete`,
+          title: 'KronTech — Lembrete',
           body:  `${r.titulo} começa em ${r.min_lembrete ?? 30} minuto(s)`,
+          icon,
         }).show()
       }
     }

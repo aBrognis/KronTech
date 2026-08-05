@@ -60,7 +60,7 @@ function createWindow() {
 }
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.krontech.app')
+  app.setAppUserModelId('com.anderson.krontech')
 }
 
 app.whenReady().then(async () => {
