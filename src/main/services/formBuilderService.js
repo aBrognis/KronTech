@@ -301,6 +301,126 @@ export async function valoresDistintos(nomeTabela, nomeColuna) {
   return rows.map(r => r.v)
 }
 
+// ── Filtro por coluna (aba Acesso) ─────────────────────────────────────────────
+// Mapeia cada tipo de campo do FormBuilder para um grupo de operador de filtro.
+// Ponto único de extensão: adicionar um tipo novo é uma linha aqui.
+function opGroupForTipo(tipo) {
+  const MAP = {
+    texto:'texto', texto_longo:'texto', email:'texto', telefone:'texto', url:'texto',
+    cpf:'texto', cnpj:'texto', cep:'texto', documento:'texto', login:'texto',
+    codigo_auto:'texto', cor:'texto',
+    numero:'numero', moeda:'numero', percentual:'numero', calculo:'numero',
+    avaliacao:'numero', progresso:'numero',
+    data:'data', data_hora:'data', hora:'data',
+    booleano:'booleano',
+    select:'exato', radio:'exato', pasta:'exato', lookup:'exato',
+    flags:'flags', tags:'tags',
+    arquivo:'has_file', imagem:'has_file',
+  }
+  return MAP[tipo] || null
+}
+
+function buildFiltroSQL(f, tipoCampo, params) {
+  const c = col(f.campo)
+  const push = (v) => { params.push(v); return params.length }
+
+  switch (opGroupForTipo(tipoCampo)) {
+    case 'texto': {
+      if (!f.valor) return null
+      const n = push(`%${f.valor}%`)
+      return `CAST(${c} AS TEXT) ILIKE $${n}`
+    }
+    case 'numero': {
+      const parts = []
+      if (f.valor  != null && f.valor  !== '') parts.push(`${c} >= $${push(f.valor)}`)
+      if (f.valor2 != null && f.valor2 !== '') parts.push(`${c} <= $${push(f.valor2)}`)
+      return parts.length ? parts.join(' AND ') : null
+    }
+    case 'data': {
+      const parts = []
+      if (f.valor  != null && f.valor  !== '') parts.push(`${c} >= $${push(f.valor)}`)
+      if (f.valor2 != null && f.valor2 !== '') parts.push(`${c} <= $${push(f.valor2)}`)
+      return parts.length ? parts.join(' AND ') : null
+    }
+    case 'booleano': {
+      if (f.valor !== true && f.valor !== false) return null
+      return `${c} = $${push(f.valor)}`
+    }
+    case 'exato': {
+      if (!f.valor || f.valor === '__todos__') return null
+      return `${c} = $${push(f.valor)}`
+    }
+    case 'flags': {                      // código de flag é sempre 1 caractere (ver OpcoesList.jsx)
+      if (!f.valor) return null
+      const n = push(`%${f.valor}%`)
+      return `${c} ILIKE $${n}`
+    }
+    case 'tags': {                       // contains simples — pode dar falso positivo por substring
+      if (!f.valor) return null
+      const n = push(`%${f.valor}%`)
+      return `${c} ILIKE $${n}`
+    }
+    case 'has_file':
+      if (f.valor === 'com') return `${c} IS NOT NULL AND ${c} <> ''`
+      if (f.valor === 'sem') return `(${c} IS NULL OR ${c} = '')`
+      return null
+    default:
+      return null   // senha, divisor, botao, copiar — não filtráveis
+  }
+}
+
+// filtros: [{ campo, op, valor, valor2 }] — tipo do campo é resolvido no servidor
+// via kr_tela_campos, nunca confiado no valor vindo do renderer.
+export async function listarRegistrosFiltrado(nomeTabela, {
+  filtros = [], busca = '', pagina = 1, porPagina = 50, ordenar = null, direcao = 'ASC',
+} = {}) {
+  const tela = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
+  if (!tela) throw new Error(`Tela "${nomeTabela}" não encontrada.`)
+
+  const camposTela = await query(
+    'SELECT nome_campo, tipo, campo_busca FROM kr_tela_campos WHERE tela_id=$1 AND ativo=TRUE',
+    [tela.id]
+  )
+  const tipoPorCampo = Object.fromEntries(camposTela.map(c => [c.nome_campo, c.tipo]))
+
+  const params = []
+  const conds = ['ativo=TRUE']
+
+  for (const f of filtros) {
+    if (!tipoPorCampo[f.campo]) continue
+    const frag = buildFiltroSQL(f, tipoPorCampo[f.campo], params)
+    if (frag) conds.push(frag)
+  }
+
+  if (busca && busca.trim()) {
+    const camposBusca = camposTela.filter(c => c.campo_busca).map(c => c.nome_campo)
+    if (camposBusca.length) {
+      const orConds = camposBusca.map(nc => {
+        params.push(`%${busca.trim()}%`)
+        return `CAST(${col(nc)} AS TEXT) ILIKE $${params.length}`
+      })
+      conds.push(`(${orConds.join(' OR ')})`)
+    }
+  }
+
+  const where = 'WHERE ' + conds.join(' AND ')
+  const pag = Math.max(1, pagina)
+  const porPag = Math.min(200, Math.max(1, porPagina))
+  const offset = (pag - 1) * porPag
+  const colOrdem = ordenar && tipoPorCampo[ordenar] ? col(ordenar) : 'id'
+  const dir = direcao === 'DESC' ? 'DESC' : 'ASC'
+
+  const countParams = [...params]
+  params.push(porPag, offset)
+  const pL = params.length - 1, pO = params.length
+
+  const [registros, total] = await Promise.all([
+    query(`SELECT * FROM ${tbl(nomeTabela)} ${where} ORDER BY ${colOrdem} ${dir} LIMIT $${pL} OFFSET $${pO}`, params),
+    queryOne(`SELECT COUNT(*) AS n FROM ${tbl(nomeTabela)} ${where}`, countParams)
+  ])
+  return { registros, total: parseInt(total.n), pagina: pag, porPagina: porPag, totalPaginas: Math.ceil(parseInt(total.n) / porPag) || 1 }
+}
+
 export async function inserirRegistro(nomeTabela, dados) {
   const colunas = Object.keys(dados).map(col)
   const valores = Object.values(dados)

@@ -11,6 +11,7 @@ export const excluirTela        = (id)           => api().excluirTela(id)
 
 // ── Registros ─────────────────────────────────────────────────────────────────
 export const listarRegistros    = (tbl, opts)    => api().listarRegistros(tbl, opts)
+export const listarRegistrosFiltrado = (tbl, opts) => api().listarRegistrosFiltrado(tbl, opts)
 export const getAllRegistros     = (tbl)          => api().getAllRegistros(tbl)
 export const inserirRegistro    = (tbl, dados)   => api().inserirRegistro(tbl, dados)
 export const atualizarRegistro  = (tbl, id, dados, ts) => api().atualizarRegistro(tbl, id, dados, ts)
