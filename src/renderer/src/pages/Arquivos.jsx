@@ -514,8 +514,10 @@ export default function Arquivos({ newTrigger }) {
                           >
                             <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
                             <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || '—'}</td>
-                            <td style={{ ...tdS, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <ExtIcon ext={r.arquivo_ext} size={13} />{r.nome}
+                            <td style={{ ...tdS, color: 'var(--t1)' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                <ExtIcon ext={r.arquivo_ext} size={13} />{r.nome}
+                              </span>
                             </td>
                             <td style={tdS}>{r.categoria || '—'}</td>
                             <td style={tdS}>{r.pasta || '—'}</td>
