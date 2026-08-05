@@ -9,9 +9,9 @@ async function check() {
   try {
     const rows = await query(`
       SELECT id, titulo, hr_inicio, min_lembrete
-      FROM age_001
+      FROM agenda_eventos
       WHERE lembrete = true
-        AND status = 'Pendente'
+        AND ativo = true
         AND dt_evento = CURRENT_DATE
         AND hr_inicio IS NOT NULL
     `)

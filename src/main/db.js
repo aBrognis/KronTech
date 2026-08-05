@@ -44,7 +44,7 @@ const SCHEMA_VERSION = 2
 // Sincroniza sequências de código com o max existente nas tabelas de sistema.
 // Roda em TODA inicialização para proteger contra restore de backup.
 async function syncSequencias() {
-  for (const tbl of ['age_001', 'arq_001']) {
+  for (const tbl of ['arq_001']) {
     await query(`
       DO $$
       DECLARE cur_max INTEGER;
@@ -120,22 +120,8 @@ async function migration1() {
   await query(`DROP TABLE IF EXISTS rel_001      CASCADE`).catch(e => console.warn('[migration] drop rel_001:', e.message))
 
   // ── Tabelas de sistema ────────────────────────────────────────────────────
-
-  await query(`
-    CREATE TABLE IF NOT EXISTS age_001 (
-      id           SERIAL PRIMARY KEY,
-      titulo       VARCHAR(300) NOT NULL,
-      categoria    VARCHAR(50)  DEFAULT 'Tarefa',
-      dt_evento    DATE,
-      hr_inicio    TIME,
-      hr_fim       TIME,
-      descricao    TEXT,
-      status       VARCHAR(30)  DEFAULT 'Pendente',
-      lembrete     BOOLEAN      DEFAULT FALSE,
-      min_lembrete INTEGER      DEFAULT 30,
-      dt_criacao   TIMESTAMP    DEFAULT NOW()
-    )
-  `)
+  // Agenda não usa mais tabela fixa — agenda_eventos/agenda_categorias/
+  // agenda_status são criadas via templates do FormBuilder (Designer).
 
   await query(`
     CREATE TABLE IF NOT EXISTS arq_001 (
@@ -320,7 +306,7 @@ async function migration1() {
   ).catch(e => console.warn('[migration] rehash admin legado:', e.message))
 
   // ── Sequências para tabelas de sistema (após todos os CREATE TABLE) ────────
-  for (const tbl of ['age_001', 'arq_001']) {
+  for (const tbl of ['arq_001']) {
     await query(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) DEFAULT ''`).catch(e => console.warn(`[migration] alter ${tbl} coluna codigo:`, e.message))
     await query(`CREATE SEQUENCE IF NOT EXISTS ${tbl}_codigo_seq START 1`).catch(e => console.warn(`[migration] criar sequência ${tbl}:`, e.message))
   }
@@ -556,6 +542,10 @@ export async function initDb() {
   // Colunas adicionadas após bancos existentes já terem passado pela migration
   // versionada acima — precisam rodar sempre (idempotente), não só uma vez.
   await query(`ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS grupo_fixo VARCHAR(30)`).catch(e => console.warn('[migration] alter kr_telas grupo_fixo (startup):', e.message))
+
+  // age_001 foi substituída por agenda_eventos/agenda_categorias/agenda_status
+  // (criadas via templates do Designer); só tinha dados de teste.
+  await query(`DROP TABLE IF EXISTS age_001 CASCADE`).catch(e => console.warn('[migration] drop age_001 (startup):', e.message))
 
   // Remove constraints problemáticos a cada startup (idempotente)
   await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
