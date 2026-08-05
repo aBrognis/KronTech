@@ -241,7 +241,6 @@ async function migration1() {
     `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS canvas_h      INTEGER  DEFAULT 480`,
     `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS col_favorito   BOOLEAN DEFAULT TRUE`,
     `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS col_timestamps BOOLEAN DEFAULT TRUE`,
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS grupo_fixo    VARCHAR(30)`,
   ]) { await query(col).catch(e => console.warn('[migration] alter kr_telas:', e.message)) }
 
   await query(`
@@ -553,6 +552,10 @@ export async function initDb() {
     )
     console.log(`[db] Schema atualizado para versão ${SCHEMA_VERSION}`)
   }
+
+  // Colunas adicionadas após bancos existentes já terem passado pela migration
+  // versionada acima — precisam rodar sempre (idempotente), não só uma vez.
+  await query(`ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS grupo_fixo VARCHAR(30)`).catch(e => console.warn('[migration] alter kr_telas grupo_fixo (startup):', e.message))
 
   // Remove constraints problemáticos a cada startup (idempotente)
   await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
