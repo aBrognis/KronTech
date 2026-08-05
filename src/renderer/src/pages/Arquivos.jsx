@@ -514,7 +514,7 @@ export default function Arquivos({ newTrigger }) {
                           >
                             <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
                             <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || '—'}</td>
-                            <td style={{ ...tdS, color: 'var(--t1)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <td style={{ ...tdS, color: 'var(--t1)', display: 'flex', alignItems: 'center', gap: 6 }}>
                               <ExtIcon ext={r.arquivo_ext} size={13} />{r.nome}
                             </td>
                             <td style={tdS}>{r.categoria || '—'}</td>
@@ -909,15 +909,19 @@ export default function Arquivos({ newTrigger }) {
 
       {/* ── Rodapé ── */}
       <div className="page-footer">
-        <div className="page-footer-nav">
-          <button className="page-footer-nav-btn" onClick={() => navTo(0)} disabled={currentIdx <= 0 || items.length === 0} title="Primeiro"><ChevronsLeft size={13} /></button>
-          <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx - 1)} disabled={currentIdx <= 0} title="Anterior"><ChevronLeft size={13} /></button>
-          <span className="page-footer-counter">{items.length > 0 ? `${currentIdx + 1} / ${items.length}` : '0 / 0'}</span>
-          <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx + 1)} disabled={currentIdx >= items.length - 1} title="Próximo"><ChevronRight size={13} /></button>
-          <button className="page-footer-nav-btn" onClick={() => navTo(items.length - 1)} disabled={currentIdx >= items.length - 1 || items.length === 0} title="Último"><ChevronsRight size={13} /></button>
-        </div>
+        {activeTab === 'cadastro' && (
+          <>
+            <div className="page-footer-nav">
+              <button className="page-footer-nav-btn" onClick={() => navTo(0)} disabled={currentIdx <= 0 || items.length === 0} title="Primeiro"><ChevronsLeft size={13} /></button>
+              <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx - 1)} disabled={currentIdx <= 0} title="Anterior"><ChevronLeft size={13} /></button>
+              <span className="page-footer-counter">{items.length > 0 ? `${currentIdx + 1} / ${items.length}` : '0 / 0'}</span>
+              <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx + 1)} disabled={currentIdx >= items.length - 1} title="Próximo"><ChevronRight size={13} /></button>
+              <button className="page-footer-nav-btn" onClick={() => navTo(items.length - 1)} disabled={currentIdx >= items.length - 1 || items.length === 0} title="Último"><ChevronsRight size={13} /></button>
+            </div>
 
-        <div style={{ width: 1, height: 22, background: 'var(--bd)', flexShrink: 0 }} />
+            <div style={{ width: 1, height: 22, background: 'var(--bd)', flexShrink: 0 }} />
+          </>
+        )}
 
         <div className="page-footer-actions">
           {activeTab === 'cadastro' && (
