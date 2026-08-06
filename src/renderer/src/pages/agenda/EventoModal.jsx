@@ -5,6 +5,20 @@ export default function EventoModal({ modal, form, setForm, categorias, statuses
   const isNew = modal === 'new'
   function set(k,v) { setForm(f=>({...f,[k]:v})) }
 
+  const lembretes = form.lembretes || []
+  const opcoesDisponiveis = MIN_OPTIONS.filter(o => !lembretes.includes(o.value))
+
+  function adicionarLembrete(valor) {
+    if (!valor) return
+    const v = Number(valor)
+    if (lembretes.includes(v)) return
+    set('lembretes', [...lembretes, v].sort((a,b)=>a-b))
+  }
+
+  function removerLembrete(valor) {
+    set('lembretes', lembretes.filter(v => v !== valor))
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ maxWidth:600 }} onClick={e=>e.stopPropagation()}>
@@ -93,16 +107,38 @@ export default function EventoModal({ modal, form, setForm, categorias, statuses
             <textarea className="form-textarea" rows={3} placeholder="Detalhes, pauta, observações..." value={form.descricao} onChange={e=>set('descricao',e.target.value)}/>
           </div>
 
-          {/* Lembrete */}
-          <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-            <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, cursor:'pointer', color:'var(--t2)', userSelect:'none' }}>
-              <input type="checkbox" checked={form.lembrete} onChange={e=>set('lembrete',e.target.checked)} style={{ accentColor:'var(--or)' }}/>
-              <Bell size={13}/> Lembrete
+          {/* Lembretes */}
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <label className="form-label" style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <Bell size={13}/> Lembretes
             </label>
-            {form.lembrete && (
-              <select className="form-select" style={{ width:'auto', height:28, fontSize:11 }} value={form.min_lembrete} onChange={e=>set('min_lembrete',Number(e.target.value))}>
-                {MIN_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+            {lembretes.length > 0 && (
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {lembretes.map(v => {
+                  const opt = MIN_OPTIONS.find(o=>o.value===v)
+                  return (
+                    <span key={v} style={{
+                      display:'flex', alignItems:'center', gap:6, fontSize:11, color:'var(--t2)',
+                      background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:6, padding:'4px 6px 4px 10px',
+                    }}>
+                      {opt?.label || `${v} min antes`}
+                      <button type="button" onClick={()=>removerLembrete(v)}
+                        style={{ display:'flex', alignItems:'center', justifyContent:'center', background:'none', border:'none', cursor:'pointer', color:'var(--t3)', padding:2 }}>
+                        <X size={11}/>
+                      </button>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
+            {opcoesDisponiveis.length > 0 && (
+              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                <select className="form-select" style={{ width:'auto', height:28, fontSize:11 }} defaultValue=""
+                  onChange={e => { adicionarLembrete(e.target.value); e.target.value = '' }}>
+                  <option value="" disabled>Adicionar lembrete...</option>
+                  {opcoesDisponiveis.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             )}
           </div>
 

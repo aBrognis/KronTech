@@ -153,8 +153,7 @@ export default function Agenda({ newTrigger }) {
       dia_todo:     ev.dia_todo||false,
       local:        ev.local||'',
       descricao:    ev.descricao||'',
-      lembrete:     ev.lembrete||false,
-      min_lembrete: ev.min_lembrete??30,
+      lembretes:    (ev.lembretes?.length ? ev.lembretes : (ev.lembrete ? [ev.min_lembrete ?? 30] : [])),
       recorrencia:  ev.recorrencia||'nenhuma',
     })
     setErro(null)

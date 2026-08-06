@@ -25,7 +25,7 @@ export const COR_STATUS_FALLBACK = '#94A3B8'
 export const EMPTY_FORM = {
   titulo:'', categoria_id:'', status_id:'', cliente_id:'',
   dt_evento:'', hr_inicio:'', hr_fim:'', dia_todo:false,
-  local:'', descricao:'', lembrete:false, min_lembrete:30, recorrencia:'nenhuma',
+  local:'', descricao:'', lembretes:[], recorrencia:'nenhuma',
 }
 
 export function toISO(date) {
