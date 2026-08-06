@@ -1207,7 +1207,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         )
       })()}
 
-      {/* Rodapé */}
+      {/* Rodapé (só na aba Cadastro) */}
+      {activeTab === 'cadastro' && (
       <div className="page-footer">
         <div className="page-footer-nav">
           <button className="page-footer-nav-btn" onClick={() => navTo(0)} disabled={currentIdx <= 0}><ChevronsLeft size={13} /></button>
@@ -1220,23 +1221,22 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         <div style={{ width: 1, height: 22, background: 'var(--bd)', flexShrink: 0 }} />
 
         <div className="page-footer-actions">
-          {activeTab === 'cadastro' && (
-            isRO ? (
-              <>
-                <button className="btn btn-primary"  onClick={handleIncluir}><Plus size={13} /> Incluir</button>
-                <button className="btn btn-ghost"    onClick={handleAlterar} disabled={!registros.length}><Edit2 size={13} /> Alterar</button>
-                <button className="btn btn-danger"   onClick={handleExcluir} disabled={!registros.length}><Trash2 size={13} /> Excluir</button>
-                <button className="btn btn-ghost"    onClick={abrirConsulta}><Search size={13} /> Consultar</button>
-              </>
-            ) : (
-              <>
-                <button className="btn btn-primary" onClick={handleGravar} disabled={saving}><Save size={13} /> {saving ? 'Salvando...' : 'Gravar'}</button>
-                <button className="btn btn-ghost"   onClick={handleDesistir}><X size={13} /> Desistir</button>
-              </>
-            )
+          {isRO ? (
+            <>
+              <button className="btn btn-primary"  onClick={handleIncluir}><Plus size={13} /> Incluir</button>
+              <button className="btn btn-ghost"    onClick={handleAlterar} disabled={!registros.length}><Edit2 size={13} /> Alterar</button>
+              <button className="btn btn-danger"   onClick={handleExcluir} disabled={!registros.length}><Trash2 size={13} /> Excluir</button>
+              <button className="btn btn-ghost"    onClick={abrirConsulta}><Search size={13} /> Consultar</button>
+            </>
+          ) : (
+            <>
+              <button className="btn btn-primary" onClick={handleGravar} disabled={saving}><Save size={13} /> {saving ? 'Salvando...' : 'Gravar'}</button>
+              <button className="btn btn-ghost"   onClick={handleDesistir}><X size={13} /> Desistir</button>
+            </>
           )}
         </div>
       </div>
+      )}
 
       {/* Modal de confirmação de exclusão */}
       {confirmExcluir && (
