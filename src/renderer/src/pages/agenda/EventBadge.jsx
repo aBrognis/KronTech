@@ -1,21 +1,29 @@
+import { AlertTriangle } from 'lucide-react'
 import { fmtHora, corEvento } from './utils'
 
-export default function EventoChip({ ev, onClick, small }) {
+export default function EventoChip({ ev, onClick, small, conflito, dragging, onMouseDown }) {
   const cor = corEvento(ev)
   return (
     <div onClick={e => { e.stopPropagation(); onClick(ev) }}
+      onMouseDown={onMouseDown ? e => { e.stopPropagation(); onMouseDown(ev, e) } : undefined}
       style={{
         background: cor+'22', borderLeft:`2.5px solid ${cor}`,
+        border: conflito ? '1px dashed var(--red)' : undefined,
         borderRadius:'0 4px 4px 0', padding: small ? '1px 4px' : '2px 6px',
         fontSize: small ? 9 : 10, color: cor, marginBottom:2,
         overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
         cursor:'pointer', userSelect:'none',
         transition:'background .12s',
+        opacity: dragging ? 0.4 : 1,
+        display:'flex', alignItems:'center', gap:3,
       }}
       onMouseEnter={e => e.currentTarget.style.background = cor+'44'}
       onMouseLeave={e => e.currentTarget.style.background = cor+'22'}
     >
-      {ev.hr_inicio && !ev.dia_todo ? `${fmtHora(ev.hr_inicio)} ` : ''}{ev.titulo}
+      {conflito && <AlertTriangle size={small?8:9} color="var(--red)" style={{ flexShrink:0 }}/>}
+      <span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>
+        {ev.hr_inicio && !ev.dia_todo ? `${fmtHora(ev.hr_inicio)} ` : ''}{ev.titulo}
+      </span>
     </div>
   )
 }

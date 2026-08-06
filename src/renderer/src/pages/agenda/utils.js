@@ -88,3 +88,39 @@ export function nomeStatus(ev) {
 export function nomeCliente(ev) {
   return ev.cliente_nome || '—'
 }
+
+export function toMinutos(hhmmss) {
+  if (!hhmmss) return null
+  const [h, m] = hhmmss.split(':').map(Number)
+  return h * 60 + m
+}
+
+// Retorna o Set de ids de eventos do dia que se sobrepõem no horário com
+// pelo menos outro evento. Eventos sem hr_fim assumem 30min de duração;
+// eventos dia_todo são ignorados (não fazem sentido como conflito de horário).
+export function eventosConflitantes(events, isoDate) {
+  const doDia = eventosDodia(events, isoDate).filter(e => e.hr_inicio && !e.dia_todo)
+  const conflitantes = new Set()
+  for (let i = 0; i < doDia.length; i++) {
+    const a = doDia[i]
+    const aIni = toMinutos(a.hr_inicio), aFim = a.hr_fim ? toMinutos(a.hr_fim) : aIni + 30
+    for (let j = i + 1; j < doDia.length; j++) {
+      const b = doDia[j]
+      const bIni = toMinutos(b.hr_inicio), bFim = b.hr_fim ? toMinutos(b.hr_fim) : bIni + 30
+      if (aIni < bFim && bIni < aFim) { conflitantes.add(a.id); conflitantes.add(b.id) }
+    }
+  }
+  return conflitantes
+}
+
+// Desloca hr_fim mantendo a duração original do evento, a partir de uma nova hora de início.
+export function deslocarHora(hrInicioAntiga, hrFimAntiga, novaHoraInicio) {
+  const iniAntigo = toMinutos(hrInicioAntiga)
+  const fimAntigo = toMinutos(hrFimAntiga)
+  if (iniAntigo == null || fimAntigo == null) return hrFimAntiga
+  const duracao = fimAntigo - iniAntigo
+  const novoFimMin = novaHoraInicio * 60 + duracao
+  const h = Math.floor(novoFimMin / 60) % 24
+  const m = novoFimMin % 60
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
+}

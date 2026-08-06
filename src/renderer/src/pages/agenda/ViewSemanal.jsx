@@ -1,13 +1,19 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import EventoChip from './EventBadge'
-import { DIAS_SEMANA_CURTO, toISO, eventosDodia } from './utils'
+import { DIAS_SEMANA_CURTO, toISO, eventosDodia, eventosConflitantes } from './utils'
 
-export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpenEdit }) {
+export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpenEdit, draggingId, onDragStart }) {
   const HORAS = Array.from({length:24},(_,i)=>i)
   const scrollRef = useRef(null)
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 7 * 48
   }, [])
+
+  const conflitosPorDia = useMemo(() => {
+    const map = {}
+    weekDays.forEach(d => { map[toISO(d)] = eventosConflitantes(events, toISO(d)) })
+    return map
+  }, [events, weekDays])
 
   return (
     <div style={{ flex:1, display:'flex', flexDirection:'column', minHeight:0 }}>
@@ -49,8 +55,10 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
                   const evH = parseInt(e.hr_inicio.slice(0,2))
                   return evH === h
                 })
+                const conflitantes = conflitosPorDia[iso]
                 return (
                   <div key={`${h}-${di}`} onClick={() => onOpenNew(iso)}
+                    data-agenda-slot={iso} data-agenda-hora={h}
                     style={{
                       height:48, borderLeft:'1px solid var(--bd)', borderBottom:'1px solid var(--bd)',
                       padding:'1px 2px', cursor:'pointer', position:'relative',
@@ -60,7 +68,11 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
                     onMouseLeave={e => e.currentTarget.style.background=isToday?'rgba(255,107,43,.03)':'transparent'}
                   >
                     {dayEvs.map(ev => (
-                      <EventoChip key={ev.id} ev={ev} onClick={onOpenEdit} small/>
+                      <EventoChip key={ev.id} ev={ev} onClick={onOpenEdit} small
+                        conflito={conflitantes.has(ev.id)}
+                        dragging={draggingId===ev.id}
+                        onMouseDown={onDragStart}
+                      />
                     ))}
                   </div>
                 )

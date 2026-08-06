@@ -1,10 +1,11 @@
-import { useRef, useEffect } from 'react'
-import { Plus, Clock, MapPin } from 'lucide-react'
-import { DIAS_SEMANA_LONGO, MESES, toISO, eventosDodia, corEvento, corStatus, nomeStatus } from './utils'
+import { useRef, useEffect, useMemo } from 'react'
+import { Plus, Clock, MapPin, AlertTriangle } from 'lucide-react'
+import { DIAS_SEMANA_LONGO, MESES, toISO, eventosDodia, eventosConflitantes, corEvento, corStatus, nomeStatus } from './utils'
 
-export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit }) {
+export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit, draggingId, onDragStart }) {
   const iso = toISO(date)
   const dayEvs = eventosDodia(events, iso)
+  const conflitantes = useMemo(() => eventosConflitantes(events, iso), [events, iso])
   const HORAS = Array.from({length:24},(_,i)=>i)
   const scrollRef = useRef(null)
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 7*64 }, [])
@@ -57,7 +58,9 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit 
               <div style={{ width:56, flexShrink:0, padding:'4px 8px 0 0', textAlign:'right', fontSize:10, color: isNowH?'var(--or)':'var(--t3)', fontWeight: isNowH?700:400 }}>
                 {String(h).padStart(2,'0')}:00
               </div>
-              <div onClick={() => onOpenNew(iso)} style={{ flex:1, padding:'3px 8px', cursor:'pointer', borderLeft:'1px solid var(--bd)' }}
+              <div onClick={() => onOpenNew(iso)}
+                data-agenda-slot={iso} data-agenda-hora={h}
+                style={{ flex:1, padding:'3px 8px', cursor:'pointer', borderLeft:'1px solid var(--bd)' }}
                 onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
                 onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                 {isNowH && (
@@ -68,10 +71,20 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit 
                 {hEvs.map(ev => {
                   const cor = corEvento(ev)
                   const stCor = corStatus(ev)
+                  const conflito = conflitantes.has(ev.id)
                   return (
                     <div key={ev.id} onClick={e => { e.stopPropagation(); onOpenEdit(ev) }}
-                      style={{ background:cor+'18', border:`1.5px solid ${cor}55`, borderLeft:`4px solid ${cor}`, borderRadius:6, padding:'6px 10px', marginBottom:4, cursor:'pointer' }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:cor }}>{ev.titulo}</div>
+                      onMouseDown={onDragStart ? e => { e.stopPropagation(); onDragStart(ev, e) } : undefined}
+                      style={{
+                        background:cor+'18', border:`1.5px solid ${cor}55`, borderLeft:`4px solid ${cor}`,
+                        outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
+                        borderRadius:6, padding:'6px 10px', marginBottom:4, cursor:'pointer',
+                        opacity: draggingId===ev.id ? 0.4 : 1,
+                      }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:cor, display:'flex', alignItems:'center', gap:5 }}>
+                        {conflito && <AlertTriangle size={11} color="var(--red)"/>}
+                        {ev.titulo}
+                      </div>
                       <div style={{ display:'flex', gap:10, marginTop:3, flexWrap:'wrap' }}>
                         {(ev.hr_inicio||ev.hr_fim) && (
                           <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:3 }}>
