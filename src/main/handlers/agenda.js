@@ -175,4 +175,20 @@ export function registerAgendaHandlers({ ipcMain, wrap, query, queryOne }) {
     if (!row) throw new Error(`Evento #${id} não encontrado.`)
     await query('DELETE FROM agenda_eventos WHERE id=$1', [id])
   }))
+
+  // Exclui este evento e todas as ocorrências futuras da mesma série
+  // (mesmo recorrencia_grupo_id, dt_evento >= dt_evento do evento clicado).
+  ipcMain.handle('agenda:deleteSerieFutura', wrap(async (_, id) => {
+    const row = await queryOne('SELECT id, dt_evento, recorrencia_grupo_id FROM agenda_eventos WHERE id=$1', [id])
+    if (!row) throw new Error(`Evento #${id} não encontrado.`)
+    if (!row.recorrencia_grupo_id) {
+      await query('DELETE FROM agenda_eventos WHERE id=$1', [id])
+      return { removidos: 1 }
+    }
+    const del = await query(
+      `DELETE FROM agenda_eventos WHERE recorrencia_grupo_id=$1 AND dt_evento>=$2 RETURNING id`,
+      [row.recorrencia_grupo_id, row.dt_evento]
+    )
+    return { removidos: del.length }
+  }))
 }

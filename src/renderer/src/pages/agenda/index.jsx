@@ -11,6 +11,7 @@ import ViewLista from './ViewLista'
 import EventoModal from './EventoModal'
 import PainelDia from './PainelDia'
 import GerenciarCategoriasModal from './GerenciarCategoriasModal'
+import ConfirmModal from './ConfirmModal'
 import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays } from './utils'
 
 export default function Agenda({ newTrigger }) {
@@ -31,6 +32,7 @@ export default function Agenda({ newTrigger }) {
   const [form, setForm]           = useState(EMPTY_FORM)
   const [saving, setSaving]       = useState(false)
   const [erro, setErro]           = useState(null)
+  const [confirmState, setConfirmState] = useState(null)
   const prevTrigger = useRef(0)
 
   const weekDays = getWeekDays(currentDate)
@@ -181,13 +183,43 @@ export default function Agenda({ newTrigger }) {
     } finally { setSaving(false) }
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!modal?.id) return
-    if (!confirm(`Excluir o evento "${modal.titulo}"?`)) return
-    const res = await window.api.agenda.delete(modal.id)
-    if (!res.ok) { setErro(res.erro); return }
-    setModal(null)
-    await loadEvents()
+    const isRecorrente = !!modal.recorrencia_grupo_id && modal.recorrencia !== 'nenhuma'
+    if (isRecorrente) {
+      setConfirmState({
+        titulo: 'Excluir evento recorrente',
+        mensagem: `"${modal.titulo}" faz parte de uma série recorrente. O que deseja excluir?`,
+        options: [
+          { label:'Cancelar', value:'cancelar' },
+          { label:'Somente este', value:'este' },
+          { label:'Este e os futuros', value:'serie', primary:true, danger:true },
+        ],
+        onChoose: async (choice) => {
+          setConfirmState(null)
+          if (choice === 'cancelar') return
+          const res = choice === 'serie'
+            ? await window.api.agenda.deleteSerieFutura(modal.id)
+            : await window.api.agenda.delete(modal.id)
+          if (!res.ok) { setErro(res.erro); return }
+          setModal(null)
+          await loadEvents()
+        },
+      })
+      return
+    }
+    setConfirmState({
+      titulo: 'Excluir evento',
+      mensagem: `Excluir o evento "${modal.titulo}"?`,
+      onChoose: async (ok) => {
+        setConfirmState(null)
+        if (!ok) return
+        const res = await window.api.agenda.delete(modal.id)
+        if (!res.ok) { setErro(res.erro); return }
+        setModal(null)
+        await loadEvents()
+      },
+    })
   }
 
   const VIEWS = [
@@ -302,6 +334,16 @@ export default function Agenda({ newTrigger }) {
           categorias={categorias} statuses={statuses}
           onClose={()=>setGerenciarAberto(false)}
           onReload={loadLookups}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          titulo={confirmState.titulo}
+          mensagem={confirmState.mensagem}
+          options={confirmState.options}
+          onChoose={confirmState.onChoose}
+          onClose={()=>setConfirmState(null)}
         />
       )}
     </div>

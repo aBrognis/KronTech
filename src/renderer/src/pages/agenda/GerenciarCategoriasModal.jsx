@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Plus, Trash2, Pencil, Check } from 'lucide-react'
+import ConfirmModal from './ConfirmModal'
 
 const EMPTY_ITEM = { codigo:'', nome:'', cor:'#6366F1', ordem:99 }
 
@@ -9,6 +10,8 @@ export default function GerenciarCategoriasModal({ categorias, statuses, onClose
   const [form, setForm] = useState(EMPTY_ITEM)
   const [erro, setErro] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [confirmItem, setConfirmItem] = useState(null)
+  const [excluirErro, setExcluirErro] = useState(null)
 
   const lista = tab === 'categorias' ? categorias : statuses
 
@@ -46,12 +49,19 @@ export default function GerenciarCategoriasModal({ categorias, statuses, onClose
     } finally { setSaving(false) }
   }
 
-  async function excluir(item) {
-    if (!confirm(`Excluir "${item.nome}"?`)) return
+  function excluir(item) {
+    setExcluirErro(null)
+    setConfirmItem(item)
+  }
+
+  async function confirmarExclusao(ok) {
+    const item = confirmItem
+    setConfirmItem(null)
+    if (!ok || !item) return
     const res = tab === 'categorias'
       ? await window.api.agenda.excluirCategoria(item.id)
       : await window.api.agenda.excluirStatus(item.id)
-    if (!res.ok) { alert(res.erro); return }
+    if (!res.ok) { setExcluirErro(res.erro); return }
     await onReload()
   }
 
@@ -73,6 +83,12 @@ export default function GerenciarCategoriasModal({ categorias, statuses, onClose
               </button>
             ))}
           </div>
+
+          {excluirErro && (
+            <div style={{ fontSize:11, color:'var(--red)', background:'rgba(248,113,113,.1)', border:'1px solid rgba(239,68,68,.4)', borderRadius:8, padding:'8px 12px' }}>
+              {excluirErro}
+            </div>
+          )}
 
           <div style={{ display:'flex', flexDirection:'column', gap:6, maxHeight:280, overflowY:'auto' }}>
             {lista.length===0 && editId!=='new' && (
@@ -119,6 +135,15 @@ export default function GerenciarCategoriasModal({ categorias, statuses, onClose
 
         </div>
       </div>
+
+      {confirmItem && (
+        <ConfirmModal
+          titulo={tab==='categorias' ? 'Excluir categoria' : 'Excluir status'}
+          mensagem={`Excluir "${confirmItem.nome}"?`}
+          onChoose={confirmarExclusao}
+          onClose={()=>setConfirmItem(null)}
+        />
+      )}
     </div>
   )
 }

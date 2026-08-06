@@ -26,6 +26,7 @@ const api = {
     create:            (d)  => ipcRenderer.invoke('agenda:create', d),
     update:            (d)  => ipcRenderer.invoke('agenda:update', d),
     delete:            (id) => ipcRenderer.invoke('agenda:delete', id),
+    deleteSerieFutura: (id) => ipcRenderer.invoke('agenda:deleteSerieFutura', id),
     listarCategorias:  ()   => ipcRenderer.invoke('agenda:listarCategorias'),
     criarCategoria:    (d)  => ipcRenderer.invoke('agenda:criarCategoria', d),
     atualizarCategoria:(d)  => ipcRenderer.invoke('agenda:atualizarCategoria', d),
