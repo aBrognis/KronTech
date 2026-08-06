@@ -1,17 +1,19 @@
 import { useRef, useEffect, useMemo } from 'react'
-import EventoChip from './EventBadge'
-import { DIAS_SEMANA_CURTO, toISO, eventosDodia, eventosConflitantes } from './utils'
+import { AlertTriangle } from 'lucide-react'
+import { DIAS_SEMANA_CURTO, toISO, layoutEventosComHora, corEvento, fmtHora } from './utils'
+
+const PX_HORA = 48
 
 export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpenEdit, draggingId, onDragStart }) {
   const HORAS = Array.from({length:24},(_,i)=>i)
   const scrollRef = useRef(null)
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 7 * 48
+    if (scrollRef.current) scrollRef.current.scrollTop = 7 * PX_HORA
   }, [])
 
-  const conflitosPorDia = useMemo(() => {
+  const layoutPorDia = useMemo(() => {
     const map = {}
-    weekDays.forEach(d => { map[toISO(d)] = eventosConflitantes(events, toISO(d)) })
+    weekDays.forEach(d => { map[toISO(d)] = layoutEventosComHora(events, toISO(d), PX_HORA) })
     return map
   }, [events, weekDays])
 
@@ -39,46 +41,62 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
           )
         })}
       </div>
-      {/* Grade horária */}
+      {/* Grade horária contínua, colunas de dia com posicionamento absoluto por minuto */}
       <div ref={scrollRef} style={{ flex:1, overflowY:'auto', position:'relative' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'52px repeat(7,1fr)' }}>
-          {HORAS.map(h => (
-            <>
-              <div key={`h${h}`} style={{ height:48, borderBottom:'1px solid var(--bd)', padding:'2px 6px 0 0', textAlign:'right', fontSize:9, color:'var(--t3)', flexShrink:0, position:'relative', top:-7 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'52px repeat(7,1fr)', position:'relative', height: 24*PX_HORA }}>
+          {/* Coluna de horas */}
+          <div style={{ position:'relative' }}>
+            {HORAS.map(h => (
+              <div key={h} style={{ position:'absolute', top: h*PX_HORA - 7, right:6, fontSize:9, color:'var(--t3)' }}>
                 {h===0?'':String(h).padStart(2,'0')+':00'}
               </div>
-              {weekDays.map((d,di) => {
-                const iso = toISO(d)
-                const isToday = iso === toISO(today)
-                const dayEvs = eventosDodia(events, iso).filter(e => {
-                  if (!e.hr_inicio) return false
-                  const evH = parseInt(e.hr_inicio.slice(0,2))
-                  return evH === h
-                })
-                const conflitantes = conflitosPorDia[iso]
-                return (
-                  <div key={`${h}-${di}`} onClick={() => onOpenNew(iso)}
+            ))}
+          </div>
+
+          {weekDays.map((d,di) => {
+            const iso = toISO(d)
+            const isToday = iso === toISO(today)
+            const layout = layoutPorDia[iso]
+            return (
+              <div key={di} style={{ position:'relative', borderLeft:'1px solid var(--bd)', background: isToday ? 'rgba(255,107,43,.03)' : 'transparent' }}>
+                {HORAS.map(h => (
+                  <div key={h} onClick={() => onOpenNew(iso)}
                     data-agenda-slot={iso} data-agenda-hora={h}
-                    style={{
-                      height:48, borderLeft:'1px solid var(--bd)', borderBottom:'1px solid var(--bd)',
-                      padding:'1px 2px', cursor:'pointer', position:'relative',
-                      background: isToday ? 'rgba(255,107,43,.03)' : 'transparent',
-                    }}
+                    style={{ position:'absolute', left:0, right:0, top:h*PX_HORA, height:PX_HORA, borderBottom:'1px solid var(--bd)', cursor:'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background='var(--s3)'}
-                    onMouseLeave={e => e.currentTarget.style.background=isToday?'rgba(255,107,43,.03)':'transparent'}
-                  >
-                    {dayEvs.map(ev => (
-                      <EventoChip key={ev.id} ev={ev} onClick={onOpenEdit} small
-                        conflito={conflitantes.has(ev.id)}
-                        dragging={draggingId===ev.id}
-                        onMouseDown={onDragStart}
-                      />
-                    ))}
-                  </div>
-                )
-              })}
-            </>
-          ))}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                  />
+                ))}
+                {layout.map(({ ev, top, height, col, cols }) => {
+                  const cor = corEvento(ev)
+                  const conflito = cols > 1
+                  const larguraPct = 100 / cols
+                  return (
+                    <div key={ev.id}
+                      onClick={e => { e.stopPropagation(); onOpenEdit(ev) }}
+                      onMouseDown={onDragStart ? e => { e.stopPropagation(); onDragStart(ev, e) } : undefined}
+                      style={{
+                        position:'absolute', top, height: Math.max(height-1, 14),
+                        left: `calc(${larguraPct * col}% + ${col>0?2:1}px)`,
+                        width: `calc(${larguraPct}% - ${col<cols-1?4:2}px)`,
+                        background: cor+'22', borderLeft:`2.5px solid ${cor}`,
+                        outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
+                        borderRadius:'0 4px 4px 0', padding:'1px 4px',
+                        fontSize:9, color:cor, cursor: onDragStart ? 'grab' : 'pointer',
+                        opacity: draggingId===ev.id ? 0.4 : 1,
+                        overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+                        display:'flex', alignItems:'center', gap:2, zIndex:1,
+                      }}>
+                      {conflito && <AlertTriangle size={8} color="var(--red)" style={{ flexShrink:0 }}/>}
+                      <span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>
+                        {ev.hr_inicio && !ev.dia_todo ? `${fmtHora(ev.hr_inicio)} ` : ''}{ev.titulo}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

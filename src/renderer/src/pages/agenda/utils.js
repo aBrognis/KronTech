@@ -113,6 +113,52 @@ export function eventosConflitantes(events, isoDate) {
   return conflitantes
 }
 
+// Calcula o layout "lado a lado" (estilo Google Agenda) dos eventos com hora
+// de um dia: cada evento recebe { ev, top, height, col, cols } em pixels/
+// frações, onde `col`/`cols` definem em quantas colunas o grupo sobreposto
+// foi dividido e em qual delas este evento cai. `pxPorHora` é a altura em
+// px de uma hora na grade (ex: 64 na view Dia, 48 na Semana).
+export function layoutEventosComHora(events, isoDate, pxPorHora) {
+  const doDia = eventosDodia(events, isoDate).filter(e => e.hr_inicio && !e.dia_todo)
+  const itens = doDia.map(ev => {
+    const ini = toMinutos(ev.hr_inicio)
+    const fim = ev.hr_fim ? Math.max(toMinutos(ev.hr_fim), ini + 15) : ini + 30
+    return { ev, ini, fim }
+  }).sort((a,b) => a.ini - b.ini || a.fim - b.fim)
+
+  // Agrupa em clusters de eventos mutuamente conectados por overlap (transitivo).
+  const clusters = []
+  for (const item of itens) {
+    let cluster = clusters.find(c => c.some(o => item.ini < o.fim && o.ini < item.fim))
+    if (!cluster) { cluster = []; clusters.push(cluster) }
+    cluster.push(item)
+  }
+
+  const resultado = []
+  for (const cluster of clusters) {
+    // Column packing: cada evento pega a primeira coluna livre (sem overlap
+    // com o que já está nela); cols = nº máximo de colunas usadas no cluster.
+    const colunas = [] // array de arrays de items já alocados por coluna
+    for (const item of cluster) {
+      let colIdx = colunas.findIndex(col => col.every(o => item.ini >= o.fim || o.ini >= item.fim))
+      if (colIdx === -1) { colIdx = colunas.length; colunas.push([]) }
+      colunas[colIdx].push(item)
+      item.col = colIdx
+    }
+    const totalCols = colunas.length
+    for (const item of cluster) {
+      resultado.push({
+        ev: item.ev,
+        top: (item.ini / 60) * pxPorHora,
+        height: Math.max(((item.fim - item.ini) / 60) * pxPorHora, 18),
+        col: item.col,
+        cols: totalCols,
+      })
+    }
+  }
+  return resultado
+}
+
 // Desloca hr_fim mantendo a duração original do evento, a partir de uma nova hora de início.
 export function deslocarHora(hrInicioAntiga, hrFimAntiga, novaHoraInicio) {
   const iniAntigo = toMinutos(hrInicioAntiga)
