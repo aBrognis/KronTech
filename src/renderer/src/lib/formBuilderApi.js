@@ -21,8 +21,8 @@ export const proximoCodigo      = (tbl, col, pad, chars) => api().proximoCodigo(
 export const valoresDistintos   = (tbl, col)     => api().valoresDistintos(tbl, col)
 
 // ── Lookup ────────────────────────────────────────────────────────────────────
-export const listarOpcoesLookup = (tabela, exibir, codigo) =>
-  api().listarOpcoesLookup(tabela, exibir, codigo)
+export const listarOpcoesLookup = (tabela, exibir, codigo, filtro) =>
+  api().listarOpcoesLookup(tabela, exibir, codigo, filtro)
 export const colunasTabela      = (tabela) => api().colunasTabela(tabela)
 
 // ── Módulos ───────────────────────────────────────────────────────────────────

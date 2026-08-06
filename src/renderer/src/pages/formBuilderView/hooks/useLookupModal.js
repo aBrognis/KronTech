@@ -18,7 +18,7 @@ export function useLookupModal({ form, setField }) {
     setLkpModalBusca('')
     setLkpModalSelId(form[campo.nome_campo] ? Number(form[campo.nome_campo]) : null)
     try {
-      const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
+      const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '', cfg.lookupFiltro)
       if (!res.ok) throw new Error(res.erro)
       setLkpModalTodos(res.data)
     } catch { setLkpModalTodos([]) }

@@ -38,7 +38,7 @@ export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSe
   ipcMain.handle('fb:excluirRegistro',  wrap((_, tbl, id)        => fb.excluirRegistro(tbl, id)))
   ipcMain.handle('fb:proximoCodigo',    wrap((_, tbl, campo, padrao, seqChars) => fb.proximoCodigo(tbl, campo, padrao, seqChars)))
   ipcMain.handle('fb:toggleFavorito',      wrap((_, tbl, id, hasTs)      => fb.toggleFavorito(tbl, id, hasTs)))
-  ipcMain.handle('fb:listarOpcoesLookup',  wrap((_, tbl, exibir, codigo) => fb.listarOpcoesLookup(tbl, exibir, codigo)))
+  ipcMain.handle('fb:listarOpcoesLookup',  wrap((_, tbl, exibir, codigo, filtro) => fb.listarOpcoesLookup(tbl, exibir, codigo, filtro)))
   ipcMain.handle('fb:listarColunasTabela', wrap((_, tbl)                 => fb.listarColunasTabela(tbl)))
   ipcMain.handle('fb:valoresDistintos', wrap((_, tbl, coluna) => fb.valoresDistintos(tbl, coluna)))
 

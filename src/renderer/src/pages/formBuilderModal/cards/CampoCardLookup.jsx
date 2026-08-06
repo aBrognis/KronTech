@@ -87,6 +87,30 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               Obrigatório
             </label>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', gap: 8 }}>
+            <div className="form-group">
+              <label className="form-label">Filtrar por (opcional)</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.campo || ''} disabled={salvando || !cfg.lookupTabela}
+                onChange={e => setLkp({ lookupFiltro: e.target.value ? { campo: e.target.value, op: cfg.lookupFiltro?.op || 'ilike', valor: cfg.lookupFiltro?.valor || '' } : null })}>
+                <option value="">— sem filtro —</option>
+                {cols.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Op.</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.op || 'ilike'} disabled={salvando || !cfg.lookupFiltro?.campo}
+                onChange={e => setLkp({ lookupFiltro: { ...cfg.lookupFiltro, op: e.target.value } })}>
+                <option value="ilike">contém</option>
+                <option value="eq">igual a</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Valor</label>
+              <input className="form-input" style={{ height: 32 }} value={cfg.lookupFiltro?.valor || ''} disabled={salvando || !cfg.lookupFiltro?.campo}
+                onChange={e => setLkp({ lookupFiltro: { ...cfg.lookupFiltro, valor: e.target.value } })}
+                placeholder="Ex: F (Fornecedor)" />
+            </div>
+          </div>
           {aviso && <div style={{ fontSize: 11, color: '#fb923c', padding: '6px 10px', background: 'rgba(251,146,60,.08)', borderRadius: 6, border: '1px solid rgba(251,146,60,.25)' }}>
             ⚠ Configure a tabela e o campo a exibir antes de salvar.
           </div>}

@@ -210,7 +210,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         const map = {}
         await Promise.all(lookupCampos.map(async c => {
           const cfg = c.opcoes
-          const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '')
+          const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '', cfg.lookupFiltro)
           map[c.nome_campo] = res.ok ? res.data : []
         }))
         setLookupOpcoes(map)

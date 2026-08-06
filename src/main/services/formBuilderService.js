@@ -471,13 +471,20 @@ export async function toggleFavorito(nomeTabela, id, hasTs = true) {
   )
 }
 
-export async function listarOpcoesLookup(nomeTabela, campoExibir, campoCodigo) {
+export async function listarOpcoesLookup(nomeTabela, campoExibir, campoCodigo, filtro) {
   if (!nomeTabela || !campoExibir) return []
   try {
     const codSelect = campoCodigo ? `, ${col(campoCodigo)} AS codigo` : ''
+    const params = []
+    let whereFiltro = ''
+    if (filtro?.campo && filtro?.valor) {
+      const c = col(filtro.campo)
+      if (filtro.op === 'eq') { params.push(filtro.valor); whereFiltro = ` AND ${c} = $${params.length}` }
+      else { params.push(`%${filtro.valor}%`); whereFiltro = ` AND ${c} ILIKE $${params.length}` }
+    }
     const rows = await query(
-      `SELECT id, ${col(campoExibir)} AS exibir${codSelect} FROM ${tbl(nomeTabela)} WHERE ativo=TRUE ORDER BY ${col(campoExibir)}`,
-      []
+      `SELECT id, ${col(campoExibir)} AS exibir${codSelect} FROM ${tbl(nomeTabela)} WHERE ativo=TRUE${whereFiltro} ORDER BY ${col(campoExibir)}`,
+      params
     )
     return rows.map(r => ({
       id: r.id,
