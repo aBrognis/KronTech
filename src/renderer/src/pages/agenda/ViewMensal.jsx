@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react'
 import EventoChip from './EventBadge'
 import { DIAS_SEMANA_CURTO, buildGrid, eventosDodia } from './utils'
 
-export default function ViewMensal({ year, month, today, events, selectedDay, onSelectDay, onOpenNew, onOpenEdit }) {
+export default function ViewMensal({ year, month, today, events, selectedDay, onSelectDay, onOpenNew, onOpenEdit, draggingId, onDragStart }) {
   const grid = buildGrid(year, month)
   return (
     <div style={{ flex:1, display:'flex', flexDirection:'column', minHeight:0 }}>
@@ -30,6 +30,7 @@ export default function ViewMensal({ year, month, today, events, selectedDay, on
           const dayEvs  = eventosDodia(events, iso)
           return (
             <div key={idx} onClick={() => onSelectDay(day)}
+              data-agenda-slot={iso}
               style={{
                 borderRight:'1px solid var(--bd)', borderBottom:'1px solid var(--bd)',
                 padding:'5px 5px 3px', cursor:'pointer', minHeight:90,
@@ -53,7 +54,8 @@ export default function ViewMensal({ year, month, today, events, selectedDay, on
                 )}
               </div>
               {dayEvs.slice(0,3).map(ev => (
-                <EventoChip key={ev.id} ev={ev} onClick={onOpenEdit} small/>
+                <EventoChip key={ev.id} ev={ev} onClick={onOpenEdit} small
+                  dragging={draggingId===ev.id} onMouseDown={onDragStart}/>
               ))}
               {dayEvs.length>3 && (
                 <div style={{ fontSize:9, color:'var(--t3)', paddingLeft:4 }}>+{dayEvs.length-3} mais</div>

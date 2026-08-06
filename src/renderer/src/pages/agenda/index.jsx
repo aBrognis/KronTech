@@ -12,7 +12,8 @@ import EventoModal from './EventoModal'
 import PainelDia from './PainelDia'
 import GerenciarCategoriasModal from './GerenciarCategoriasModal'
 import ConfirmModal from './ConfirmModal'
-import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays } from './utils'
+import { useDragEvento } from './useDragEvento'
+import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays, deslocarHora } from './utils'
 
 export default function Agenda({ newTrigger }) {
   const today = new Date()
@@ -182,6 +183,30 @@ export default function Agenda({ newTrigger }) {
     } finally { setSaving(false) }
   }
 
+  async function handleDrop(ev, novaIso, novaHora) {
+    const mesmaData = dtToISO(ev.dt_evento) === novaIso
+    if (novaHora === null && mesmaData) return // soltou no mesmo dia (view mensal)
+    if (novaHora !== null) {
+      const horaAtual = ev.hr_inicio ? parseInt(ev.hr_inicio.slice(0,2)) : null
+      if (mesmaData && horaAtual === novaHora) return // soltou na mesma célula
+    }
+    const payload = {
+      id: ev.id, titulo: ev.titulo, categoria_id: ev.categoria_id, status_id: ev.status_id,
+      cliente_id: ev.cliente_id, dt_evento: novaIso,
+      hr_inicio: novaHora !== null ? `${String(novaHora).padStart(2,'0')}:00` : ev.hr_inicio,
+      hr_fim: novaHora !== null && ev.hr_inicio && ev.hr_fim
+        ? deslocarHora(ev.hr_inicio, ev.hr_fim, novaHora)
+        : ev.hr_fim,
+      dia_todo: ev.dia_todo, local: ev.local, descricao: ev.descricao,
+      lembretes: ev.lembretes || [], recorrencia: ev.recorrencia || 'nenhuma',
+    }
+    const res = await window.api.agenda.update(payload)
+    if (!res.ok) { setErro(res.erro); return }
+    await loadEvents()
+  }
+
+  const { draggingId, startDrag } = useDragEvento({ onDrop: handleDrop })
+
   function handleDelete() {
     if (!modal?.id) return
     const isRecorrente = !!modal.recorrencia_grupo_id && modal.recorrencia !== 'nenhuma'
@@ -290,6 +315,7 @@ export default function Agenda({ newTrigger }) {
               selectedDay={selectedDay}
               onSelectDay={day => setSelectedDay(d => d===day?null:day)}
               onOpenNew={openNew} onOpenEdit={openEdit}
+              draggingId={draggingId} onDragStart={startDrag}
             />
             {selectedDay && (
               <PainelDia
@@ -306,6 +332,7 @@ export default function Agenda({ newTrigger }) {
           <ViewSemanal
             weekDays={weekDays} today={today} events={events}
             onOpenNew={openNew} onOpenEdit={openEdit}
+            draggingId={draggingId} onDragStart={startDrag}
           />
         )}
 
@@ -313,6 +340,7 @@ export default function Agenda({ newTrigger }) {
           <ViewDiaria
             date={currentDate} today={today} events={events}
             onOpenNew={openNew} onOpenEdit={openEdit}
+            draggingId={draggingId} onDragStart={startDrag}
           />
         )}
 
