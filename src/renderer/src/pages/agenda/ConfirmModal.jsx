@@ -8,7 +8,7 @@ export default function ConfirmModal({ titulo, mensagem, options, onChoose, onCl
     { label:'OK', value:true, primary:true },
   ]
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" style={{ zIndex:1100 }} onClick={onClose}>
       <div className="modal" style={{ maxWidth:420 }} onClick={e=>e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display:'flex', alignItems:'center', gap:8 }}>

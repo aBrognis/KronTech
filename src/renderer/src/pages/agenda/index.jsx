@@ -198,12 +198,17 @@ export default function Agenda({ newTrigger }) {
         onChoose: async (choice) => {
           setConfirmState(null)
           if (choice === 'cancelar') return
-          const res = choice === 'serie'
-            ? await window.api.agenda.deleteSerieFutura(modal.id)
-            : await window.api.agenda.delete(modal.id)
-          if (!res.ok) { setErro(res.erro); return }
-          setModal(null)
-          await loadEvents()
+          try {
+            const res = choice === 'serie'
+              ? await window.api.agenda.deleteSerieFutura(modal.id)
+              : await window.api.agenda.delete(modal.id)
+            if (!res.ok) { console.error('[agenda] delete falhou:', res.erro); setErro(res.erro); return }
+            setModal(null)
+            await loadEvents()
+          } catch (e) {
+            console.error('[agenda] delete lançou exceção:', e)
+            setErro(String(e?.message || e))
+          }
         },
       })
       return
