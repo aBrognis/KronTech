@@ -11,6 +11,11 @@ export function wrap(fn) {
       const data = await fn(...args)
       return data === undefined ? { ok: true } : { ok: true, data }
     } catch (err) {
+      // 23503 = foreign_key_violation — traduz o erro cru do Postgres para
+      // uma mensagem amigável em vez de expor detalhe técnico ao usuário.
+      if (err.code === '23503') {
+        return { ok: false, erro: 'Não é possível excluir: este registro está sendo usado em outro cadastro.' }
+      }
       return { ok: false, erro: err.message || String(err) }
     }
   }

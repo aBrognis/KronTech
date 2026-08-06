@@ -331,14 +331,24 @@ async function migration1() {
         WHEN 'url'         THEN 'TEXT'
         WHEN 'login'       THEN 'VARCHAR(100)'
         WHEN 'senha'       THEN 'TEXT'
-        WHEN 'documento'   THEN 'VARCHAR(20)'
-        WHEN 'cep'         THEN 'VARCHAR(10)'
+        WHEN 'documento'   THEN 'VARCHAR(18)'
+        WHEN 'cep'         THEN 'VARCHAR(9)'
         WHEN 'select'      THEN 'VARCHAR(200)'
         WHEN 'radio'       THEN 'VARCHAR(200)'
         WHEN 'tags'        THEN 'TEXT'
         WHEN 'avaliacao'   THEN 'SMALLINT'
         WHEN 'codigo_auto' THEN 'VARCHAR(50)'
         WHEN 'lookup'      THEN 'INTEGER'
+        WHEN 'data_hora'   THEN 'TIMESTAMP'
+        WHEN 'hora'        THEN 'TIME'
+        WHEN 'percentual'  THEN 'NUMERIC(6,2)'
+        WHEN 'cpf'         THEN 'VARCHAR(14)'
+        WHEN 'cnpj'        THEN 'VARCHAR(18)'
+        WHEN 'flags'       THEN 'VARCHAR(50)'
+        WHEN 'pasta'       THEN 'VARCHAR(200)'
+        WHEN 'cor'         THEN 'VARCHAR(7)'
+        WHEN 'progresso'   THEN 'SMALLINT'
+        WHEN 'calculo'     THEN 'NUMERIC(15,2)'
         ELSE 'VARCHAR(100)'
       END;
     END; $$
@@ -356,6 +366,8 @@ async function migration1() {
       v_existe         BOOLEAN;
       v_col_favorito   BOOLEAN;
       v_col_timestamps BOOLEAN;
+      v_resultado      TEXT;
+      v_lookup_tabela  TEXT;
     BEGIN
       SELECT nome_tabela,
              COALESCE(col_favorito,   TRUE),
@@ -396,37 +408,64 @@ async function migration1() {
           v_sql := v_sql || '; ';
         END LOOP;
         IF v_sql <> '' THEN EXECUTE v_sql; END IF;
-        RETURN 'ALTERADA: ' || v_nome_tabela;
+        v_resultado := 'ALTERADA: ' || v_nome_tabela;
+      ELSE
+        v_sql := 'CREATE TABLE ' || quote_ident(v_nome_tabela) || ' (' || chr(10)
+              || '  id SERIAL PRIMARY KEY';
+        FOR rec IN SELECT * FROM kr_tela_campos WHERE tela_id=p_tela_id AND ativo=TRUE AND tipo != 'divisor' ORDER BY ordem LOOP
+          IF rec.sequencial THEN
+            v_col := '  ' || quote_ident(rec.nome_campo) || ' VARCHAR(50)';
+          ELSE
+            v_tipo_pg := fn_tipo_para_pg(rec.tipo, rec.tamanho);
+            v_col := '  ' || quote_ident(rec.nome_campo) || ' ' || v_tipo_pg;
+            IF rec.valor_padrao IS NOT NULL THEN v_col := v_col || ' DEFAULT ' || quote_literal(rec.valor_padrao); END IF;
+            IF rec.obrigatorio THEN v_col := v_col || ' NOT NULL'; END IF;
+          END IF;
+          v_sql := v_sql || ',' || chr(10) || v_col;
+        END LOOP;
+        v_sql := v_sql || ',' || chr(10) || '  ativo BOOLEAN DEFAULT TRUE';
+        IF v_col_timestamps THEN
+          v_sql := v_sql || ',' || chr(10) || '  criado_em   TIMESTAMP DEFAULT NOW()'
+                         || ',' || chr(10) || '  alterado_em TIMESTAMP DEFAULT NOW()';
+        END IF;
+        IF v_col_favorito THEN
+          v_sql := v_sql || ',' || chr(10) || '  favorito BOOLEAN DEFAULT FALSE';
+        END IF;
+        v_sql := v_sql || chr(10) || ');';
+        EXECUTE v_sql;
+        FOR rec IN SELECT nome_campo FROM kr_tela_campos WHERE tela_id=p_tela_id AND campo_busca=TRUE AND ativo=TRUE LOOP
+          EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || v_nome_tabela || '_' || rec.nome_campo
+               || ' ON ' || quote_ident(v_nome_tabela) || '(' || quote_ident(rec.nome_campo) || ')';
+        END LOOP;
+        v_resultado := 'CRIADA: ' || v_nome_tabela;
       END IF;
 
-      v_sql := 'CREATE TABLE ' || quote_ident(v_nome_tabela) || ' (' || chr(10)
-            || '  id SERIAL PRIMARY KEY';
-      FOR rec IN SELECT * FROM kr_tela_campos WHERE tela_id=p_tela_id AND ativo=TRUE AND tipo != 'divisor' ORDER BY ordem LOOP
-        IF rec.sequencial THEN
-          v_col := '  ' || quote_ident(rec.nome_campo) || ' VARCHAR(50)';
-        ELSE
-          v_tipo_pg := fn_tipo_para_pg(rec.tipo, rec.tamanho);
-          v_col := '  ' || quote_ident(rec.nome_campo) || ' ' || v_tipo_pg;
-          IF rec.valor_padrao IS NOT NULL THEN v_col := v_col || ' DEFAULT ' || quote_literal(rec.valor_padrao); END IF;
-          IF rec.obrigatorio THEN v_col := v_col || ' NOT NULL'; END IF;
+      -- FK real para campos lookup (roda sempre, tabela nova ou existente).
+      -- ON DELETE RESTRICT: nunca deixa apagar um registro referenciado em
+      -- outro cadastro. Nome de FK determinístico (fk_<tabela>_<campo>) para
+      -- que a EXCEPTION abaixo torne isto idempotente em re-salvamentos.
+      FOR rec IN
+        SELECT c.nome_campo, c.opcoes FROM kr_tela_campos c
+        WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.tipo='lookup'
+      LOOP
+        v_lookup_tabela := rec.opcoes->>'lookupTabela';
+        IF v_lookup_tabela IS NOT NULL AND v_lookup_tabela <> '' THEN
+          IF EXISTS (SELECT 1 FROM information_schema.tables
+                     WHERE table_schema='public' AND table_name=v_lookup_tabela) THEN
+            BEGIN
+              EXECUTE 'ALTER TABLE ' || quote_ident(v_nome_tabela)
+                   || ' ADD CONSTRAINT ' || quote_ident('fk_' || v_nome_tabela || '_' || rec.nome_campo)
+                   || ' FOREIGN KEY (' || quote_ident(rec.nome_campo) || ')'
+                   || ' REFERENCES ' || quote_ident(v_lookup_tabela) || '(id) ON DELETE RESTRICT';
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END;
+          END IF;
+          -- ELSE tabela-alvo ainda não existe: pula silenciosamente, a FK é
+          -- adicionada na próxima vez que esta tela for salva.
         END IF;
-        v_sql := v_sql || ',' || chr(10) || v_col;
       END LOOP;
-      v_sql := v_sql || ',' || chr(10) || '  ativo BOOLEAN DEFAULT TRUE';
-      IF v_col_timestamps THEN
-        v_sql := v_sql || ',' || chr(10) || '  criado_em   TIMESTAMP DEFAULT NOW()'
-                       || ',' || chr(10) || '  alterado_em TIMESTAMP DEFAULT NOW()';
-      END IF;
-      IF v_col_favorito THEN
-        v_sql := v_sql || ',' || chr(10) || '  favorito BOOLEAN DEFAULT FALSE';
-      END IF;
-      v_sql := v_sql || chr(10) || ');';
-      EXECUTE v_sql;
-      FOR rec IN SELECT nome_campo FROM kr_tela_campos WHERE tela_id=p_tela_id AND campo_busca=TRUE AND ativo=TRUE LOOP
-        EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || v_nome_tabela || '_' || rec.nome_campo
-             || ' ON ' || quote_ident(v_nome_tabela) || '(' || quote_ident(rec.nome_campo) || ')';
-      END LOOP;
-      RETURN 'CRIADA: ' || v_nome_tabela;
+
+      RETURN v_resultado;
     END; $$
   `).catch(e => console.warn('[migration] criar função fn_criar_tabela_usuario:', e.message))
 
