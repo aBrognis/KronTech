@@ -237,7 +237,7 @@ export const TEMPLATES = [
       { _key:'av10', nomeCampo:'recomenda',     label:'Recomenda?',     tipo:'radio',       tamanho:10,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:[
         {label:'Sim',valor:'sim',cor:'#4ADE80'},{label:'Não',valor:'nao',cor:'#F87171'},{label:'Talvez',valor:'talvez',cor:'#FBD24C'},
       ], x_pos:607, y_pos:234, w_px:579, h_px:56 },
-      { _key:'av11', nomeCampo:'flags',         label:'Observações',    tipo:'flags',       tamanho:10,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:[
+      { _key:'av11', nomeCampo:'flags',         label:'Checklist de Qualidade', tipo:'flags', tamanho:10, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:[
         {label:'Entrega no prazo',valor:'P'},{label:'Nota fiscal correta',valor:'N'},{label:'Produto conforme',valor:'C'},{label:'Fácil negociação',valor:'F'},
       ], x_pos:14,  y_pos:298, w_px:1172, h_px:56 },
       { _key:'av12', nomeCampo:'observacoes',   label:'Observações',    tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:362, w_px:1172, h_px:90 },
@@ -525,7 +525,7 @@ export const TEMPLATES = [
   // ── Agenda / Relacionamento ────────────────────────────────────────────────
   {
     id: 'agenda_contatos',
-    emoji: '📇', label: 'Agenda de Contatos', categoria: 'Referências',
+    emoji: '📇', label: 'Agenda de Contatos', categoria: 'Cadastros',
     descricao: 'Agenda leve de contatos com telefone, e-mail, empresa, grupo e link para redes sociais.',
     nomeTela: 'Agenda de Contatos', nomeTabela: 'contato_001', icone: 'contact', canvasW: 1200, canvasH: 580,
     campos: [
@@ -818,8 +818,8 @@ export const TEMPLATES = [
         {label:'Baixa',valor:'baixa',cor:'#4ADE80'},{label:'Normal',valor:'normal',cor:'#60A5FA'},{label:'Alta',valor:'alta',cor:'#F87171'},
       ], x_pos:728, y_pos:78,  w_px:458, h_px:56 },
       // Linha 3: DtInicio(280)+14+DtFim(280)+14+Duração(180)+14+Local(390)=1158→+14=1172: last=14+280+14+280+14+180+14=796, 796+390=1186✓ 280+280+180+390=1130+3*14=1172✓
-      { _key:'ac6',  nomeCampo:'dt_inicio',     label:'Data/Hora Início',  tipo:'data',        tamanho:0,   obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:24, opcoes:null,           x_pos:14,  y_pos:142, w_px:280, h_px:56 },
-      { _key:'ac7',  nomeCampo:'dt_fim',        label:'Data/Hora Fim',     tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:24, opcoes:null,           x_pos:308, y_pos:142, w_px:280, h_px:56 },
+      { _key:'ac6',  nomeCampo:'dt_inicio',     label:'Data/Hora Início',  tipo:'data_hora',   tamanho:0,   obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:24, opcoes:null,           x_pos:14,  y_pos:142, w_px:280, h_px:56 },
+      { _key:'ac7',  nomeCampo:'dt_fim',        label:'Data/Hora Fim',     tipo:'data_hora',   tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:24, opcoes:null,           x_pos:308, y_pos:142, w_px:280, h_px:56 },
       { _key:'ac8',  nomeCampo:'duracao',       label:'Duração (min)',     tipo:'numero',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'60',  largura:15, opcoes:null,           x_pos:602, y_pos:142, w_px:180, h_px:56 },
       { _key:'ac9',  nomeCampo:'local',         label:'Local / Link',      tipo:'texto',       tamanho:300, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:33, opcoes:null,           x_pos:796, y_pos:142, w_px:390, h_px:56 },
       { _key:'ac10', nomeCampo:'participantes', label:'Participantes',     tipo:'tags',        tamanho:500, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:206, w_px:1172, h_px:56 },
@@ -1035,7 +1035,7 @@ export const TEMPLATES = [
         {label:'DOC',valor:'doc',cor:'#A78BFA'},{label:'Cartão débito',valor:'cartao_debito',cor:'#FBD24C'},{label:'Cartão crédito',valor:'cartao_credito',cor:'#FB923C'},{label:'Cheque',valor:'cheque',cor:'#94A3B8'},
       ], x_pos:722, y_pos:78,  w_px:464, h_px:56 },
       // Linha 3: Valor(380)+14+SaldoAnterior(380)+14+SaldoAtual(384)=1172→last=14+380+14+380+14=802, 802+384=1186✓
-      { _key:'lx7',  nomeCampo:'valor',         label:'Valor',             tipo:'moeda',       tamanho:0,   obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:32, opcoes:null,           x_pos:14,  y_pos:142, w_px:380, h_px:56 },
+      { _key:'lx7',  nomeCampo:'valor',         label:'Valor (negativo p/ saída)', tipo:'moeda', tamanho:0, obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:32, opcoes:null,           x_pos:14,  y_pos:142, w_px:380, h_px:56 },
       { _key:'lx8',  nomeCampo:'saldo_anterior',label:'Saldo Anterior',    tipo:'moeda',       tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:32, opcoes:null,           x_pos:408, y_pos:142, w_px:380, h_px:56 },
       { _key:'lx9',  nomeCampo:'saldo_atual',   label:'Saldo Atual',       tipo:'calculo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:32, opcoes:{formula:'{saldo_anterior} + {valor}'}, x_pos:802, y_pos:142, w_px:384, h_px:56 },
       { _key:'lx10', nomeCampo:'comprovante',   label:'Comprovante',       tipo:'arquivo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:206, w_px:1172, h_px:90 },
@@ -1082,8 +1082,8 @@ export const TEMPLATES = [
       { _key:'ae1',  nomeCampo:'codigo',      label:'Código',      tipo:'codigo_auto', tamanho:10,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:9,   opcoes:{seqChars:5},   x_pos:14,  y_pos:14,  w_px:110, h_px:56 },
       { _key:'ae2',  nomeCampo:'titulo',      label:'Título',      tipo:'texto',       tamanho:300, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:80,  opcoes:null,           x_pos:138, y_pos:14,  w_px:1048,h_px:56 },
       { _key:'ae3',  nomeCampo:'dt_evento',   label:'Data',        tipo:'data',        tamanho:0,   obrigatorio:true,  sequencial:false, campoBusca:false, valorPadrao:'',    largura:20,  opcoes:null,           x_pos:14,  y_pos:78,  w_px:260, h_px:56 },
-      { _key:'ae4',  nomeCampo:'hr_inicio',   label:'Início',      tipo:'texto',       tamanho:5,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:15,  opcoes:null,           x_pos:288, y_pos:78,  w_px:200, h_px:56 },
-      { _key:'ae5',  nomeCampo:'hr_fim',      label:'Fim',         tipo:'texto',       tamanho:5,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:15,  opcoes:null,           x_pos:502, y_pos:78,  w_px:200, h_px:56 },
+      { _key:'ae4',  nomeCampo:'hr_inicio',   label:'Início',      tipo:'hora',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:15,  opcoes:null,           x_pos:288, y_pos:78,  w_px:200, h_px:56 },
+      { _key:'ae5',  nomeCampo:'hr_fim',      label:'Fim',         tipo:'hora',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:15,  opcoes:null,           x_pos:502, y_pos:78,  w_px:200, h_px:56 },
       { _key:'ae6',  nomeCampo:'dia_todo',    label:'Dia todo',    tipo:'booleano',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'false',largura:15, opcoes:null,           x_pos:716, y_pos:78,  w_px:200, h_px:56 },
       { _key:'ae7',  nomeCampo:'recorrencia', label:'Recorrência', tipo:'select',      tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'nenhuma', largura:20, opcoes:[
         {label:'Nenhuma',valor:'nenhuma',cor:'#94A3B8'},{label:'Diária',valor:'diaria',cor:'#60A5FA'},
