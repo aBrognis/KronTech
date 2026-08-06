@@ -550,6 +550,30 @@ export async function initDb() {
   // Remove constraints problemáticos a cada startup (idempotente)
   await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
 
+  // Tabela de dados demo do Dashboard BI (idempotente, roda sempre)
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_demo_vendas (
+      id          SERIAL PRIMARY KEY,
+      vendedor    VARCHAR(80)   NOT NULL,
+      regiao      VARCHAR(40)   NOT NULL,
+      produto     VARCHAR(80)   NOT NULL,
+      categoria   VARCHAR(40)   NOT NULL,
+      canal       VARCHAR(30)   NOT NULL,
+      status      VARCHAR(20)   NOT NULL,
+      quantidade  INTEGER       NOT NULL DEFAULT 1,
+      valor       NUMERIC(12,2) NOT NULL,
+      custo       NUMERIC(12,2) NOT NULL,
+      avaliacao   SMALLINT,
+      data_venda  DATE          NOT NULL,
+      criado_em   TIMESTAMP     DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_demo_vendas (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_demo_vendas_data ON kr_demo_vendas(data_venda)`).catch(() => {})
+
+  // Comparação com período anterior nos widgets do Dashboard (idempotente)
+  await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS comparar_anterior BOOLEAN DEFAULT FALSE`).catch(e => console.warn('[migration] alter dash_001 comparar_anterior (startup):', e.message))
+  await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS sql_query_anterior TEXT`).catch(e => console.warn('[migration] alter dash_001 sql_query_anterior (startup):', e.message))
+
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()
 }

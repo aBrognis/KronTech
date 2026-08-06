@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
-         Check, X, Search, AlertCircle, Copy, RefreshCw } from 'lucide-react'
+         Check, X, Search, AlertCircle, Copy, RefreshCw, Database } from 'lucide-react'
 import { getAllIcons, LucideIcon, WidgetBody,
-         TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dashShared'
+         TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
 
 function nextPos(widgets) {
   if (!widgets.length) return { x: 0, y: 0 }
@@ -11,7 +11,7 @@ function nextPos(widgets) {
 }
 
 function emptyForm() {
-  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '' }
+  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '' }
 }
 
 export default function DashboardDesigner({ newTrigger, onNavigate }) {
@@ -25,11 +25,42 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [previewRows,   setPreviewRows]   = useState(null)
   const [previewFields, setPreviewFields] = useState([])
   const [previewErr,    setPreviewErr]    = useState(null)
+  const [testingPrev,       setTestingPrev]       = useState(false)
+  const [prevPreviewRows,   setPrevPreviewRows]   = useState(null)
+  const [prevPreviewFields, setPrevPreviewFields] = useState([])
+  const [prevPreviewErr,    setPrevPreviewErr]    = useState(null)
   const [searchIcon,    setSearchIcon]    = useState('')
   const [showGuide,     setShowGuide]     = useState(false)
   const [iconOpen,      setIconOpen]      = useState(false)
+  const [seeding,       setSeeding]       = useState(false)
+  const [clearingDemo,  setClearingDemo]  = useState(false)
+  const [demoMsg,       setDemoMsg]       = useState(null)
   const iconRef  = useRef(null)
   const allIcons = getAllIcons()
+
+  async function handleSeedDemo() {
+    setSeeding(true); setDemoMsg(null)
+    try {
+      const res = await window.api.dash.seedDemo()
+      setDemoMsg(res.ok ? { ok:true, texto:`${res.data.inserted} linhas geradas` } : { ok:false, texto: res.erro })
+    } catch (e) {
+      setDemoMsg({ ok:false, texto: String(e) })
+    } finally {
+      setSeeding(false)
+    }
+  }
+
+  async function handleClearDemo() {
+    setClearingDemo(true); setDemoMsg(null)
+    try {
+      const res = await window.api.dash.clearDemo()
+      setDemoMsg(res.ok ? { ok:true, texto:'Dados demo removidos' } : { ok:false, texto: res.erro })
+    } catch (e) {
+      setDemoMsg({ ok:false, texto: String(e) })
+    } finally {
+      setClearingDemo(false)
+    }
+  }
 
   useEffect(() => {
     window.api.dash.getAll()
@@ -66,16 +97,30 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       cor:          w.cor          || '#FF6B2B',
       intervalo:    w.intervalo    || 0,
       icone_lucide: w.icone_lucide || '',
+      grid_x:       w.grid_x       ?? 0,
+      grid_y:       w.grid_y       ?? 0,
+      grid_w:       w.grid_w       || 3,
+      grid_h:       w.grid_h       || 2,
+      comparar_anterior:  w.comparar_anterior  || false,
+      sql_query_anterior: w.sql_query_anterior || '',
     })
     resetPreview()
     setShowGuide(false)
   }
 
-  function resetPreview() { setPreviewRows(null); setPreviewFields([]); setPreviewErr(null) }
+  function resetPreview() {
+    setPreviewRows(null); setPreviewFields([]); setPreviewErr(null)
+    setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null)
+  }
 
   function f(key, val) {
+    if (key === 'tipo') {
+      const meta = TIPOS.find(t => t.value === val)
+      setForm(prev => ({ ...prev, tipo: val, grid_w: meta?.defW ?? prev.grid_w, grid_h: meta?.defH ?? prev.grid_h }))
+      resetPreview(); setShowGuide(false)
+      return
+    }
     setForm(prev => ({ ...prev, [key]: val }))
-    if (key === 'tipo') { resetPreview(); setShowGuide(false) }
   }
 
   async function handleSave() {
@@ -83,9 +128,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     setSaving(true)
     try {
       if (selected === 'new') {
-        const pos  = nextPos(widgets)
-        const meta = TIPOS.find(t => t.value === form.tipo) || TIPOS[0]
-        const payload = { ...form, grid_x: pos.x, grid_y: pos.y, grid_w: meta.defW, grid_h: meta.defH }
+        const pos = nextPos(widgets)
+        const payload = { ...form, grid_x: pos.x, grid_y: pos.y }
         const res = await window.api.dash.create(payload)
         if (!res.ok) return
         const newW = { ...payload, id: res.data.id }
@@ -95,6 +139,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         await window.api.dash.update({ id: selected, ...form })
         setWidgets(prev => prev.map(w => w.id === selected ? { ...w, ...form } : w))
       }
+      window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setSaving(false)
     }
@@ -107,6 +152,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       await window.api.dash.delete(id)
       setWidgets(prev => prev.filter(w => w.id !== id))
       if (selected === id) { setSelected(null); setForm(emptyForm()); resetPreview() }
+      window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setDeleting(null)
     }
@@ -115,13 +161,27 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   async function handleTestSql() {
     const sql = form.sql_query.trim()
     if (!sql) return
-    setTesting(true); resetPreview()
+    setTesting(true)
+    setPreviewRows(null); setPreviewFields([]); setPreviewErr(null)
     try {
       const res = await window.api.sql.execute(sql)
       if (!res.ok) { setPreviewErr(res.erro.split('\n')[0]) }
       else { setPreviewRows(res.data.rows || []); setPreviewFields(res.data.fields || []) }
     } catch(e) { setPreviewErr(String(e)) }
     finally     { setTesting(false) }
+  }
+
+  async function handleTestSqlAnterior() {
+    const sql = form.sql_query_anterior.trim()
+    if (!sql) return
+    setTestingPrev(true)
+    setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null)
+    try {
+      const res = await window.api.sql.execute(sql)
+      if (!res.ok) { setPrevPreviewErr(res.erro.split('\n')[0]) }
+      else { setPrevPreviewRows(res.data.rows || []); setPrevPreviewFields(res.data.fields || []) }
+    } catch(e) { setPrevPreviewErr(String(e)) }
+    finally     { setTestingPrev(false) }
   }
 
   const iconFiltered = searchIcon
@@ -153,6 +213,36 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
             <Plus size={13} />
             Novo Widget
           </button>
+
+          <div style={{ display:'flex', gap:6, marginTop:8 }}>
+            <button
+              onClick={handleSeedDemo}
+              disabled={seeding || clearingDemo}
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'6px 8px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s2)', color:'var(--t2)', cursor: seeding||clearingDemo ? 'not-allowed' : 'pointer', fontSize:10.5, fontWeight:500, opacity: clearingDemo ? .5 : 1 }}
+            >
+              {seeding
+                ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
+                : <Database size={11} />
+              }
+              Popular demo
+            </button>
+            <button
+              onClick={handleClearDemo}
+              disabled={seeding || clearingDemo}
+              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'6px 8px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s2)', color:'var(--t2)', cursor: seeding||clearingDemo ? 'not-allowed' : 'pointer', fontSize:10.5, fontWeight:500, opacity: seeding ? .5 : 1 }}
+            >
+              {clearingDemo
+                ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
+                : <Trash2 size={11} />
+              }
+              Limpar demo
+            </button>
+          </div>
+          {demoMsg && (
+            <div style={{ marginTop:6, fontSize:10, color: demoMsg.ok ? 'var(--t3)' : '#F87171' }}>
+              {demoMsg.texto}
+            </div>
+          )}
         </div>
 
         <div style={{ flex:1, overflowY:'auto', padding:'6px 8px' }}>
@@ -229,9 +319,9 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                     style={{
                       display:'flex', alignItems:'center', gap:6, padding:'7px 13px',
                       borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:500, transition:'all .12s',
-                      border: active ? '1.5px solid var(--pri)' : '1.5px solid var(--bd)',
-                      background: active ? 'var(--pri)20' : 'var(--s2)',
-                      color: active ? 'var(--pri)' : 'var(--t2)',
+                      border: active ? '1.5px solid var(--or)' : '1.5px solid var(--bd)',
+                      background: active ? 'var(--or3)' : 'var(--s2)',
+                      color: active ? 'var(--or)' : 'var(--t2)',
                     }}
                   >
                     <LucideIcon name={t.icon} size={12} color={active ? undefined : undefined} />
@@ -343,6 +433,42 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
               </div>
             </div>
 
+            {/* ── Tamanho do card ── */}
+            <div style={{ marginBottom:20 }}>
+              <Label>Tamanho do card</Label>
+              <div style={{ display:'flex', alignItems:'center', gap:18 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:11, color:'var(--t3)', width:52 }}>Largura</span>
+                  <input
+                    type="range" min={2} max={12} step={1}
+                    value={form.grid_w}
+                    onChange={e => f('grid_w', Number(e.target.value))}
+                    style={{ width:120 }}
+                  />
+                  <span style={{ fontSize:11, color:'var(--t1)', fontWeight:600, width:44 }}>{form.grid_w}/12</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:11, color:'var(--t3)', width:52 }}>Altura</span>
+                  <input
+                    type="range" min={1} max={8} step={1}
+                    value={form.grid_h}
+                    onChange={e => f('grid_h', Number(e.target.value))}
+                    style={{ width:120 }}
+                  />
+                  <span style={{ fontSize:11, color:'var(--t1)', fontWeight:600 }}>{form.grid_h} lin.</span>
+                </div>
+              </div>
+              <div style={{ marginTop:10, display:'flex', alignItems:'flex-end', height:88, gap:2 }}>
+                <div style={{
+                  width: `${form.grid_w / 12 * 100}%`, maxWidth: 260,
+                  height: Math.min(form.grid_h * 12, 88),
+                  background:'var(--or3)', border:'1.5px solid var(--or)', borderRadius:6,
+                  transition:'width .1s, height .1s',
+                }} />
+                <span style={{ fontSize:10, color:'var(--t3)', marginLeft:8, marginBottom:2 }}>prévia proporcional</span>
+              </div>
+            </div>
+
             {/* ── SQL ── */}
             <div style={{ marginBottom:14 }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
@@ -351,7 +477,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                   {!form.sql_query && sqlHint && (
                     <button
                       onClick={() => f('sql_query', sqlHint)}
-                      style={{ fontSize:10, color:'var(--pri)', background:'none', border:'none', cursor:'pointer' }}
+                      style={{ fontSize:10, color:'var(--or)', background:'none', border:'none', cursor:'pointer' }}
                     >
                       Inserir exemplo
                     </button>
@@ -375,7 +501,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                         <span style={{ fontSize:10, fontWeight:600, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5 }}>{ex.label}</span>
                         <button
                           onClick={() => { f('sql_query', ex.sql); setShowGuide(false) }}
-                          style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:'var(--pri)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
+                          style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:'var(--or)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
                         >
                           <Copy size={9} />Usar este
                         </button>
@@ -389,7 +515,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
               <textarea
                 className="form-textarea"
                 value={form.sql_query}
-                onChange={e => { f('sql_query', e.target.value); resetPreview() }}
+                onChange={e => { f('sql_query', e.target.value); setPreviewRows(null); setPreviewFields([]); setPreviewErr(null) }}
                 placeholder={sqlHint || 'SELECT ...'}
                 spellCheck={false}
                 style={{ width:'100%', height:120, fontFamily:'monospace', fontSize:11, resize:'vertical', lineHeight:1.65 }}
@@ -421,6 +547,60 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
               </div>
             </div>
 
+            {/* ── Comparação com período anterior ── */}
+            <div style={{ marginBottom:20, padding:'12px 14px', border:'1px solid var(--bd)', borderRadius:10, background:'var(--s2)' }}>
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--t1)' }}>
+                <input
+                  type="checkbox"
+                  checked={form.comparar_anterior}
+                  onChange={e => f('comparar_anterior', e.target.checked)}
+                  style={{ width:14, height:14, cursor:'pointer' }}
+                />
+                Comparar com período anterior
+              </label>
+              {form.comparar_anterior && (
+                <div style={{ marginTop:10 }}>
+                  <div style={{ fontSize:10, color:'var(--t3)', marginBottom:6, lineHeight:1.5 }}>
+                    Escreva uma query que retorne o mesmo formato de colunas, referente ao período anterior.
+                    Para gráficos, as categorias devem estar na mesma ordem da query principal.
+                  </div>
+                  <textarea
+                    className="form-textarea"
+                    value={form.sql_query_anterior}
+                    onChange={e => { f('sql_query_anterior', e.target.value); setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null) }}
+                    placeholder="SELECT ... (mesmo formato, período anterior)"
+                    spellCheck={false}
+                    style={{ width:'100%', height:90, fontFamily:'monospace', fontSize:11, resize:'vertical', lineHeight:1.65 }}
+                  />
+                  <div style={{ display:'flex', gap:8, marginTop:7, alignItems:'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleTestSqlAnterior}
+                      disabled={testingPrev || !form.sql_query_anterior.trim()}
+                      style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s3)', color:'var(--t1)', cursor: testingPrev||!form.sql_query_anterior.trim() ? 'not-allowed' : 'pointer', fontSize:11, fontWeight:500, opacity: !form.sql_query_anterior.trim() ? .5 : 1 }}
+                    >
+                      {testingPrev
+                        ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
+                        : <Play size={11} />
+                      }
+                      Testar SQL
+                    </button>
+                    {prevPreviewRows && (
+                      <span style={{ fontSize:10, color:'var(--t3)' }}>
+                        {prevPreviewRows.length} linha{prevPreviewRows.length!==1?'s':''} · {prevPreviewFields.length} coluna{prevPreviewFields.length!==1?'s':''}
+                      </span>
+                    )}
+                    {prevPreviewErr && (
+                      <div style={{ display:'flex', alignItems:'center', gap:4, color:'#F87171', fontSize:10, flex:1, overflow:'hidden' }}>
+                        <AlertCircle size={11} style={{ flexShrink:0 }} />
+                        <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{prevPreviewErr}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* ── Preview ── */}
             {previewRows && previewRows.length > 0 && (
               <div style={{ marginBottom:20 }}>
@@ -430,6 +610,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                     widget={form}
                     rows={previewRows}
                     fields={previewFields}
+                    prevRows={prevPreviewRows}
+                    prevFields={prevPreviewFields}
                     fillHeight={false}
                   />
                 </div>

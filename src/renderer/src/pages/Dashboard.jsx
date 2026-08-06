@@ -3,14 +3,17 @@ import { RefreshCw, Settings2, AlertTriangle, LayoutDashboard } from 'lucide-rea
 import GridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { LucideIcon, WidgetBody, fmtInterval } from './dashShared'
+import { LucideIcon, WidgetBody, fmtInterval } from './dash'
 
 // ── Widget card ───────────────────────────────────────────────────────────────
 
 function Widget({ widget, onRefresh, loading, error }) {
-  const isFillH = ['line','bar','bar_h','pie','scatter','radar'].includes(widget.tipo)
+  const isFillH = ['line','bar','bar_h','pie','scatter','radar',
+    'bar_stacked','line_area','funnel','heatmap','calendar_heatmap','treemap','sunburst',
+    'boxplot','candlestick','graph','tree','sankey','theme_river','pictorial_bar','parallel',
+  ].includes(widget.tipo)
   return (
-    <div className="dash-panel" style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', cursor:'default' }}>
+    <div className="dash-widget-card" style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', cursor:'default' }}>
       <div
         className="widget-drag-handle"
         style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 12px 8px', cursor:'grab', flexShrink:0, borderBottom:'1px solid var(--bd)', background:'var(--s2)', borderRadius:'8px 8px 0 0' }}
@@ -37,14 +40,15 @@ function Widget({ widget, onRefresh, loading, error }) {
         </button>
       </div>
 
-      <div className="dash-panel-body" style={{ flex:1, position:'relative', overflow:'hidden', padding: isFillH ? 0 : '12px 14px' }}>
+      <div className="dash-widget-card-body" style={{ flex:1, position:'relative', overflow:'hidden', padding: isFillH ? 0 : '12px 14px' }}>
         {loading && <div className="skel" style={{ position:'absolute', inset:0, zIndex:2, borderRadius: isFillH ? 0 : 6 }} />}
         {error ? (
           <div style={{ display:'flex', alignItems:'center', gap:6, color:'#F87171', fontSize:11, padding: isFillH ? 12 : 0 }}>
             <AlertTriangle size={13} />{error}
           </div>
         ) : widget._rows ? (
-          <WidgetBody widget={widget} rows={widget._rows} fields={widget._fields} fillHeight={isFillH} />
+          <WidgetBody widget={widget} rows={widget._rows} fields={widget._fields}
+            prevRows={widget._prevRows} prevFields={widget._prevFields} fillHeight={isFillH} />
         ) : null}
       </div>
     </div>
@@ -80,12 +84,21 @@ export default function Dashboard({ onNavigate }) {
     try {
       const sql = (w.sql_query || '').trim()
       if (!sql) return { ...w, _rows: [], _fields: [] }
-      const res = await window.api.sql.execute(sql)
+      const sqlAnterior = w.comparar_anterior ? (w.sql_query_anterior || '').trim() : ''
+      const [res, resPrev] = await Promise.all([
+        window.api.sql.execute(sql),
+        sqlAnterior ? window.api.sql.execute(sqlAnterior).catch(() => null) : Promise.resolve(null),
+      ])
       if (!res.ok) {
         setErrorMap(m => ({ ...m, [w.id]: res.erro.split('\n')[0].slice(0, 80) }))
         return { ...w, _rows: [], _fields: [] }
       }
-      return { ...w, _rows: res.data.rows || [], _fields: res.data.fields || [] }
+      const prevOk = resPrev && resPrev.ok
+      return {
+        ...w, _rows: res.data.rows || [], _fields: res.data.fields || [],
+        _prevRows: prevOk ? (resPrev.data.rows || []) : undefined,
+        _prevFields: prevOk ? (resPrev.data.fields || []) : undefined,
+      }
     } catch (e) {
       setErrorMap(m => ({ ...m, [w.id]: String(e).slice(0, 80) }))
       return { ...w, _rows: [], _fields: [] }
@@ -103,7 +116,7 @@ export default function Dashboard({ onNavigate }) {
       setLayout(filled.map(w => ({
         i: String(w.id),
         x: w.grid_x ?? 0, y: w.grid_y ?? 0,
-        w: w.grid_w ?? 3,  h: w.grid_h ?? 4,
+        w: w.grid_w ?? 3,  h: w.grid_h ?? 2,
         minW: 2, minH: 2,
       })))
     } finally {
@@ -112,6 +125,11 @@ export default function Dashboard({ onNavigate }) {
   }, [loadWidget])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  useEffect(() => {
+    window.addEventListener('dash:widgets-changed', loadAll)
+    return () => window.removeEventListener('dash:widgets-changed', loadAll)
+  }, [loadAll])
 
   // auto-refresh timers
   useEffect(() => {
@@ -201,7 +219,7 @@ export default function Dashboard({ onNavigate }) {
           position:'fixed', right:22, bottom:22, zIndex:100,
           display:'flex', alignItems:'center', gap:7,
           padding:'9px 18px', borderRadius:24,
-          background:'var(--pri)', color:'#fff',
+          background:'var(--or)', color:'#fff',
           border:'none', cursor:'pointer',
           fontSize:12, fontWeight:600, letterSpacing:.3,
           boxShadow:'0 4px 20px rgba(0,0,0,.4)',

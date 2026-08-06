@@ -7,6 +7,7 @@ import { registerJanelaHandlers } from './handlers/janela'
 import { registerSqlHandlers } from './handlers/sql'
 import { registerAgendaHandlers } from './handlers/agenda'
 import { registerDashboardHandlers } from './handlers/dashboard'
+import { registerDashboardDemoHandlers } from './handlers/dashboardDemo'
 import { registerClipboardHandlers } from './handlers/clipboard'
 import { registerEntidadeHandlers } from './handlers/entidade'
 import { registerAuthHandlers } from './handlers/auth'
@@ -20,6 +21,7 @@ export function registerHandlers() {
   registerSqlHandlers({ ipcMain, wrap, query, queryOne, getPool })
   registerAgendaHandlers({ ipcMain, wrap, query, queryOne })
   registerDashboardHandlers({ ipcMain, wrap, query, queryOne })
+  registerDashboardDemoHandlers({ ipcMain, wrap, query })
   registerClipboardHandlers({ ipcMain, wrap })
   registerEntidadeHandlers({ ipcMain })
   registerAuthHandlers({ ipcMain, query, queryOne })

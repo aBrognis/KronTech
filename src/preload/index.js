@@ -32,6 +32,8 @@ const api = {
     update:       (d)       => ipcRenderer.invoke('dash:update', d),
     updateLayout: (layouts) => ipcRenderer.invoke('dash:updateLayout', layouts),
     delete:       (id)      => ipcRenderer.invoke('dash:delete', id),
+    seedDemo:     ()        => ipcRenderer.invoke('dash:seedDemo'),
+    clearDemo:    ()        => ipcRenderer.invoke('dash:clearDemo'),
   },
   arquivos: {
     getAll:     ()    => ipcRenderer.invoke('arquivos:getAll'),
