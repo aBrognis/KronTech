@@ -6,6 +6,7 @@ import { TIPOS, TIPOS_COM_OPCOES, FUNCOES_BOTAO, COR_PALETTE, LARGURAS, TIPO_MET
 import { CampoCardDivisor, CampoCardCopiar, CampoCardFavoritoTimestamps } from './formBuilderModal/cards/CampoCardSimples.jsx'
 import { CampoCardBotao } from './formBuilderModal/cards/CampoCardBotao.jsx'
 import { CampoCardLookup } from './formBuilderModal/cards/CampoCardLookup.jsx'
+import { CampoCardSubGrid } from './formBuilderModal/cards/CampoCardSubGrid.jsx'
 import { CampoCardPadrao } from './formBuilderModal/cards/CampoCardPadrao.jsx'
 import { CampoPainelVazio, CampoPainelFavoritoTimestamps, CampoPainelDivisor, CampoPainelCopiar } from './formBuilderModal/cards/CampoPainelSimples.jsx'
 import { CampoPainelBotao } from './formBuilderModal/cards/CampoPainelBotao.jsx'
@@ -453,6 +454,13 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
       <CampoCardLookup campo={campo} idx={idx} setCampos={setCampos} atualizarCampo={atualizarCampo}
         isExp={isExp} toggleExpand={toggleExpand} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando}
         lookupColMap={lookupColMap} carregarColunasLookup={carregarColunasLookup} telasList={telasList} />
+    )
+
+    // ── SUB_GRID (accordion) ──────────────────────────────────────────────
+    if (campo.tipo === 'sub_grid') return (
+      <CampoCardSubGrid campo={campo} idx={idx} setCampos={setCampos} atualizarCampo={atualizarCampo}
+        isExp={isExp} toggleExpand={toggleExpand} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando}
+        nomeTabelaPai={nomeTabela} />
     )
 
     // ── CAMPO NORMAL (accordion) ──────────────────────────────────────────

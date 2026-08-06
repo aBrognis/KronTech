@@ -25,6 +25,7 @@ import {
 import { InputCPF, InputCNPJ, InputCEP, InputDocumento } from './formBuilderView/inputs/InputMascarado.jsx'
 import { InputArquivoCampo, InputImagem } from './formBuilderView/inputs/InputArquivo.jsx'
 import { InputLookup } from './formBuilderView/inputs/InputLookup.jsx'
+import { InputSubGrid } from './formBuilderView/inputs/InputSubGrid.jsx'
 import {
   InputPasta, InputDataHora, InputHora, InputUrl, InputLogin, InputSenha, InputPadrao,
 } from './formBuilderView/inputs/InputEspecial.jsx'
@@ -33,7 +34,7 @@ import '../App.css'
 
 const POR_PAG = 50
 
-const TIPOS_SISTEMA = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar', 'calculo']
+const TIPOS_SISTEMA = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar', 'calculo', 'sub_grid']
 
 const MODOS_MODAL = [
   { val: 'iniciando', label: 'Iniciando'  },
@@ -243,7 +244,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     }
   }
 
-  function carregarForm(t, reg) {
+  async function carregarForm(t, reg) {
     if (!t || !reg) return
     const f = { _id: reg.id }
     t.campos.filter(c => c.ativo && !TIPOS_SISTEMA.includes(c.tipo)).forEach(c => {
@@ -257,6 +258,13 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       f[c.nome_campo] = v
     })
     if (t.col_favorito !== false) f.favorito = reg.favorito ?? false
+    const camposSubGrid = t.campos.filter(c => c.ativo && c.tipo === 'sub_grid' && c.opcoes?.subGridTabela)
+    if (camposSubGrid.length) {
+      await Promise.all(camposSubGrid.map(async c => {
+        const res = await window.api.formBuilder.listarSubGrid(c.opcoes.subGridTabela, c.opcoes.subGridParentColuna, reg.id)
+        f[c.nome_campo] = res.ok ? res.data : []
+      }))
+    }
     setForm(f)
   }
 
@@ -271,6 +279,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       // flags sempre iniciam vazias — valor_padrao não se aplica a flags
       f[c.nome_campo] = c.tipo === 'flags' ? '' : (c.valor_padrao ?? '')
     })
+    tela.campos.filter(c => c.ativo && c.tipo === 'sub_grid').forEach(c => { f[c.nome_campo] = [] })
     for (const c of tela.campos.filter(c => c.ativo && c.sequencial)) {
       try {
         const res = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars)
@@ -300,20 +309,30 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         dados[c.nome_campo] = form[c.nome_campo] ?? null
       })
       if (tela.col_favorito !== false) dados.favorito = form.favorito ?? false
+
+      const camposSubGrid = tela.campos.filter(c => c.ativo && c.tipo === 'sub_grid' && c.opcoes?.subGridTabela)
+      const subGrids = {}
+      camposSubGrid.forEach(c => { subGrids[c.nome_campo] = form[c.nome_campo] || [] })
+      const temSubGrid = camposSubGrid.length > 0
+
       if (mode === 'new') {
         for (const c of tela.campos.filter(c => c.ativo && c.sequencial)) {
           const resCod = await window.api.formBuilder.proximoCodigo(nomeTabela, c.nome_campo, c.valor_padrao, c.opcoes?.seqChars)
           if (!resCod.ok) throw new Error(resCod.erro)
           dados[c.nome_campo] = resCod.data
         }
-        const resNovo = await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
+        const resNovo = temSubGrid
+          ? await window.api.formBuilder.inserirRegistroComSubGrids(nomeTabela, dados, subGrids)
+          : await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
         if (!resNovo.ok) throw new Error(resNovo.erro)
         const totalPosInsercao = total + 1
         const ultimaPag = Math.max(1, Math.ceil(totalPosInsercao / POR_PAG))
         await carregar(tela, ultimaPag, busca, resNovo.data?.id ?? null)
       } else {
         const idAtual = registros[currentIdx]?.id
-        const resUpd = await window.api.formBuilder.atualizarRegistro(nomeTabela, idAtual, dados, tela.col_timestamps !== false)
+        const resUpd = temSubGrid
+          ? await window.api.formBuilder.atualizarRegistroComSubGrids(nomeTabela, idAtual, dados, subGrids, tela.col_timestamps !== false)
+          : await window.api.formBuilder.atualizarRegistro(nomeTabela, idAtual, dados, tela.col_timestamps !== false)
         if (!resUpd.ok) throw new Error(resUpd.erro)
         await carregar(tela, pagina, busca, idAtual)
       }
@@ -579,6 +598,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     if (campo.tipo === 'percentual') return <InputPercentual campo={campo} val={val} isRO={isRO} saving={saving} inputStyle={inputStyle} setField={setField} />
 
     if (campo.tipo === 'calculo') return <InputCalculo campo={campo} form={form} />
+
+    if (campo.tipo === 'sub_grid') return <InputSubGrid campo={campo} val={val} isRO={isRO} saving={saving} setField={setField} />
 
     if (campo.tipo === 'login') return <InputLogin campo={campo} val={val} isRO={isRO} saving={saving} inputStyle={inputStyle} setField={setField} />
 

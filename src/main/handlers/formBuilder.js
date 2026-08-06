@@ -2,6 +2,7 @@ import { BrowserWindow, dialog } from 'electron'
 import { extname, basename, dirname, relative } from 'path'
 import { statSync } from 'fs'
 import * as fb from '../services/formBuilderService'
+import * as subGrid from '../services/subGridService'
 
 export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSenha, importLog, importCancelFlags, categoriaByExt, scanDir }) {
 
@@ -41,6 +42,18 @@ export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSe
   ipcMain.handle('fb:listarOpcoesLookup',  wrap((_, tbl, exibir, codigo, filtro) => fb.listarOpcoesLookup(tbl, exibir, codigo, filtro)))
   ipcMain.handle('fb:listarColunasTabela', wrap((_, tbl)                 => fb.listarColunasTabela(tbl)))
   ipcMain.handle('fb:valoresDistintos', wrap((_, tbl, coluna) => fb.valoresDistintos(tbl, coluna)))
+
+  // ── Sub-grids (grade de itens filha, ex: parcelas de um título) ────────────
+  ipcMain.handle('fb:inserirRegistroComSubGrids', wrap(async (_, tbl, dados, subGrids) => {
+    const dadosHash = await hashCamposSenha(tbl, dados)
+    return subGrid.inserirRegistroComSubGrids(tbl, dadosHash, subGrids)
+  }))
+  ipcMain.handle('fb:atualizarRegistroComSubGrids', wrap(async (_, tbl, id, d, subGrids, hasTs) => {
+    const dadosHash = await hashCamposSenha(tbl, d)
+    return subGrid.atualizarRegistroComSubGrids(tbl, id, dadosHash, subGrids, hasTs)
+  }))
+  ipcMain.handle('fb:listarSubGrid', wrap((_, subGridTabela, parentColuna, parentId) =>
+    subGrid.listarSubGrid(subGridTabela, parentColuna, parentId)))
 
   // Importação em massa para tabela do FormBuilder — sem cópia de arquivo, INSERT em lote
   ipcMain.handle('fb:importarPasta', async (e, { tbl, mapeamento, hasTs = false, seqChars = 3 }) => {

@@ -33,3 +33,8 @@ export const excluirModulo      = (id)           => api().excluirModulo(id)
 
 // ── Importação ────────────────────────────────────────────────────────────────
 export const importarPasta      = (opts)         => api().importarPasta(opts)
+
+// ── Sub-grids (grade de itens filha) ───────────────────────────────────────────
+export const inserirRegistroComSubGrids   = (tbl, dados, subGrids) => api().inserirRegistroComSubGrids(tbl, dados, subGrids)
+export const atualizarRegistroComSubGrids = (tbl, id, dados, subGrids, ts) => api().atualizarRegistroComSubGrids(tbl, id, dados, subGrids, ts)
+export const listarSubGrid                = (subGridTabela, parentColuna, parentId) => api().listarSubGrid(subGridTabela, parentColuna, parentId)

@@ -17,6 +17,7 @@ export const TIPOS = [
   { valor: 'documento',    label: 'CPF / CNPJ',       pg: 'VARCHAR(18)',   desc: 'Campo unificado: toggle Física (CPF) / Jurídica (CNPJ). Adapta máscara, validação e busca automaticamente.', ex: '000.000.000-00 ou 00.000.000/0000-00' },
   { valor: 'flags',        label: 'Flags',            pg: 'VARCHAR(50)',   desc: 'Checkboxes múltiplos. Cada opção tem um código curto; o valor salvo é a concatenação dos selecionados (ex: CFT).', ex: 'C, F, T → CFT' },
   { valor: 'lookup',       label: 'Lookup (outra tabela)', pg: 'INTEGER',  desc: 'Referência a um registro de outra tela (FK).', ex: 'Banco, Cliente, Produto'  },
+  { valor: 'sub_grid',     label: 'Grade de Itens (Sub-tabela)', pg: null, desc: 'Lista editável de linhas relacionadas, guardada em uma tabela filha própria (parcelas, itens de pedido, etc).', ex: 'Parcelas de um título' },
   // ── Componentes especiais ──────────────────────────────────────────────────
   { valor: 'pasta',        label: 'Pasta (autocomplete)', pg: 'VARCHAR(200)', desc: 'Texto com sugestão automática dos valores já cadastrados nessa coluna. Ideal para categorias/pastas.', ex: 'Contratos, Financeiro' },
   { valor: 'arquivo',      label: 'Arquivo',          pg: 'TEXT',          desc: 'Upload de arquivo qualquer (PDF, DOCX, XLSX...). Salva o caminho no banco.', ex: 'Contrato.pdf, Planilha.xlsx' },
@@ -86,6 +87,7 @@ export const TIPO_META = {
   email:       { short: '@',   color: '#60A5FA' },
   telefone:    { short: 'TEL', color: '#34D399' },
   lookup:      { short: 'LNK', color: '#818CF8' },
+  sub_grid:    { short: 'GRD', color: '#FBD24C' },
   cpf:         { short: 'CPF', color: '#34D399' },
   cnpj:        { short: 'CNPJ',color: '#34D399' },
   cep:         { short: 'CEP', color: '#34D399' },

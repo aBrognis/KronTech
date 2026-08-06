@@ -368,6 +368,12 @@ async function migration1() {
       v_col_timestamps BOOLEAN;
       v_resultado      TEXT;
       v_lookup_tabela  TEXT;
+      v_sg_tabela      TEXT;
+      v_sg_parent_col  TEXT;
+      v_sg_existe      BOOLEAN;
+      v_sg_sql         TEXT;
+      v_sg_campo       JSONB;
+      v_sg_tipo_pg     TEXT;
     BEGIN
       SELECT nome_tabela,
              COALESCE(col_favorito,   TRUE),
@@ -393,7 +399,7 @@ async function migration1() {
 
         FOR rec IN
           SELECT c.* FROM kr_tela_campos c
-          WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.sequencial=FALSE AND c.tipo != 'divisor'
+          WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.sequencial=FALSE AND c.tipo NOT IN ('divisor','sub_grid')
             AND NOT EXISTS (
               SELECT 1 FROM information_schema.columns ic
               WHERE ic.table_schema='public' AND ic.table_name=v_nome_tabela AND ic.column_name=c.nome_campo
@@ -412,7 +418,7 @@ async function migration1() {
       ELSE
         v_sql := 'CREATE TABLE ' || quote_ident(v_nome_tabela) || ' (' || chr(10)
               || '  id SERIAL PRIMARY KEY';
-        FOR rec IN SELECT * FROM kr_tela_campos WHERE tela_id=p_tela_id AND ativo=TRUE AND tipo != 'divisor' ORDER BY ordem LOOP
+        FOR rec IN SELECT * FROM kr_tela_campos WHERE tela_id=p_tela_id AND ativo=TRUE AND tipo NOT IN ('divisor','sub_grid') ORDER BY ordem LOOP
           IF rec.sequencial THEN
             v_col := '  ' || quote_ident(rec.nome_campo) || ' VARCHAR(50)';
           ELSE
@@ -462,6 +468,53 @@ async function migration1() {
           END IF;
           -- ELSE tabela-alvo ainda não existe: pula silenciosamente, a FK é
           -- adicionada na próxima vez que esta tela for salva.
+        END IF;
+      END LOOP;
+
+      -- Tabelas filhas para campos sub_grid (grade de itens editável, ex:
+      -- parcelas de um título). O pai já está garantido acima. Uma tabela
+      -- filha por campo sub_grid, sempre com back-reference NOT NULL +
+      -- ON DELETE CASCADE (única exceção deliberada ao RESTRICT universal:
+      -- linhas filhas não têm existência própria fora do registro pai).
+      FOR rec IN
+        SELECT c.opcoes FROM kr_tela_campos c
+        WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.tipo='sub_grid'
+      LOOP
+        v_sg_tabela     := rec.opcoes->>'subGridTabela';
+        v_sg_parent_col := rec.opcoes->>'subGridParentColuna';
+        IF v_sg_tabela IS NOT NULL AND v_sg_tabela <> '' AND v_sg_parent_col IS NOT NULL AND v_sg_parent_col <> '' THEN
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema='public' AND table_name=v_sg_tabela
+          ) INTO v_sg_existe;
+
+          IF NOT v_sg_existe THEN
+            v_sg_sql := 'CREATE TABLE ' || quote_ident(v_sg_tabela) || ' (' || chr(10)
+                     || '  id SERIAL PRIMARY KEY,' || chr(10)
+                     || '  ' || quote_ident(v_sg_parent_col) || ' INTEGER NOT NULL REFERENCES '
+                             || quote_ident(v_nome_tabela) || '(id) ON DELETE CASCADE';
+            FOR v_sg_campo IN SELECT * FROM jsonb_array_elements(COALESCE(rec.opcoes->'subGridCampos','[]'::jsonb)) LOOP
+              v_sg_tipo_pg := fn_tipo_para_pg(v_sg_campo->>'tipo', (v_sg_campo->>'tamanho')::INTEGER);
+              v_sg_sql := v_sg_sql || ',' || chr(10) || '  ' || quote_ident(v_sg_campo->>'nomeCampo') || ' ' || v_sg_tipo_pg;
+              IF (v_sg_campo->>'obrigatorio')::BOOLEAN THEN v_sg_sql := v_sg_sql || ' NOT NULL'; END IF;
+            END LOOP;
+            v_sg_sql := v_sg_sql || ',' || chr(10) || '  ativo BOOLEAN DEFAULT TRUE'
+                     || ',' || chr(10) || '  criado_em TIMESTAMP DEFAULT NOW()'
+                     || ',' || chr(10) || '  alterado_em TIMESTAMP DEFAULT NOW()'
+                     || chr(10) || ');';
+            EXECUTE v_sg_sql;
+          ELSE
+            FOR v_sg_campo IN SELECT * FROM jsonb_array_elements(COALESCE(rec.opcoes->'subGridCampos','[]'::jsonb)) LOOP
+              IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns ic
+                WHERE ic.table_schema='public' AND ic.table_name=v_sg_tabela AND ic.column_name=(v_sg_campo->>'nomeCampo')
+              ) THEN
+                v_sg_tipo_pg := fn_tipo_para_pg(v_sg_campo->>'tipo', (v_sg_campo->>'tamanho')::INTEGER);
+                EXECUTE 'ALTER TABLE ' || quote_ident(v_sg_tabela) || ' ADD COLUMN IF NOT EXISTS '
+                     || quote_ident(v_sg_campo->>'nomeCampo') || ' ' || v_sg_tipo_pg;
+              END IF;
+            END LOOP;
+          END IF;
         END IF;
       END LOOP;
 

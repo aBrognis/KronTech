@@ -86,6 +86,9 @@ const api = {
     listarColunasTabela: (tbl)                      => ipcRenderer.invoke('fb:listarColunasTabela', tbl),
     valoresDistintos:    (tbl, coluna)              => ipcRenderer.invoke('fb:valoresDistintos', tbl, coluna),
     importarPasta:       (opts)                     => ipcRenderer.invoke('fb:importarPasta', opts),
+    inserirRegistroComSubGrids:   (tbl, dados, subGrids)         => ipcRenderer.invoke('fb:inserirRegistroComSubGrids', tbl, dados, subGrids),
+    atualizarRegistroComSubGrids: (tbl, id, dados, subGrids, hasTs) => ipcRenderer.invoke('fb:atualizarRegistroComSubGrids', tbl, id, dados, subGrids, hasTs),
+    listarSubGrid:                (subGridTabela, parentColuna, parentId) => ipcRenderer.invoke('fb:listarSubGrid', subGridTabela, parentColuna, parentId),
   },
   designer: {
     open: () => ipcRenderer.invoke('designer:open'),
