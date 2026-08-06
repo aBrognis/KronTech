@@ -314,6 +314,11 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       const subGrids = {}
       camposSubGrid.forEach(c => { subGrids[c.nome_campo] = form[c.nome_campo] || [] })
       const temSubGrid = camposSubGrid.length > 0
+      const campoComHook = camposSubGrid.find(c => c.opcoes?.posSaveHook)
+      // Quando há um hook (ex: status calculado pelo servidor a partir das
+      // parcelas), o campo status não deve ser enviado como veio do form —
+      // o hook é quem decide o valor real.
+      if (campoComHook && 'status' in dados) delete dados.status
 
       if (mode === 'new') {
         for (const c of tela.campos.filter(c => c.ativo && c.sequencial)) {
@@ -321,16 +326,20 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
           if (!resCod.ok) throw new Error(resCod.erro)
           dados[c.nome_campo] = resCod.data
         }
-        const resNovo = temSubGrid
-          ? await window.api.formBuilder.inserirRegistroComSubGrids(nomeTabela, dados, subGrids)
-          : await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
+        const resNovo = campoComHook
+          ? await window.api.formBuilder.inserirComSubGridHook(campoComHook.opcoes.posSaveHook, nomeTabela, dados, campoComHook.nome_campo, subGrids[campoComHook.nome_campo])
+          : temSubGrid
+            ? await window.api.formBuilder.inserirRegistroComSubGrids(nomeTabela, dados, subGrids)
+            : await window.api.formBuilder.inserirRegistro(nomeTabela, dados)
         if (!resNovo.ok) throw new Error(resNovo.erro)
         const totalPosInsercao = total + 1
         const ultimaPag = Math.max(1, Math.ceil(totalPosInsercao / POR_PAG))
         await carregar(tela, ultimaPag, busca, resNovo.data?.id ?? null)
       } else {
         const idAtual = registros[currentIdx]?.id
-        const resUpd = temSubGrid
+        const resUpd = campoComHook
+          ? await window.api.formBuilder.atualizarComSubGridHook(campoComHook.opcoes.posSaveHook, nomeTabela, idAtual, dados, campoComHook.nome_campo, subGrids[campoComHook.nome_campo], tela.col_timestamps !== false)
+          : temSubGrid
           ? await window.api.formBuilder.atualizarRegistroComSubGrids(nomeTabela, idAtual, dados, subGrids, tela.col_timestamps !== false)
           : await window.api.formBuilder.atualizarRegistro(nomeTabela, idAtual, dados, tela.col_timestamps !== false)
         if (!resUpd.ok) throw new Error(resUpd.erro)

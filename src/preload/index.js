@@ -89,6 +89,8 @@ const api = {
     inserirRegistroComSubGrids:   (tbl, dados, subGrids)         => ipcRenderer.invoke('fb:inserirRegistroComSubGrids', tbl, dados, subGrids),
     atualizarRegistroComSubGrids: (tbl, id, dados, subGrids, hasTs) => ipcRenderer.invoke('fb:atualizarRegistroComSubGrids', tbl, id, dados, subGrids, hasTs),
     listarSubGrid:                (subGridTabela, parentColuna, parentId) => ipcRenderer.invoke('fb:listarSubGrid', subGridTabela, parentColuna, parentId),
+    inserirComSubGridHook:   (hookNome, tbl, dados, nomeCampoSubGrid, linhas) => ipcRenderer.invoke('fb:inserirComSubGridHook', hookNome, tbl, dados, nomeCampoSubGrid, linhas),
+    atualizarComSubGridHook: (hookNome, tbl, id, dados, nomeCampoSubGrid, linhas, hasTs) => ipcRenderer.invoke('fb:atualizarComSubGridHook', hookNome, tbl, id, dados, nomeCampoSubGrid, linhas, hasTs),
   },
   designer: {
     open: () => ipcRenderer.invoke('designer:open'),

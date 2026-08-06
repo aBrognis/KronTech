@@ -1215,6 +1215,7 @@ export const TEMPLATES = [
         opcoes:{
           subGridTabela:'contas_pagar_001_parcelas',
           subGridParentColuna:'contas_pagar_001_id',
+          posSaveHook:'financeiro.atualizarTitulo',
           subGridCampos:[
             { nomeCampo:'numero_parcela',   label:'Parcela Nº',      tipo:'numero', obrigatorio:true,  ordem:0 },
             { nomeCampo:'valor_parcela',    label:'Valor',           tipo:'moeda',  obrigatorio:true,  ordem:1 },
@@ -1260,6 +1261,7 @@ export const TEMPLATES = [
         opcoes:{
           subGridTabela:'contas_receber_001_parcelas',
           subGridParentColuna:'contas_receber_001_id',
+          posSaveHook:'financeiro.atualizarTitulo',
           subGridCampos:[
             { nomeCampo:'numero_parcela',   label:'Parcela Nº',      tipo:'numero', obrigatorio:true,  ordem:0 },
             { nomeCampo:'valor_parcela',    label:'Valor',           tipo:'moeda',  obrigatorio:true,  ordem:1 },

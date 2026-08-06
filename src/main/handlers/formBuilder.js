@@ -3,6 +3,7 @@ import { extname, basename, dirname, relative } from 'path'
 import { statSync } from 'fs'
 import * as fb from '../services/formBuilderService'
 import * as subGrid from '../services/subGridService'
+import { SUBGRID_HOOKS } from '../services/subGridHooks'
 
 export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSenha, importLog, importCancelFlags, categoriaByExt, scanDir }) {
 
@@ -54,6 +55,20 @@ export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSe
   }))
   ipcMain.handle('fb:listarSubGrid', wrap((_, subGridTabela, parentColuna, parentId) =>
     subGrid.listarSubGrid(subGridTabela, parentColuna, parentId)))
+
+  // ── Hooks pós-save de sub_grid (ex: recálculo de status financeiro) ────────
+  ipcMain.handle('fb:inserirComSubGridHook', wrap(async (_, hookNome, tbl, dados, nomeCampoSubGrid, linhas) => {
+    const hook = SUBGRID_HOOKS[hookNome]
+    if (!hook) throw new Error(`Hook de sub_grid desconhecido: ${hookNome}`)
+    const dadosHash = await hashCamposSenha(tbl, dados)
+    return hook.inserir(tbl, dadosHash, nomeCampoSubGrid, linhas)
+  }))
+  ipcMain.handle('fb:atualizarComSubGridHook', wrap(async (_, hookNome, tbl, id, dados, nomeCampoSubGrid, linhas, hasTs) => {
+    const hook = SUBGRID_HOOKS[hookNome]
+    if (!hook) throw new Error(`Hook de sub_grid desconhecido: ${hookNome}`)
+    const dadosHash = await hashCamposSenha(tbl, dados)
+    return hook.atualizar(tbl, id, dadosHash, nomeCampoSubGrid, linhas, hasTs)
+  }))
 
   // Importação em massa para tabela do FormBuilder — sem cópia de arquivo, INSERT em lote
   ipcMain.handle('fb:importarPasta', async (e, { tbl, mapeamento, hasTs = false, seqChars = 3 }) => {
