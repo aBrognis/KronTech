@@ -25,7 +25,7 @@ export function useDragEvento({ onDrop }) {
       if (!st) return
       if (!st.moved && (Math.abs(e.clientX - st.startX) > 4 || Math.abs(e.clientY - st.startY) > 4)) {
         st.moved = true
-        document.body.style.cursor = 'grabbing'
+        document.body.style.cursor = 'none' // cursor nativo escalado fica borrado em telas de alto DPI; usa DragGhost/DragCursor em HTML no lugar
         setDraggingEvento(st.evento)
       }
       if (st.moved) setMousePos({ x: e.clientX, y: e.clientY })
@@ -37,7 +37,7 @@ export function useDragEvento({ onDrop }) {
       setDraggingId(null)
       setDraggingEvento(null)
       setMousePos(null)
-      document.body.style.cursor = ''
+      document.body.style.cursor = 'auto'
       if (!st?.moved) return // clique simples sem arrastar — não interfere no onClick de abrir o modal
       const el = document.elementFromPoint(e.clientX, e.clientY)
       const target = el?.closest('[data-agenda-slot]')
@@ -53,7 +53,7 @@ export function useDragEvento({ onDrop }) {
     return () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
+      document.body.style.cursor = 'auto'
     }
   }, [draggingId, onDrop])
 

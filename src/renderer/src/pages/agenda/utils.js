@@ -127,11 +127,26 @@ export function layoutEventosComHora(events, isoDate, pxPorHora) {
   }).sort((a,b) => a.ini - b.ini || a.fim - b.fim)
 
   // Agrupa em clusters de eventos mutuamente conectados por overlap (transitivo).
+  // Um item pode sobrepor mais de um cluster já existente (ex: A-B formam um
+  // cluster, e um item C chega sobrepondo só B mas não A — sem merge, C e A
+  // ficariam em clusters separados mesmo fazendo parte da mesma "cadeia" de
+  // conflitos). Por isso, junta (merge) todos os clusters que o item tocar.
   const clusters = []
   for (const item of itens) {
-    let cluster = clusters.find(c => c.some(o => item.ini < o.fim && o.ini < item.fim))
-    if (!cluster) { cluster = []; clusters.push(cluster) }
-    cluster.push(item)
+    const tocados = []
+    for (const c of clusters) {
+      if (c.some(o => item.ini < o.fim && o.ini < item.fim)) tocados.push(c)
+    }
+    if (tocados.length === 0) {
+      clusters.push([item])
+    } else {
+      const [alvo, ...resto] = tocados
+      alvo.push(item)
+      for (const c of resto) {
+        alvo.push(...c)
+        clusters.splice(clusters.indexOf(c), 1)
+      }
+    }
   }
 
   const resultado = []

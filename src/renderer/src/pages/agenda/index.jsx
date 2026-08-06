@@ -13,6 +13,7 @@ import PainelDia from './PainelDia'
 import GerenciarCategoriasModal from './GerenciarCategoriasModal'
 import ConfirmModal from './ConfirmModal'
 import DragGhost from './DragGhost'
+import DragCursor from './DragCursor'
 import { useDragEvento } from './useDragEvento'
 import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays, deslocarHora } from './utils'
 
@@ -381,6 +382,7 @@ export default function Agenda({ newTrigger }) {
       )}
 
       <DragGhost evento={draggingEvento} mousePos={mousePos}/>
+      <DragCursor mousePos={mousePos}/>
     </div>
   )
 }
