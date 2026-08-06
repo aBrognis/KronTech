@@ -120,8 +120,6 @@ async function migration1() {
   await query(`DROP TABLE IF EXISTS rel_001      CASCADE`).catch(e => console.warn('[migration] drop rel_001:', e.message))
 
   // ── Tabelas de sistema ────────────────────────────────────────────────────
-  // Agenda não usa mais tabela fixa — agenda_eventos/agenda_categorias/
-  // agenda_status são criadas via templates do FormBuilder (Designer).
 
   await query(`
     CREATE TABLE IF NOT EXISTS arq_001 (
@@ -636,8 +634,70 @@ export async function initDb() {
   await query(`ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS grupo_fixo VARCHAR(30)`).catch(e => console.warn('[migration] alter kr_telas grupo_fixo (startup):', e.message))
 
   // age_001 foi substituída por agenda_eventos/agenda_categorias/agenda_status
-  // (criadas via templates do Designer); só tinha dados de teste.
+  // (agora tabelas nativas fixas, ver bloco abaixo); só tinha dados de teste.
   await query(`DROP TABLE IF EXISTS age_001 CASCADE`).catch(e => console.warn('[migration] drop age_001 (startup):', e.message))
+
+  // Agenda nativa (tabelas fixas, criadas sempre - idempotente)
+  await query(`
+    CREATE TABLE IF NOT EXISTS agenda_categorias (
+      id          SERIAL PRIMARY KEY,
+      codigo      VARCHAR(10)  DEFAULT '',
+      nome        VARCHAR(150) NOT NULL,
+      cor         VARCHAR(20)  DEFAULT '#6366F1',
+      icone       VARCHAR(50)  DEFAULT '',
+      descricao   TEXT         DEFAULT '',
+      ativo       BOOLEAN      DEFAULT TRUE,
+      criado_em   TIMESTAMP    DEFAULT NOW(),
+      alterado_em TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create agenda_categorias (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS agenda_status (
+      id          SERIAL PRIMARY KEY,
+      codigo      VARCHAR(10)  DEFAULT '',
+      nome        VARCHAR(150) NOT NULL,
+      cor         VARCHAR(20)  DEFAULT '#94A3B8',
+      ordem       INTEGER      DEFAULT 99,
+      icone       VARCHAR(50)  DEFAULT '',
+      ativo       BOOLEAN      DEFAULT TRUE,
+      criado_em   TIMESTAMP    DEFAULT NOW(),
+      alterado_em TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create agenda_status (startup):', e.message))
+
+  // Sequencia nativa para o codigo de agenda_eventos (substitui a sequencia
+  // que hoje so existe porque o Designer a criava para o template FormBuilder).
+  await query(`CREATE SEQUENCE IF NOT EXISTS agenda_eventos_codigo_seq`)
+    .catch(e => console.warn('[migration] create agenda_eventos_codigo_seq (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS agenda_eventos (
+      id                    SERIAL PRIMARY KEY,
+      codigo                VARCHAR(10)  DEFAULT '',
+      titulo                VARCHAR(300) NOT NULL,
+      categoria_id          INTEGER      REFERENCES agenda_categorias(id) ON DELETE SET NULL,
+      status_id             INTEGER      REFERENCES agenda_status(id)     ON DELETE SET NULL,
+      cliente_id            INTEGER,
+      dt_evento             DATE         NOT NULL,
+      hr_inicio             TIME,
+      hr_fim                TIME,
+      dia_todo              BOOLEAN      DEFAULT FALSE,
+      local                 VARCHAR(300) DEFAULT '',
+      descricao             TEXT         DEFAULT '',
+      lembrete              BOOLEAN      DEFAULT FALSE,
+      min_lembrete          INTEGER      DEFAULT 30,
+      recorrencia           VARCHAR(20)  DEFAULT 'nenhuma',
+      recorrencia_grupo_id  INTEGER,
+      recorrencia_fim       DATE,
+      ativo                 BOOLEAN      DEFAULT TRUE,
+      criado_em             TIMESTAMP    DEFAULT NOW(),
+      alterado_em           TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create agenda_eventos (startup):', e.message))
+
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_dt ON agenda_eventos(dt_evento)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_grupo ON agenda_eventos(recorrencia_grupo_id)`).catch(() => {})
 
   // Remove constraints problemáticos a cada startup (idempotente)
   await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
