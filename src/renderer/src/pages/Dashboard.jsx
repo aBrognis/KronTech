@@ -75,7 +75,17 @@ export default function Dashboard({ onNavigate }) {
       if (w) setContainerW(w)
     })
     ro.observe(containerRef.current)
-    return () => ro.disconnect()
+    // Login/maximização da janela terminam depois deste mount — o container pode
+    // reportar uma largura desatualizada na primeira medição do ResizeObserver.
+    // Reafirma a largura real em seguida (raf + timeout) para não depender só
+    // de um evento de resize físico que talvez nunca chegue a disparar de novo.
+    const raf = requestAnimationFrame(() => {
+      if (containerRef.current) setContainerW(containerRef.current.getBoundingClientRect().width)
+    })
+    const t = setTimeout(() => {
+      if (containerRef.current) setContainerW(containerRef.current.getBoundingClientRect().width)
+    }, 300)
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); clearTimeout(t) }
   }, [])
 
   const loadWidget = useCallback(async (w) => {

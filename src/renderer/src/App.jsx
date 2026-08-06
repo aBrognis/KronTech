@@ -6,6 +6,7 @@ import SplashScreen    from './pages/SplashScreen'
 import LoginPage       from './pages/LoginPage'
 import Sidebar         from './components/Sidebar'
 import UpdateBanner    from './components/UpdateBanner'
+import ErrorBoundary   from './components/ErrorBoundary'
 import Dashboard           from './pages/Dashboard'
 import DashboardDesigner  from './pages/DashboardDesigner'
 import Arquivos        from './pages/Arquivos'
@@ -311,7 +312,7 @@ export default function App() {
 
   // Abas: cada aba tem { id, pageId, label }
   const [tabs,        setTabs]        = useState(() => [makeTab('dashboard')])
-  const [activeTabId, setActiveTabId] = useState(1)
+  const [activeTabId, setActiveTabId] = useState(() => tabs[0].id)
 
   // Estado de página fora das abas (formbuilder)
   const [noTabPage,   setNoTabPage]   = useState(null)
@@ -515,7 +516,9 @@ export default function App() {
         {/* ── Conteúdo ── */}
         {noTabPage ? (
           <main className="content" key={noTabPage}>
-            <FormBuilder newTrigger={newTrigger} onTelasUpdated={handleTelasUpdated} />
+            <ErrorBoundary key={noTabPage}>
+              <FormBuilder newTrigger={newTrigger} onTelasUpdated={handleTelasUpdated} />
+            </ErrorBoundary>
           </main>
         ) : (
           <div className="tab-content-area">
@@ -525,7 +528,9 @@ export default function App() {
                 className="content"
                 style={{ display: tab.id === activeTabId ? 'flex' : 'none' }}
               >
-                {renderTabContent(tab.pageId)}
+                <ErrorBoundary key={tab.id}>
+                  {renderTabContent(tab.pageId)}
+                </ErrorBoundary>
               </main>
             ))}
           </div>
