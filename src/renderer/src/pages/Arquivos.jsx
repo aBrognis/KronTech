@@ -422,9 +422,9 @@ export default function Arquivos({ newTrigger }) {
 
         {/* ════ ABA ACESSO ════ */}
         {activeTab === 'acesso' && (
-          <>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 10 }}>
             {/* Painel de filtros, retrátil */}
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', marginBottom: 10, overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', overflow: 'hidden', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
                 onClick={() => setFPainelAberto(a => !a)}>
                 <SlidersHorizontal size={13} color="var(--t2)" />
@@ -487,8 +487,8 @@ export default function Arquivos({ newTrigger }) {
                 <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
             ) : (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)' }}>
-                <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 340px)', minHeight: 100 }}>
+              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 100 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--s1)' }}>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                       <tr>
@@ -539,7 +539,7 @@ export default function Arquivos({ newTrigger }) {
                   onPagina={irParaPaginaAcesso} onPorPagina={mudarPorPaginaAcesso} />
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* ════ ABA CADASTRO ════ */}

@@ -68,14 +68,16 @@ export default function AbaAcesso({
   }
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 10 }}>
       {/* Painel de filtros por coluna + busca global, retrátil */}
-      <PainelFiltros camposData={camposData} fFiltros={fFiltros} setFiltroCampo={setFiltroCampo}
-        fBusca={fBusca} setFBusca={setFBusca}
-        pastasSugest={pastasSugest} lookupOpcoes={lookupOpcoes}
-        limparFiltrosAcesso={limparFiltrosAcesso} onBuscar={handleBuscar} fLoading={fLoading} />
+      <div style={{ flexShrink: 0 }}>
+        <PainelFiltros camposData={camposData} fFiltros={fFiltros} setFiltroCampo={setFiltroCampo}
+          fBusca={fBusca} setFBusca={setFBusca}
+          pastasSugest={pastasSugest} lookupOpcoes={lookupOpcoes}
+          limparFiltrosAcesso={limparFiltrosAcesso} onBuscar={handleBuscar} fLoading={fLoading} />
+      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <button className="btn btn-ghost" style={{ height: 30, padding: '0 10px' }}
           disabled={!totalGeral}
           onClick={handleExportCSV}>
@@ -89,8 +91,8 @@ export default function AbaAcesso({
           <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
         </div>
       ) : (
-        <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)' }}>
-          <div style={{ overflowX: 'auto', maxHeight: 'calc(100vh - 300px)', minHeight: 100 }}>
+        <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 100 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--s1)' }}>
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
@@ -137,6 +139,6 @@ export default function AbaAcesso({
             onPagina={irParaPagina} onPorPagina={mudarPorPagina} />
         </div>
       )}
-    </>
+    </div>
   )
 }

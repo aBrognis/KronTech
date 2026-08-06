@@ -392,7 +392,7 @@
 
 .btn {
   position: relative; overflow: hidden;
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 0 15px; height: 32px;
   border-radius: 8px;
   font-size: 12px; font-family: var(--fb); font-weight: 550;
