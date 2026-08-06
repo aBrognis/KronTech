@@ -9,26 +9,27 @@ const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.ic
 async function check() {
   try {
     const rows = await query(`
-      SELECT id, titulo, hr_inicio, min_lembrete
-      FROM agenda_eventos
-      WHERE lembrete = true
-        AND ativo = true
-        AND dt_evento = CURRENT_DATE
-        AND hr_inicio IS NOT NULL
+      SELECT e.id AS evento_id, e.titulo, e.hr_inicio, l.id AS lembrete_id, l.min_antes
+      FROM agenda_eventos e
+      JOIN agenda_lembretes l ON l.evento_id = e.id
+      WHERE e.ativo = true
+        AND e.dt_evento = CURRENT_DATE
+        AND e.hr_inicio IS NOT NULL
     `)
 
     const now = new Date()
     const nowMin = now.getHours() * 60 + now.getMinutes()
 
     for (const r of rows) {
-      if (notified.has(r.id)) continue
+      const chave = `${r.evento_id}:${r.lembrete_id}`
+      if (notified.has(chave)) continue
       const [h, m] = String(r.hr_inicio).split(':').map(Number)
       const eventMin   = h * 60 + m
-      const triggerMin = eventMin - (r.min_lembrete ?? 30)
+      const triggerMin = eventMin - (r.min_antes ?? 30)
       // Dispara se já passou do horário de aviso E o evento ainda não começou —
       // corrige a perda de lembrete quando o app fica fechado durante a janela.
       if (nowMin >= triggerMin && nowMin < eventMin) {
-        notified.add(r.id)
+        notified.add(chave)
         new Notification({
           title: 'KronTech — Lembrete',
           body:  `${r.titulo} começa em ${Math.max(0, eventMin - nowMin)} minuto(s)`,

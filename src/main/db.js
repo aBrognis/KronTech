@@ -696,6 +696,16 @@ export async function initDb() {
     )
   `).catch(e => console.warn('[migration] create agenda_eventos (startup):', e.message))
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS agenda_lembretes (
+      id          SERIAL PRIMARY KEY,
+      evento_id   INTEGER NOT NULL REFERENCES agenda_eventos(id) ON DELETE CASCADE,
+      min_antes   INTEGER NOT NULL,
+      criado_em   TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create agenda_lembretes (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_lembretes_evento ON agenda_lembretes(evento_id)`).catch(() => {})
+
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_dt ON agenda_eventos(dt_evento)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_grupo ON agenda_eventos(recorrencia_grupo_id)`).catch(() => {})
 
