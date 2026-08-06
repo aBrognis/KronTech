@@ -7,6 +7,8 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 // dezenas/centenas de células (mês: até 42, semana/dia: até 168).
 export function useDragEvento({ onDrop }) {
   const [draggingId, setDraggingId] = useState(null)
+  const [draggingEvento, setDraggingEvento] = useState(null)
+  const [mousePos, setMousePos] = useState(null)
   const dragState = useRef(null)
 
   const startDrag = useCallback((ev, e) => {
@@ -23,13 +25,19 @@ export function useDragEvento({ onDrop }) {
       if (!st) return
       if (!st.moved && (Math.abs(e.clientX - st.startX) > 4 || Math.abs(e.clientY - st.startY) > 4)) {
         st.moved = true
+        document.body.style.cursor = 'grabbing'
+        setDraggingEvento(st.evento)
       }
+      if (st.moved) setMousePos({ x: e.clientX, y: e.clientY })
     }
 
     function onUp(e) {
       const st = dragState.current
       dragState.current = null
       setDraggingId(null)
+      setDraggingEvento(null)
+      setMousePos(null)
+      document.body.style.cursor = ''
       if (!st?.moved) return // clique simples sem arrastar — não interfere no onClick de abrir o modal
       const el = document.elementFromPoint(e.clientX, e.clientY)
       const target = el?.closest('[data-agenda-slot]')
@@ -45,8 +53,9 @@ export function useDragEvento({ onDrop }) {
     return () => {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
     }
   }, [draggingId, onDrop])
 
-  return { draggingId, startDrag }
+  return { draggingId, draggingEvento, mousePos, startDrag }
 }

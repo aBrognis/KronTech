@@ -12,6 +12,7 @@ import EventoModal from './EventoModal'
 import PainelDia from './PainelDia'
 import GerenciarCategoriasModal from './GerenciarCategoriasModal'
 import ConfirmModal from './ConfirmModal'
+import DragGhost from './DragGhost'
 import { useDragEvento } from './useDragEvento'
 import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays, deslocarHora } from './utils'
 
@@ -205,7 +206,7 @@ export default function Agenda({ newTrigger }) {
     await loadEvents()
   }
 
-  const { draggingId, startDrag } = useDragEvento({ onDrop: handleDrop })
+  const { draggingId, draggingEvento, mousePos, startDrag } = useDragEvento({ onDrop: handleDrop })
 
   function handleDelete() {
     if (!modal?.id) return
@@ -378,6 +379,8 @@ export default function Agenda({ newTrigger }) {
           onClose={()=>setConfirmState(null)}
         />
       )}
+
+      <DragGhost evento={draggingEvento} mousePos={mousePos}/>
     </div>
   )
 }

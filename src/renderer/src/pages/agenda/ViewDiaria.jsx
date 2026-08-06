@@ -78,7 +78,8 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
                       style={{
                         background:cor+'18', border:`1.5px solid ${cor}55`, borderLeft:`4px solid ${cor}`,
                         outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
-                        borderRadius:6, padding:'6px 10px', marginBottom:4, cursor:'pointer',
+                        borderRadius:6, padding:'6px 10px', marginBottom:4,
+                        cursor: onDragStart ? 'grab' : 'pointer',
                         opacity: draggingId===ev.id ? 0.4 : 1,
                       }}>
                       <div style={{ fontSize:12, fontWeight:700, color:cor, display:'flex', alignItems:'center', gap:5 }}>
