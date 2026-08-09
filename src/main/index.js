@@ -120,11 +120,14 @@ if (process.platform === 'win32') {
 // como se fosse o caminho do app a carregar. Em produção (app empacotado) o
 // executável já é o app inteiro, então não precisa desses argumentos extras.
 if (!app.isPackaged) {
-  // electron-vite/electron sempre é invocado a partir da raiz do projeto
-  // (onde está o package.json com "main"), então process.cwd() é o caminho
-  // estável a passar — mais confiável que tentar derivar de process.argv[1],
-  // que varia conforme a forma exata como o electron-vite invoca o binário.
-  app.setAsDefaultProtocolClient('krontech', process.execPath, [process.cwd()])
+  // __dirname aqui é <raiz do projeto>/out/main — subir duas pastas dá a
+  // raiz do projeto (onde está o package.json com "main"), que é o
+  // argumento que "electron <caminho>" espera. process.cwd() foi tentado
+  // antes mas não é confiável: o diretório de trabalho no momento em que
+  // o Windows relança o processo pode não ser a raiz do projeto (por isso
+  // o registro anterior apontou para C:\windows\system32).
+  const projectRoot = join(__dirname, '../../')
+  app.setAsDefaultProtocolClient('krontech', process.execPath, [projectRoot])
 } else {
   app.setAsDefaultProtocolClient('krontech')
 }
