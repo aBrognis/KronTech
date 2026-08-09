@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react'
 import { fmtHora, corEvento } from './utils'
 
-export default function EventoChip({ ev, onClick, small, conflito, dragging, onMouseDown }) {
+export default function EventoChip({ ev, onClick, small, conflito, onMouseDown }) {
   const cor = corEvento(ev)
   return (
     <div onClick={e => { e.stopPropagation(); onClick(ev) }}
@@ -14,7 +14,6 @@ export default function EventoChip({ ev, onClick, small, conflito, dragging, onM
         overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
         cursor: onMouseDown ? 'grab' : 'pointer', userSelect:'none',
         transition:'background .12s',
-        opacity: dragging ? 0.4 : 1,
         display:'flex', alignItems:'center', gap:3,
       }}
       onMouseEnter={e => e.currentTarget.style.background = cor+'44'}

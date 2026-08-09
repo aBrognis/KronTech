@@ -605,6 +605,20 @@ html.light .form-textarea:disabled {
 }
 
 /* ============================================================
+   AGENDA — drag-and-drop
+   ============================================================ */
+
+.agenda-drag-placeholder {
+  border: 1.5px dashed var(--bd2, var(--bd));
+  background: var(--s2) !important;
+}
+.agenda-drop-target {
+  outline: 2px solid var(--or);
+  outline-offset: -2px;
+  background: rgba(255,107,43,.08) !important;
+}
+
+/* ============================================================
    MODAL — visual moderno
    ============================================================ */
 

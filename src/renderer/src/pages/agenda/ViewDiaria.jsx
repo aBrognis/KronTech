@@ -4,7 +4,7 @@ import { DIAS_SEMANA_LONGO, MESES, toISO, eventosDodia, layoutEventosComHora, co
 
 const PX_HORA = 64
 
-export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit, draggingId, onDragStart }) {
+export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit, onDragStart }) {
   const iso = toISO(date)
   const dayEvs = eventosDodia(events, iso)
   const layout = useMemo(() => layoutEventosComHora(events, iso, PX_HORA), [events, iso])
@@ -93,7 +93,6 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
                     outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
                     borderRadius:6, padding: height>40 ? '6px 8px' : '2px 8px',
                     cursor: onDragStart ? 'grab' : 'pointer',
-                    opacity: draggingId===ev.id ? 0.4 : 1,
                     overflow:'hidden', zIndex:1,
                   }}>
                   <div style={{ fontSize: height>40?12:11, fontWeight:700, color:cor, display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>

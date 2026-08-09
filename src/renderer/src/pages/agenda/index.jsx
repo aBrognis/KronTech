@@ -12,9 +12,7 @@ import EventoModal from './EventoModal'
 import PainelDia from './PainelDia'
 import GerenciarCategoriasModal from './GerenciarCategoriasModal'
 import ConfirmModal from './ConfirmModal'
-import DragGhost from './DragGhost'
-import DragCursor from './DragCursor'
-import { useDragEvento } from './useDragEvento'
+import { createDragEngine } from './dragEngine'
 import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays, deslocarHora } from './utils'
 
 export default function Agenda({ newTrigger }) {
@@ -207,7 +205,9 @@ export default function Agenda({ newTrigger }) {
     await loadEvents()
   }
 
-  const { draggingId, draggingEvento, mousePos, startDrag } = useDragEvento({ onDrop: handleDrop })
+  const dragEngineRef = useRef(null)
+  if (!dragEngineRef.current) dragEngineRef.current = createDragEngine({ onDrop: handleDrop })
+  const startDrag = dragEngineRef.current.start
 
   function handleDelete() {
     if (!modal?.id) return
@@ -317,7 +317,7 @@ export default function Agenda({ newTrigger }) {
               selectedDay={selectedDay}
               onSelectDay={day => setSelectedDay(d => d===day?null:day)}
               onOpenNew={openNew} onOpenEdit={openEdit}
-              draggingId={draggingId} onDragStart={startDrag}
+              onDragStart={startDrag}
             />
             {selectedDay && (
               <PainelDia
@@ -334,7 +334,7 @@ export default function Agenda({ newTrigger }) {
           <ViewSemanal
             weekDays={weekDays} today={today} events={events}
             onOpenNew={openNew} onOpenEdit={openEdit}
-            draggingId={draggingId} onDragStart={startDrag}
+            onDragStart={startDrag}
           />
         )}
 
@@ -342,7 +342,7 @@ export default function Agenda({ newTrigger }) {
           <ViewDiaria
             date={currentDate} today={today} events={events}
             onOpenNew={openNew} onOpenEdit={openEdit}
-            draggingId={draggingId} onDragStart={startDrag}
+            onDragStart={startDrag}
           />
         )}
 
@@ -380,9 +380,6 @@ export default function Agenda({ newTrigger }) {
           onClose={()=>setConfirmState(null)}
         />
       )}
-
-      <DragGhost evento={draggingEvento} mousePos={mousePos}/>
-      <DragCursor mousePos={mousePos}/>
     </div>
   )
 }

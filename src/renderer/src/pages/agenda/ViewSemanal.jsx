@@ -4,7 +4,7 @@ import { DIAS_SEMANA_CURTO, toISO, layoutEventosComHora, corEvento, fmtHora } fr
 
 const PX_HORA = 48
 
-export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpenEdit, draggingId, onDragStart }) {
+export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpenEdit, onDragStart }) {
   const HORAS = Array.from({length:24},(_,i)=>i)
   const scrollRef = useRef(null)
   useEffect(() => {
@@ -83,7 +83,6 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
                         outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
                         borderRadius:'0 4px 4px 0', padding:'1px 4px',
                         fontSize:9, color:cor, cursor: onDragStart ? 'grab' : 'pointer',
-                        opacity: draggingId===ev.id ? 0.4 : 1,
                         overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
                         display:'flex', alignItems:'center', gap:2, zIndex:1,
                       }}>
