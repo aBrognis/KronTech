@@ -184,11 +184,6 @@ export default function Agenda({ newTrigger }) {
   }
 
   async function handleDrop(ev, novaIso, novaHora) {
-    // O dragEngine sempre remove o nó DOM do card manipulado ao soltar (evita
-    // vazamento de estilo inline entre arrastes); por isso este handler
-    // SEMPRE precisa terminar recarregando os eventos, mesmo quando não há
-    // mudança real ou o update falha — senão o card fica ausente da tela até
-    // a próxima recarga por outro motivo (era o bug do compromisso sumindo).
     if (novaIso === null) { await loadEvents(); return } // soltou fora de qualquer célula válida
     const mesmaData = dtToISO(ev.dt_evento) === novaIso
     const mesmaHora = novaHora === null
