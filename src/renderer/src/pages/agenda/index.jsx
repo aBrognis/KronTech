@@ -12,6 +12,7 @@ import EventoModal from './EventoModal'
 import PainelDia from './PainelDia'
 import GerenciarCategoriasModal from './GerenciarCategoriasModal'
 import ConfirmModal from './ConfirmModal'
+import ConfirmarStatusModal from './ConfirmarStatusModal'
 import { createDragEngine } from './dragEngine'
 import { EMPTY_FORM, MESES, MESES_CURTO, DIAS_SEMANA_LONGO, toISO, dtToISO, fmtHora, getWeekDays, deslocarHora } from './utils'
 
@@ -34,6 +35,7 @@ export default function Agenda({ newTrigger }) {
   const [saving, setSaving]       = useState(false)
   const [erro, setErro]           = useState(null)
   const [confirmState, setConfirmState] = useState(null)
+  const [statusModalEvento, setStatusModalEvento] = useState(null)
   const prevTrigger = useRef(0)
 
   const weekDays = getWeekDays(currentDate)
@@ -54,6 +56,23 @@ export default function Agenda({ newTrigger }) {
       openNew(toISO(today))
     }
   }, [newTrigger])
+
+  // Atualizações de status vindas do clique em botão da notificação (ou
+  // automação de atraso). acao='abrir' = clique no corpo (fora dos botões)
+  // -> abre o modal de confirmação manual; demais ações só recarregam a
+  // lista, já resolvidas pelo processo principal.
+  useEffect(() => {
+    const unsubscribe = window.api.agenda.onStatusAtualizado(async ({ acao, eventoId }) => {
+      if (acao === 'abrir') {
+        const res = await window.api.agenda.getByRange({ inicio: toISO(today), fim: toISO(today) })
+        const ev = res.ok ? (res.data || []).find(e => e.id === eventoId) : null
+        if (ev) setStatusModalEvento(ev)
+        return
+      }
+      await loadEvents()
+    })
+    return unsubscribe
+  }, [])
 
   async function loadLookups() {
     setLookupErro(null)
@@ -254,6 +273,11 @@ export default function Agenda({ newTrigger }) {
     })
   }
 
+  function handleConfirmarStatus(ev) {
+    setModal(null)
+    setStatusModalEvento(ev)
+  }
+
   const VIEWS = [
     { id:'mensal',  icon:<Calendar size={14}/>,     label:'Mês' },
     { id:'semanal', icon:<CalendarDays size={14}/>,  label:'Semana' },
@@ -361,6 +385,7 @@ export default function Agenda({ newTrigger }) {
           modal={modal} form={form} setForm={setForm}
           categorias={categorias} statuses={statuses} clientes={clientes}
           saving={saving} erro={erro} onSave={handleSave} onDelete={handleDelete} onClose={()=>setModal(null)}
+          onConfirmarStatus={handleConfirmarStatus}
         />
       )}
 
@@ -379,6 +404,14 @@ export default function Agenda({ newTrigger }) {
           options={confirmState.options}
           onChoose={confirmState.onChoose}
           onClose={()=>setConfirmState(null)}
+        />
+      )}
+
+      {statusModalEvento && (
+        <ConfirmarStatusModal
+          evento={statusModalEvento}
+          onClose={()=>setStatusModalEvento(null)}
+          onConfirmar={async ()=>{ setStatusModalEvento(null); await loadEvents() }}
         />
       )}
     </div>

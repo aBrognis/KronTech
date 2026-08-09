@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react'
-import { AlertTriangle } from 'lucide-react'
-import { DIAS_SEMANA_CURTO, toISO, layoutEventosComHora, corEvento, fmtHora } from './utils'
+import { AlertTriangle, Clock3 } from 'lucide-react'
+import { DIAS_SEMANA_CURTO, toISO, layoutEventosComHora, corEvento, corStatusAuto, fmtHora } from './utils'
 
 const PX_HORA = 48
 
@@ -70,6 +70,8 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
                 {layout.map(({ ev, top, height, col, cols }) => {
                   const cor = corEvento(ev)
                   const conflito = cols > 1
+                  const atrasado = ev.status_auto === 'atrasado'
+                  const corAtraso = corStatusAuto(ev)
                   const larguraPct = 100 / cols
                   return (
                     <div key={ev.id}
@@ -80,13 +82,15 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
                         left: `calc(${larguraPct * col}% + ${col>0?2:1}px)`,
                         width: `calc(${larguraPct}% - ${col<cols-1?4:2}px)`,
                         background: cor+'22', borderLeft:`2.5px solid ${cor}`,
-                        outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
+                        outline: atrasado ? `2px dashed ${corAtraso}` : conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
                         borderRadius:'0 4px 4px 0', padding:'1px 4px',
                         fontSize:9, color:cor, cursor: onDragStart ? 'grab' : 'pointer',
                         overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
                         display:'flex', alignItems:'center', gap:2, zIndex:1,
                       }}>
-                      {conflito && <AlertTriangle size={8} color="var(--red)" style={{ flexShrink:0 }}/>}
+                      {atrasado
+                        ? <Clock3 size={8} color={corAtraso} style={{ flexShrink:0 }}/>
+                        : conflito && <AlertTriangle size={8} color="var(--red)" style={{ flexShrink:0 }}/>}
                       <span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>
                         {ev.hr_inicio && !ev.dia_todo ? `${fmtHora(ev.hr_inicio)} ` : ''}{ev.titulo}
                       </span>

@@ -1,9 +1,10 @@
-import { X, Bell, Trash2 } from 'lucide-react'
-import { RECORRENCIAS, MIN_OPTIONS } from './utils'
+import { X, Bell, Trash2, Clock3 } from 'lucide-react'
+import { RECORRENCIAS, MIN_OPTIONS, STATUS_AUTO_LABEL, corStatusAuto } from './utils'
 
-export default function EventoModal({ modal, form, setForm, categorias, statuses, clientes, saving, erro, onSave, onDelete, onClose }) {
+export default function EventoModal({ modal, form, setForm, categorias, statuses, clientes, saving, erro, onSave, onDelete, onClose, onConfirmarStatus }) {
   const isNew = modal === 'new'
   function set(k,v) { setForm(f=>({...f,[k]:v})) }
+  const mostrarStatusAuto = !isNew && modal.status_auto && !['agendado','concluido','cancelado'].includes(modal.status_auto)
 
   const lembretes = form.lembretes || []
   const opcoesDisponiveis = MIN_OPTIONS.filter(o => !lembretes.includes(o.value))
@@ -141,6 +142,20 @@ export default function EventoModal({ modal, form, setForm, categorias, statuses
               </div>
             )}
           </div>
+
+          {mostrarStatusAuto && (
+            <div style={{
+              display:'flex', alignItems:'center', justifyContent:'space-between', gap:8,
+              background:'var(--s2)', border:`1px solid ${corStatusAuto(modal)}55`, borderRadius:8, padding:'8px 12px',
+            }}>
+              <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color: corStatusAuto(modal) }}>
+                <Clock3 size={13}/> {STATUS_AUTO_LABEL[modal.status_auto]}
+              </span>
+              <button type="button" className="btn btn-ghost" style={{ height:26, fontSize:11 }} onClick={()=>onConfirmarStatus(modal)}>
+                Confirmar status
+              </button>
+            </div>
+          )}
 
           {erro && (
             <div style={{ background:'rgba(248,113,113,.1)', border:'1px solid rgba(239,68,68,.4)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--red)' }}>

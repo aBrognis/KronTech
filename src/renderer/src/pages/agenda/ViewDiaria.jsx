@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react'
-import { Plus, Clock, MapPin, AlertTriangle } from 'lucide-react'
-import { DIAS_SEMANA_LONGO, MESES, toISO, eventosDodia, layoutEventosComHora, corEvento, corStatus, nomeStatus } from './utils'
+import { Plus, Clock, MapPin, AlertTriangle, Clock3 } from 'lucide-react'
+import { DIAS_SEMANA_LONGO, MESES, toISO, eventosDodia, layoutEventosComHora, corEvento, corStatus, corStatusAuto, nomeStatus } from './utils'
 
 const PX_HORA = 64
 
@@ -85,6 +85,8 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
               const cor = corEvento(ev)
               const stCor = corStatus(ev)
               const conflito = cols > 1
+              const atrasado = ev.status_auto === 'atrasado'
+              const corAtraso = corStatusAuto(ev)
               const larguraPct = 100 / cols
               return (
                 <div key={ev.id}
@@ -96,13 +98,15 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
                     width: `calc(${larguraPct}% - ${col<cols-1?6:3}px)`,
                     pointerEvents:'auto',
                     background:cor+'18', border:`1.5px solid ${cor}55`, borderLeft:`4px solid ${cor}`,
-                    outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
+                    outline: atrasado ? `2px dashed ${corAtraso}` : conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
                     borderRadius:6, padding: height>40 ? '6px 8px' : '2px 8px',
                     cursor: onDragStart ? 'grab' : 'pointer',
                     overflow:'hidden', zIndex:1,
                   }}>
                   <div style={{ fontSize: height>40?12:11, fontWeight:700, color:cor, display:'flex', alignItems:'center', gap:5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                    {conflito && <AlertTriangle size={10} color="var(--red)" style={{ flexShrink:0 }}/>}
+                    {atrasado
+                      ? <Clock3 size={10} color={corAtraso} style={{ flexShrink:0 }}/>
+                      : conflito && <AlertTriangle size={10} color="var(--red)" style={{ flexShrink:0 }}/>}
                     <span style={{ overflow:'hidden', textOverflow:'ellipsis' }}>{ev.titulo}</span>
                   </div>
                   {height > 34 && (

@@ -89,6 +89,29 @@ export function nomeCliente(ev) {
   return ev.cliente_nome || '—'
 }
 
+export const STATUS_AUTO_LABEL = {
+  agendado:       'Agendado',
+  em_andamento:   'Em andamento',
+  concluido:      'Concluído',
+  atrasado:       'Atrasado',
+  nao_compareceu: 'Não compareceu',
+  cancelado:      'Cancelado',
+}
+
+// Cor de destaque do status automático de ciclo de vida (controlado pelo
+// sistema, separado de status_cor que é livre/customizável pelo usuário).
+// null = 'agendado', sem destaque especial.
+export function corStatusAuto(ev) {
+  switch (ev.status_auto) {
+    case 'atrasado':       return '#EF4444'
+    case 'em_andamento':   return '#22C55E'
+    case 'concluido':      return '#6B7280'
+    case 'nao_compareceu': return '#F59E0B'
+    case 'cancelado':      return '#6B7280'
+    default:                return null
+  }
+}
+
 export function toMinutos(hhmmss) {
   if (!hhmmss) return null
   const [h, m] = hhmmss.split(':').map(Number)

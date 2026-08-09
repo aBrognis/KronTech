@@ -1,5 +1,5 @@
-import { Plus, X, Clock, MapPin } from 'lucide-react'
-import { DIAS_SEMANA_LONGO, MESES_CURTO, eventosDodia, corEvento, corStatus, nomeCategoria, nomeStatus, nomeCliente } from './utils'
+import { Plus, X, Clock, MapPin, Clock3 } from 'lucide-react'
+import { DIAS_SEMANA_LONGO, MESES_CURTO, eventosDodia, corEvento, corStatus, corStatusAuto, nomeCategoria, nomeStatus, nomeCliente } from './utils'
 
 export default function PainelDia({ year, month, day, events, onOpenNew, onOpenEdit, onClose }) {
   const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
@@ -28,12 +28,21 @@ export default function PainelDia({ year, month, day, events, onOpenNew, onOpenE
         ) : dayEvs.map(ev => {
           const cor = corEvento(ev)
           const stCor = corStatus(ev)
+          const atrasado = ev.status_auto === 'atrasado'
+          const corAtraso = corStatusAuto(ev)
           return (
             <div key={ev.id} onClick={()=>onOpenEdit(ev)}
-              style={{ background:'var(--s2)', border:`1px solid var(--bd)`, borderLeft:`3px solid ${cor}`, borderRadius:7, padding:'8px 10px', cursor:'pointer' }}
+              style={{
+                background:'var(--s2)', border:`1px solid var(--bd)`, borderLeft:`3px solid ${cor}`,
+                outline: atrasado ? `2px dashed ${corAtraso}` : 'none', outlineOffset:-1,
+                borderRadius:7, padding:'8px 10px', cursor:'pointer',
+              }}
               onMouseEnter={e=>e.currentTarget.style.background='var(--s3)'}
               onMouseLeave={e=>e.currentTarget.style.background='var(--s2)'}>
-              <div style={{ fontSize:12, fontWeight:600, color:'var(--t1)', marginBottom:3 }}>{ev.titulo}</div>
+              <div style={{ fontSize:12, fontWeight:600, color:'var(--t1)', marginBottom:3, display:'flex', alignItems:'center', gap:5 }}>
+                {atrasado && <Clock3 size={11} color={corAtraso} style={{ flexShrink:0 }}/>}
+                {ev.titulo}
+              </div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
                 {ev.hr_inicio && <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:2 }}><Clock size={9}/>{ev.hr_inicio.slice(0,5)}{ev.hr_fim?` – ${ev.hr_fim.slice(0,5)}`:''}</span>}
                 {ev.local && <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:2 }}><MapPin size={9}/>{ev.local}</span>}
