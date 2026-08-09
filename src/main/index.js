@@ -126,7 +126,12 @@ if (!app.isPackaged) {
   // antes mas não é confiável: o diretório de trabalho no momento em que
   // o Windows relança o processo pode não ser a raiz do projeto (por isso
   // o registro anterior apontou para C:\windows\system32).
-  const projectRoot = join(__dirname, '../../')
+  // Sem barra final: o Windows monta o comando registrado como "<execPath>"
+  // "<arg>" "%1" — uma barra invertida logo antes da aspa de fechamento
+  // escapa essa aspa (regra de parsing de linha de comando do Windows),
+  // corrompendo o comando inteiro (visto no erro real: caminho terminando
+  // em `KronTech" krontech:\...` em vez de dois argumentos separados).
+  const projectRoot = join(__dirname, '../..')
   app.setAsDefaultProtocolClient('krontech', process.execPath, [projectRoot])
 } else {
   app.setAsDefaultProtocolClient('krontech')
