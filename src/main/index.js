@@ -5,6 +5,52 @@ import { registerHandlers } from './ipcHandlers'
 import { initDb } from './db'
 import { startReminderCheck } from './services/reminder'
 import { setupAutoUpdater } from './services/updater'
+import { confirmarStatus } from './handlers/agenda'
+import { query, queryOne } from './db'
+
+function broadcast(channel, data) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send(channel, data)
+  }
+}
+
+// Trata o clique num botão da notificação de status (URI krontech://agenda/confirmar?...)
+// ou no corpo dela (acao=abrir). No Windows, isso chega como argumento de linha de
+// comando de uma "segunda instância" que o Windows redireciona pra este processo já
+// rodando (capturado via second-instance abaixo).
+async function handleAgendaProtocolo(url) {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname !== 'agenda' || parsed.pathname !== '/confirmar') return
+    const id = Number(parsed.searchParams.get('id'))
+    const acao = parsed.searchParams.get('acao')
+    if (!id) return
+
+    if (acao === 'abrir') {
+      broadcast('agenda:statusAtualizado', { acao: 'abrir', eventoId: id })
+      return
+    }
+    if (acao === 'iniciar') {
+      await confirmarStatus({ id, status: 'em_andamento', origem: 'notificacao' })
+    } else if (acao === 'adiar') {
+      // Só registra que o usuário viu e adiou, sem mudar o status atual.
+      const atual = await queryOne('SELECT status_auto FROM agenda_eventos WHERE id=$1', [id])
+      if (atual) {
+        await query(
+          'INSERT INTO agenda_status_log (evento_id, status_de, status_para, origem) VALUES ($1,$2,$2,$3)',
+          [id, atual.status_auto, 'notificacao']
+        )
+      }
+    }
+    broadcast('agenda:statusAtualizado', { acao, eventoId: id })
+  } catch (e) {
+    console.warn('[protocolo] handleAgendaProtocolo:', e.message)
+  }
+}
+
+function findProtocoloUrl(argv) {
+  return argv.find(a => a.startsWith('krontech://'))
+}
 
 function getIcon() {
   const name = nativeTheme.shouldUseDarkColors ? 'icon.ico' : 'icon-light.ico'
@@ -63,19 +109,39 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.anderson.krontech')
 }
 
-app.whenReady().then(async () => {
-  loadConfig()              // lê/cria C:\KronTech\krontech.ini
-  encryptSensitiveConfig() // criptografa senhas em texto puro (Windows DPAPI)
-  registerHandlers()
-  await initDb().catch(err => console.error('initDb error:', err.message))
-  startReminderCheck()
-  setupAutoUpdater()
-  createWindow()
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// Necessário para os botões de ação da notificação de status da Agenda: o
+// clique dispara uma URI krontech://... que o Windows abre como "nova
+// instância" do app; sem o lock, isso abriria uma segunda janela em vez de
+// avisar a instância já rodando via second-instance.
+app.setAsDefaultProtocolClient('krontech')
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const url = findProtocoloUrl(argv)
+    if (url) handleAgendaProtocolo(url)
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win) {
+      if (win.isMinimized()) win.restore()
+      win.focus()
+    }
   })
-})
+
+  app.whenReady().then(async () => {
+    loadConfig()              // lê/cria C:\KronTech\krontech.ini
+    encryptSensitiveConfig() // criptografa senhas em texto puro (Windows DPAPI)
+    registerHandlers()
+    await initDb().catch(err => console.error('initDb error:', err.message))
+    startReminderCheck()
+    setupAutoUpdater()
+    createWindow()
+
+    app.on('activate', function () {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
