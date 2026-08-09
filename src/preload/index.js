@@ -35,6 +35,12 @@ const api = {
     criarStatus:       (d)  => ipcRenderer.invoke('agenda:criarStatus', d),
     atualizarStatus:   (d)  => ipcRenderer.invoke('agenda:atualizarStatus', d),
     excluirStatus:     (id) => ipcRenderer.invoke('agenda:excluirStatus', id),
+    confirmarStatus:   (d)  => ipcRenderer.invoke('agenda:confirmarStatus', d),
+    onStatusAtualizado: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('agenda:statusAtualizado', fn)
+      return () => ipcRenderer.removeListener('agenda:statusAtualizado', fn)
+    },
   },
   dash: {
     getAll:       ()        => ipcRenderer.invoke('dash:getAll'),

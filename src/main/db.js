@@ -706,6 +706,23 @@ export async function initDb() {
   `).catch(e => console.warn('[migration] create agenda_lembretes (startup):', e.message))
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_lembretes_evento ON agenda_lembretes(evento_id)`).catch(() => {})
 
+  // Status automático de ciclo de vida do compromisso (controlado pelo sistema,
+  // separado do status_id livre/customizável pelo usuário em agenda_status).
+  await query(`ALTER TABLE agenda_eventos ADD COLUMN IF NOT EXISTS status_auto VARCHAR(20) DEFAULT 'agendado'`)
+    .catch(e => console.warn('[migration] alter agenda_eventos status_auto (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS agenda_status_log (
+      id          SERIAL PRIMARY KEY,
+      evento_id   INTEGER NOT NULL REFERENCES agenda_eventos(id) ON DELETE CASCADE,
+      status_de   VARCHAR(20),
+      status_para VARCHAR(20) NOT NULL,
+      origem      VARCHAR(20) NOT NULL,
+      criado_em   TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create agenda_status_log (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_status_log_evento ON agenda_status_log(evento_id)`).catch(() => {})
+
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_dt ON agenda_eventos(dt_evento)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_grupo ON agenda_eventos(recorrencia_grupo_id)`).catch(() => {})
 

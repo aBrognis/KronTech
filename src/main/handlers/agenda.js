@@ -13,6 +13,40 @@ async function gravarLembretes(client, eventoId, lembretes) {
   }
 }
 
+export const STATUS_AUTO_VALIDOS = ['agendado', 'em_andamento', 'concluido', 'atrasado', 'nao_compareceu', 'cancelado']
+
+// Exportada separadamente do handler IPC porque statusAutomatico.js (polling
+// de atraso) e o handler de second-instance (clique em botão da notificação)
+// também precisam chamar essa lógica internamente, sem passar pelo IPC.
+export async function confirmarStatus({ id, status, origem }) {
+  if (!STATUS_AUTO_VALIDOS.includes(status)) throw new Error(`Status inválido: ${status}`)
+  if (!['sistema', 'usuario', 'notificacao'].includes(origem)) throw new Error(`Origem inválida: ${origem}`)
+
+  const client = await getPool().connect()
+  try {
+    await client.query('BEGIN')
+    const atual = await client.query('SELECT status_auto FROM agenda_eventos WHERE id=$1', [id])
+    if (!atual.rows[0]) throw new Error(`Evento #${id} não encontrado.`)
+    const statusDe = atual.rows[0].status_auto
+
+    const upd = await client.query(
+      'UPDATE agenda_eventos SET status_auto=$1 WHERE id=$2 RETURNING *',
+      [status, id]
+    )
+    await client.query(
+      'INSERT INTO agenda_status_log (evento_id, status_de, status_para, origem) VALUES ($1,$2,$3,$4)',
+      [id, statusDe, status, origem]
+    )
+    await client.query('COMMIT')
+    return upd.rows[0]
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+}
+
 export function registerAgendaHandlers({ ipcMain, wrap, query, queryOne }) {
 
   // ── Categorias ─────────────────────────────────────────────────────────
@@ -206,6 +240,10 @@ export function registerAgendaHandlers({ ipcMain, wrap, query, queryOne }) {
     const row = await queryOne('SELECT id FROM agenda_eventos WHERE id=$1', [id])
     if (!row) throw new Error(`Evento #${id} não encontrado.`)
     await query('DELETE FROM agenda_eventos WHERE id=$1', [id])
+  }))
+
+  ipcMain.handle('agenda:confirmarStatus', wrap(async (_, d) => {
+    return confirmarStatus(d)
   }))
 
   // Exclui este evento e todas as ocorrências futuras da mesma série
