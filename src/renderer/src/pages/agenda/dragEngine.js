@@ -78,20 +78,25 @@ export function createDragEngine({ onDrop }) {
     if (rafId) cancelAnimationFrame(rafId)
 
     lastTarget?.classList.remove('agenda-drop-target')
-    el.style.position = ''
-    el.style.zIndex = ''
-    el.style.left = ''
-    el.style.top = ''
-    el.style.width = ''
-    el.style.cursor = ''
-    el.style.boxShadow = ''
-    el.style.pointerEvents = ''
+    // Não "limpar" o style inline manualmente aqui: nas views Dia/Semana o
+    // React controla top/left/width via style={{...}} com base no layout
+    // calculado, e como o card mantém a mesma key (ev.id), o React reaproveita
+    // o mesmo nó DOM no próximo render — se o valor recalculado for igual ao
+    // anterior, o reconciliador NÃO reescreve essas props, e um el.style.left=''
+    // feito aqui ficaria "vazando" pra sempre (era o bug do compromisso sumindo
+    // ao arrastar). Em vez disso, o nó inteiro é removido do DOM: o próximo
+    // render do React (disparado por loadEvents logo abaixo) recria o card do
+    // zero com o style correto, sem nenhum resquício da manipulação manual.
+    el.remove()
     placeholder.remove()
 
-    if (!lastTarget) return
-    const iso = lastTarget.getAttribute('data-agenda-slot')
-    const horaAttr = lastTarget.getAttribute('data-agenda-hora')
-    const hora = horaAttr === null ? null : Number(horaAttr)
+    // Sempre chama onDrop, mesmo sem célula de destino válida (soltou fora
+    // da grade): o card já foi removido do DOM acima, então o handler
+    // SEMPRE precisa recarregar os eventos pra ele reaparecer — passar
+    // iso/hora null sinaliza "sem mudança real" pro handler.
+    const iso = lastTarget?.getAttribute('data-agenda-slot') ?? null
+    const horaAttr = lastTarget?.getAttribute('data-agenda-hora')
+    const hora = horaAttr == null ? null : Number(horaAttr)
     onDrop(ev, iso, hora)
   }
 

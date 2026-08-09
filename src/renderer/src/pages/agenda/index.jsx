@@ -184,12 +184,18 @@ export default function Agenda({ newTrigger }) {
   }
 
   async function handleDrop(ev, novaIso, novaHora) {
+    // O dragEngine sempre remove o nó DOM do card manipulado ao soltar (evita
+    // vazamento de estilo inline entre arrastes); por isso este handler
+    // SEMPRE precisa terminar recarregando os eventos, mesmo quando não há
+    // mudança real ou o update falha — senão o card fica ausente da tela até
+    // a próxima recarga por outro motivo (era o bug do compromisso sumindo).
+    if (novaIso === null) { await loadEvents(); return } // soltou fora de qualquer célula válida
     const mesmaData = dtToISO(ev.dt_evento) === novaIso
-    if (novaHora === null && mesmaData) return // soltou no mesmo dia (view mensal)
-    if (novaHora !== null) {
-      const horaAtual = ev.hr_inicio ? parseInt(ev.hr_inicio.slice(0,2)) : null
-      if (mesmaData && horaAtual === novaHora) return // soltou na mesma célula
-    }
+    const mesmaHora = novaHora === null
+      ? mesmaData
+      : mesmaData && (ev.hr_inicio ? parseInt(ev.hr_inicio.slice(0,2)) : null) === novaHora
+    if (mesmaHora) { await loadEvents(); return }
+
     const payload = {
       id: ev.id, titulo: ev.titulo, categoria_id: ev.categoria_id, status_id: ev.status_id,
       cliente_id: ev.cliente_id, dt_evento: novaIso,
@@ -201,7 +207,7 @@ export default function Agenda({ newTrigger }) {
       lembretes: ev.lembretes || [], recorrencia: ev.recorrencia || 'nenhuma',
     }
     const res = await window.api.agenda.update(payload)
-    if (!res.ok) { setErro(res.erro); return }
+    if (!res.ok) setErro(res.erro)
     await loadEvents()
   }
 
