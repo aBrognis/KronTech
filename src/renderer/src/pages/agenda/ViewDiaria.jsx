@@ -74,8 +74,13 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
             </div>
           )}
 
-          {/* Eventos com hora, posicionados absolutamente lado a lado quando conflitam */}
-          <div style={{ position:'absolute', left:56, right:8, top:0, bottom:0 }}>
+          {/* Eventos com hora, posicionados absolutamente lado a lado quando conflitam.
+              pointerEvents:'none' no wrapper: ele cobre a coluna inteira (top:0,bottom:0)
+              e, sem isso, intercepta o elementFromPoint usado pelo drag para achar a
+              célula de hora por baixo do cursor nas áreas vazias entre eventos, fazendo
+              o drop nunca reconhecer o destino e o card voltar pra posição original. Os
+              cards individuais reativam pointerEvents:'auto' para continuar clicáveis. */}
+          <div style={{ position:'absolute', left:56, right:8, top:0, bottom:0, pointerEvents:'none' }}>
             {layout.map(({ ev, top, height, col, cols }) => {
               const cor = corEvento(ev)
               const stCor = corStatus(ev)
@@ -89,6 +94,7 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
                     position:'absolute', top, height: height-2,
                     left: `calc(${larguraPct * col}% + ${col>0?3:0}px)`,
                     width: `calc(${larguraPct}% - ${col<cols-1?6:3}px)`,
+                    pointerEvents:'auto',
                     background:cor+'18', border:`1.5px solid ${cor}55`, borderLeft:`4px solid ${cor}`,
                     outline: conflito ? '1px dashed var(--red)' : 'none', outlineOffset:-1,
                     borderRadius:6, padding: height>40 ? '6px 8px' : '2px 8px',
