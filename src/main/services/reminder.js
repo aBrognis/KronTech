@@ -2,6 +2,7 @@ import { Notification, nativeImage } from 'electron'
 import { join } from 'path'
 import { query } from '../db'
 import { extendRecurringSeries } from './recurrence'
+import { checkStatusAutomatico } from './statusAutomatico'
 
 const notified = new Set()
 const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.ico'))
@@ -55,8 +56,10 @@ async function topUpRecurringSeries() {
 export function startReminderCheck() {
   check()
   topUpRecurringSeries()
+  checkStatusAutomatico()
   setInterval(() => {
     check()
     topUpRecurringSeries()
+    checkStatusAutomatico()
   }, 60_000)
 }
