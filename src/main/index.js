@@ -113,7 +113,21 @@ if (process.platform === 'win32') {
 // clique dispara uma URI krontech://... que o Windows abre como "nova
 // instância" do app; sem o lock, isso abriria uma segunda janela em vez de
 // avisar a instância já rodando via second-instance.
-app.setAsDefaultProtocolClient('krontech')
+// Em dev (npm run dev), o executável é o electron.exe genérico do
+// node_modules — sem passar execPath + o caminho do script como argumentos,
+// o Windows registra o protocolo apontando só para o electron.exe "pelado",
+// e ao clicar no botão da notificação ele tenta interpretar a própria URI
+// como se fosse o caminho do app a carregar. Em produção (app empacotado) o
+// executável já é o app inteiro, então não precisa desses argumentos extras.
+if (!app.isPackaged) {
+  // electron-vite/electron sempre é invocado a partir da raiz do projeto
+  // (onde está o package.json com "main"), então process.cwd() é o caminho
+  // estável a passar — mais confiável que tentar derivar de process.argv[1],
+  // que varia conforme a forma exata como o electron-vite invoca o binário.
+  app.setAsDefaultProtocolClient('krontech', process.execPath, [process.cwd()])
+} else {
+  app.setAsDefaultProtocolClient('krontech')
+}
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
