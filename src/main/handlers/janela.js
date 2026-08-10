@@ -14,6 +14,7 @@ function createDesignerWindow() {
     show: false, frame: false, titleBarStyle: 'hidden',
     backgroundColor: '#0A0A0A',
     icon: getIcon(),
+    title: 'KronTech Designer',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false, contextIsolation: true,
