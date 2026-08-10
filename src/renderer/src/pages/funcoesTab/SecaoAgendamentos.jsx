@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Save, X, Power, PowerOff, Edit2, Trash2, Plus, Calendar, Clock } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
-import { genId, carregarSecao, salvarSecao, Btn, FInput, FSelect, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
+import { Btn, FInput, FSelect, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
 
 const INTERVALOS = [
   { value: '5m',  label: 'A cada 5 minutos'  },
@@ -19,27 +19,33 @@ export default function SecaoAgendamentos({ scripts }) {
   const [lista, setLista]       = useState([])
   const [editando, setEditando] = useState(null)
 
-  useEffect(() => { carregarSecao('Agendamentos').then(setLista) }, [])
+  useEffect(() => {
+    window.api.funcoes.listarAgendamentos().then(res => res.ok && setLista(res.data))
+  }, [])
 
   const salvar = useCallback(async (item) => {
-    const nova = lista.some(a => a.id === item.id)
-      ? lista.map(a => a.id === item.id ? item : a)
-      : [...lista, item]
-    setLista(nova); await salvarSecao('Agendamentos', nova); setEditando(null)
+    const existe = lista.some(a => a.id === item.id)
+    const res = existe
+      ? await window.api.funcoes.atualizarAgendamento(item)
+      : await window.api.funcoes.criarAgendamento(item)
+    if (!res.ok) { mostrarAlerta(res.erro || 'Erro ao salvar', 'erro'); return }
+    setLista(prev => existe ? prev.map(a => a.id === res.data.id ? res.data : a) : [...prev, res.data])
+    setEditando(null)
     mostrarAlerta('Agendamento salvo!', 'sucesso')
   }, [lista])
 
   const remover = useCallback(async (id) => {
     if (!confirm('Excluir este agendamento?')) return
-    const nova = lista.filter(a => a.id !== id); setLista(nova); await salvarSecao('Agendamentos', nova)
-  }, [lista])
+    await window.api.funcoes.excluirAgendamento(id)
+    setLista(prev => prev.filter(a => a.id !== id))
+  }, [])
 
-  const toggleAtivo = useCallback(async (id) => {
-    const nova = lista.map(a => a.id === id ? { ...a, ativo: !a.ativo } : a)
-    setLista(nova); await salvarSecao('Agendamentos', nova)
-  }, [lista])
+  const toggleAtivo = useCallback(async (a) => {
+    const res = await window.api.funcoes.atualizarAgendamento({ ...a, ativo: !a.ativo })
+    if (res.ok) setLista(prev => prev.map(x => x.id === a.id ? res.data : x))
+  }, [])
 
-  const novo = () => setEditando({ id: genId(), nome: '', intervalo: '1h', cron: '0 * * * *', acao: { tipo: 'script', id: '' }, ativo: false })
+  const novo = () => setEditando({ id: null, nome: '', intervalo: '1h', cron: '0 * * * *', acao: { tipo: 'script', id: '' }, ativo: false })
 
   if (editando) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -116,7 +122,7 @@ export default function SecaoAgendamentos({ scripts }) {
               </div>
               <StatusBadge ativo={a.ativo} />
               <div style={{ display: 'flex', gap: 5 }}>
-                <button className="btn btn-ghost" style={{ height: 30, color: a.ativo ? 'var(--green)' : 'var(--t3)' }} onClick={() => toggleAtivo(a.id)}>
+                <button className="btn btn-ghost" style={{ height: 30, color: a.ativo ? 'var(--green)' : 'var(--t3)' }} onClick={() => toggleAtivo(a)}>
                   {a.ativo ? <Power size={13} /> : <PowerOff size={13} />}
                 </button>
                 <button className="btn btn-ghost" style={{ height: 30 }} onClick={() => setEditando(a)}><Edit2 size={13} /></button>

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { query } from '../db'
 import { extendRecurringSeries } from './recurrence'
 import { checkStatusAutomatico } from './statusAutomatico'
+import { checkAgendamentos } from './agendamentoService'
 
 const notified = new Set()
 const icon = nativeImage.createFromPath(join(__dirname, '../../resources/icon.ico'))
@@ -57,9 +58,11 @@ export function startReminderCheck() {
   check()
   topUpRecurringSeries()
   checkStatusAutomatico()
+  checkAgendamentos()
   setInterval(() => {
     check()
     topUpRecurringSeries()
     checkStatusAutomatico()
+    checkAgendamentos()
   }, 60_000)
 }

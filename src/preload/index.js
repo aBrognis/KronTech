@@ -166,6 +166,11 @@ const api = {
     atualizarNotificacao:(d) => ipcRenderer.invoke('funcoes:atualizarNotificacao', d),
     excluirNotificacao: (id) => ipcRenderer.invoke('funcoes:excluirNotificacao', id),
     testarNotificacao:  (id, contexto) => ipcRenderer.invoke('funcoes:testarNotificacao', id, contexto),
+    listarAgendamentos:   ()  => ipcRenderer.invoke('funcoes:listarAgendamentos'),
+    criarAgendamento:     (d) => ipcRenderer.invoke('funcoes:criarAgendamento', d),
+    atualizarAgendamento: (d) => ipcRenderer.invoke('funcoes:atualizarAgendamento', d),
+    excluirAgendamento:   (id) => ipcRenderer.invoke('funcoes:excluirAgendamento', id),
+    executarAgendamentoAgora: (id) => ipcRenderer.invoke('funcoes:executarAgendamentoAgora', id),
     onToast: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('funcoes:toast', fn)

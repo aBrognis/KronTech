@@ -1,4 +1,5 @@
 import { executarScript, executarIntegracao, enviarNotificacao, logExecucao } from '../services/execucaoService'
+import { calcularProximaExecucao, executarAgendamento } from '../services/agendamentoService'
 
 export function registerFuncoesHandlers({ ipcMain, wrap, query, queryOne }) {
 
@@ -119,5 +120,43 @@ export function registerFuncoesHandlers({ ipcMain, wrap, query, queryOne }) {
       await logExecucao('notificacao', id, false, e.message, Date.now() - inicio)
       throw e
     }
+  }))
+
+  // ── Agendamentos ───────────────────────────────────────────────────────
+  ipcMain.handle('funcoes:listarAgendamentos', wrap(async () => {
+    return query(`SELECT * FROM kr_agendamentos ORDER BY nome`)
+  }))
+
+  ipcMain.handle('funcoes:criarAgendamento', wrap(async (_, d) => {
+    if (!d.nome?.trim()) throw new Error('Nome é obrigatório.')
+    if (!d.intervalo) throw new Error('Intervalo é obrigatório.')
+    if (!d.acao?.tipo) throw new Error('Ação é obrigatória.')
+    const proxima = calcularProximaExecucao(d)
+    return queryOne(
+      `INSERT INTO kr_agendamentos (nome, intervalo, cron, acao, proxima_execucao, ativo)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [d.nome.trim(), d.intervalo, d.cron || '', JSON.stringify(d.acao), proxima, d.ativo ?? true]
+    )
+  }))
+
+  ipcMain.handle('funcoes:atualizarAgendamento', wrap(async (_, d) => {
+    if (!d.nome?.trim()) throw new Error('Nome é obrigatório.')
+    const proxima = calcularProximaExecucao(d)
+    return queryOne(
+      `UPDATE kr_agendamentos SET nome=$1, intervalo=$2, cron=$3, acao=$4, proxima_execucao=$5,
+       ativo=$6, alterado_em=NOW() WHERE id=$7 RETURNING *`,
+      [d.nome.trim(), d.intervalo, d.cron || '', JSON.stringify(d.acao), proxima, d.ativo ?? true, d.id]
+    )
+  }))
+
+  ipcMain.handle('funcoes:excluirAgendamento', wrap(async (_, id) => {
+    await query(`DELETE FROM kr_agendamentos WHERE id=$1`, [id])
+  }))
+
+  ipcMain.handle('funcoes:executarAgendamentoAgora', wrap(async (_, id) => {
+    const ag = await queryOne(`SELECT * FROM kr_agendamentos WHERE id=$1`, [id])
+    if (!ag) throw new Error('Agendamento não encontrado.')
+    await executarAgendamento(ag)
+    return queryOne(`SELECT * FROM kr_agendamentos WHERE id=$1`, [id])
   }))
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Zap, Terminal, Globe, Calendar, Bell, BarChart2, GitBranch, Code, BookOpen, HelpCircle } from 'lucide-react'
-import { carregarSecao } from './funcoesTab/_shared.jsx'
 import SecaoManual from './funcoesTab/SecaoManual.jsx'
 import SecaoAutomacoes from './funcoesTab/SecaoAutomacoes.jsx'
 import SecaoScripts from './funcoesTab/SecaoScripts.jsx'
@@ -29,7 +28,7 @@ export default function FuncoesTab({ telas = [] }) {
   const [secao, setSecao] = useState('manual')
   const [scripts, setScripts] = useState([])
 
-  useEffect(() => { carregarSecao('Scripts').then(setScripts) }, [secao])
+  useEffect(() => { window.api.funcoes.listarScripts().then(res => res.ok && setScripts(res.data.map(s => ({ id: s.id, nome: s.nome })))) }, [secao])
 
   const sec = SECOES.find(s => s.id === secao)
 
