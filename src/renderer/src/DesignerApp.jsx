@@ -280,7 +280,7 @@ export default function DesignerApp() {
   const [version, setVersion] = useState('1.1')
 
   const [tabs,        setTabs]        = useState(() => [makeTab('telas')])
-  const [activeTabId, setActiveTabId] = useState(1)
+  const [activeTabId, setActiveTabId] = useState(() => tabs[0].id)
   const [showPanel,   setShowPanel]   = useState(false)
   const tabsRef = useRef(tabs)
   useEffect(() => { tabsRef.current = tabs }, [tabs])
@@ -420,7 +420,7 @@ export default function DesignerApp() {
             <main
               key={tab.id}
               className="content"
-              style={{ display: tab.id === activeTabId ? 'flex' : 'none' }}
+              style={{ display: tab.id === activeTab.id ? 'flex' : 'none' }}
             >
               <DesignerTabContent pageId={tab.pageId} />
             </main>
