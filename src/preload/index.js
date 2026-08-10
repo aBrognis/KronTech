@@ -150,6 +150,28 @@ const api = {
     login:          (usuario, senha)  => ipcRenderer.invoke('auth:login', usuario, senha),
     redefinirSenha: (opts)            => ipcRenderer.invoke('auth:redefinirSenha', opts),
   },
+  funcoes: {
+    listarScripts:      ()  => ipcRenderer.invoke('funcoes:listarScripts'),
+    criarScript:        (d) => ipcRenderer.invoke('funcoes:criarScript', d),
+    atualizarScript:    (d) => ipcRenderer.invoke('funcoes:atualizarScript', d),
+    excluirScript:      (id) => ipcRenderer.invoke('funcoes:excluirScript', id),
+    executarScript:     (id) => ipcRenderer.invoke('funcoes:executarScript', id),
+    listarIntegracoes:  ()  => ipcRenderer.invoke('funcoes:listarIntegracoes'),
+    criarIntegracao:    (d) => ipcRenderer.invoke('funcoes:criarIntegracao', d),
+    atualizarIntegracao:(d) => ipcRenderer.invoke('funcoes:atualizarIntegracao', d),
+    excluirIntegracao:  (id) => ipcRenderer.invoke('funcoes:excluirIntegracao', id),
+    testarIntegracao:   (id, contexto) => ipcRenderer.invoke('funcoes:testarIntegracao', id, contexto),
+    listarNotificacoes: ()  => ipcRenderer.invoke('funcoes:listarNotificacoes'),
+    criarNotificacao:   (d) => ipcRenderer.invoke('funcoes:criarNotificacao', d),
+    atualizarNotificacao:(d) => ipcRenderer.invoke('funcoes:atualizarNotificacao', d),
+    excluirNotificacao: (id) => ipcRenderer.invoke('funcoes:excluirNotificacao', id),
+    testarNotificacao:  (id, contexto) => ipcRenderer.invoke('funcoes:testarNotificacao', id, contexto),
+    onToast: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('funcoes:toast', fn)
+      return () => ipcRenderer.removeListener('funcoes:toast', fn)
+    },
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

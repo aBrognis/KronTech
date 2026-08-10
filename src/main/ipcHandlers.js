@@ -15,6 +15,7 @@ import { registerConfigHandlers } from './handlers/config'
 import { registerUpdateHandlers } from './handlers/update'
 import { registerArquivosHandlers } from './handlers/arquivos'
 import { registerFormBuilderHandlers } from './handlers/formBuilder'
+import { registerFuncoesHandlers } from './handlers/funcoes'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -29,4 +30,5 @@ export function registerHandlers() {
   registerUpdateHandlers({ ipcMain, wrap })
   registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getConfig, importLog, importCancelFlags, categoriaByExt, scanDir })
   registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSenha, importLog, importCancelFlags, categoriaByExt, scanDir })
+  registerFuncoesHandlers({ ipcMain, wrap, query, queryOne })
 }

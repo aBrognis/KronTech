@@ -1,7 +1,25 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Globe, Plus, Play, RefreshCw, X, Save, Edit2, Trash2, BookOpen } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
-import { genId, carregarSecao, salvarSecao, Btn, FInput, FSelect, FTextarea, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
+import { Btn, FInput, FSelect, FTextarea, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
+
+function paraApi(item) {
+  let headers = {}
+  try { headers = JSON.parse(item.headers || '{}') } catch {}
+  return {
+    id: item.id, nome: item.nome, url: item.url, metodo: item.metodo,
+    headers, body: item.body || '', auth_tipo: item.authTipo || 'none',
+    auth_token: item.authToken || '', auth_key_header: item.authKeyHeader || '', ativo: item.ativo ?? true,
+  }
+}
+function daApi(i) {
+  return {
+    id: i.id, nome: i.nome, url: i.url, metodo: i.metodo,
+    headers: JSON.stringify(i.headers || {}), body: i.body || '',
+    authTipo: i.auth_tipo || 'none', authToken: i.auth_token || '', authKeyHeader: i.auth_key_header || '',
+    ativo: i.ativo,
+  }
+}
 
 const EXEMPLOS_INTEGRACOES = [
   { nome: 'Consultar CEP (ViaCEP)', url: 'https://viacep.com.br/ws/01310100/json/', metodo: 'GET', headers: '{}', body: '', authTipo: 'none', authToken: '', ativo: true },
@@ -17,45 +35,50 @@ export default function SecaoIntegracoes() {
   const [testRes, setTestRes]   = useState({})
 
   const carregarExemplos = useCallback(async () => {
-    const novos = EXEMPLOS_INTEGRACOES.map(e => ({ ...e, id: genId() }))
-    const nova = [...lista, ...novos]; setLista(nova); await salvarSecao('Integracoes', nova)
-    mostrarAlerta(`${novos.length} integrações de exemplo carregadas!`, 'sucesso')
-  }, [lista])
+    const criados = []
+    for (const e of EXEMPLOS_INTEGRACOES) {
+      const res = await window.api.funcoes.criarIntegracao(paraApi(e))
+      if (res.ok) criados.push(daApi(res.data))
+    }
+    setLista(prev => [...prev, ...criados])
+    mostrarAlerta(`${criados.length} integrações de exemplo carregadas!`, 'sucesso')
+  }, [])
 
-  useEffect(() => { carregarSecao('Integracoes').then(setLista) }, [])
+  useEffect(() => {
+    window.api.funcoes.listarIntegracoes().then(res => res.ok && setLista(res.data.map(daApi)))
+  }, [])
 
   const salvar = useCallback(async (item) => {
-    const nova = lista.some(i => i.id === item.id)
-      ? lista.map(i => i.id === item.id ? item : i)
-      : [...lista, item]
-    setLista(nova); await salvarSecao('Integracoes', nova); setEditando(null)
+    const existe = lista.some(i => i.id === item.id)
+    const res = existe
+      ? await window.api.funcoes.atualizarIntegracao(paraApi(item))
+      : await window.api.funcoes.criarIntegracao(paraApi(item))
+    if (!res.ok) { mostrarAlerta(res.erro || 'Erro ao salvar', 'erro'); return }
+    const salvo = daApi(res.data)
+    setLista(prev => existe ? prev.map(i => i.id === salvo.id ? salvo : i) : [...prev, salvo])
+    setEditando(null)
     mostrarAlerta('Integração salva!', 'sucesso')
   }, [lista])
 
   const remover = useCallback(async (id) => {
     if (!confirm('Excluir esta integração?')) return
-    const nova = lista.filter(i => i.id !== id); setLista(nova); await salvarSecao('Integracoes', nova)
-  }, [lista])
+    await window.api.funcoes.excluirIntegracao(id)
+    setLista(prev => prev.filter(i => i.id !== id))
+  }, [])
 
   const testar = useCallback(async (item) => {
     setTestando(item.id); setTestRes(p => ({ ...p, [item.id]: null }))
     const inicio = Date.now()
-    try {
-      const opts = { method: item.metodo || 'GET', headers: { 'Content-Type': 'application/json' } }
-      if (item.authTipo === 'bearer' && item.authToken) opts.headers['Authorization'] = `Bearer ${item.authToken}`
-      if (item.authTipo === 'basic' && item.authToken) opts.headers['Authorization'] = `Basic ${btoa(item.authToken)}`
-      try { const h = JSON.parse(item.headers || '{}'); Object.assign(opts.headers, h) } catch {}
-      if (['POST','PUT','PATCH'].includes(item.metodo) && item.body) opts.body = item.body
-      const r = await fetch(item.url, opts)
-      const text = await r.text(); let data = text
-      try { data = JSON.parse(text) } catch {}
-      setTestRes(p => ({ ...p, [item.id]: { ok: r.ok, status: r.status, ms: Date.now() - inicio, data } }))
-    } catch (e) {
-      setTestRes(p => ({ ...p, [item.id]: { ok: false, status: 0, ms: Date.now() - inicio, data: e.message } }))
-    } finally { setTestando(null) }
+    const res = await window.api.funcoes.testarIntegracao(item.id)
+    if (res.ok) {
+      setTestRes(p => ({ ...p, [item.id]: { ok: res.data.ok, status: res.data.status, ms: Date.now() - inicio, data: res.data.data } }))
+    } else {
+      setTestRes(p => ({ ...p, [item.id]: { ok: false, status: 0, ms: Date.now() - inicio, data: res.erro } }))
+    }
+    setTestando(null)
   }, [])
 
-  const novaIntegracao = () => setEditando({ id: genId(), nome: '', url: '', metodo: 'GET', headers: '{}', body: '', authTipo: 'none', authToken: '', ativo: true })
+  const novaIntegracao = () => setEditando({ id: null, nome: '', url: '', metodo: 'GET', headers: '{}', body: '', authTipo: 'none', authToken: '', ativo: true })
 
   const colorMetodo = { GET: 'var(--green)', POST: 'var(--or)', PUT: 'var(--blue)', PATCH: 'var(--yellow)', DELETE: 'var(--red)' }
 

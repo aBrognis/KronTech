@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Play, RefreshCw, X, Terminal, Download, CheckCircle, AlertTriangle, BookOpen } from 'lucide-react'
 import { mostrarAlerta, exportarCSV, executarSQL } from '../../lib/funcoes/index.js'
-import { genId, carregarSecao, salvarSecao, Btn, FInput, SectionTitle, EmptyState } from './_shared.jsx'
+import { Btn, FInput, SectionTitle, EmptyState } from './_shared.jsx'
+
+function paraApi(s) { return { id: s.id, nome: s.nome, sql_texto: s.sql, ativo: s.ativo ?? true } }
+function daApi(s) { return { id: s.id, nome: s.nome, sql: s.sql_texto, descricao: s.descricao || '', ativo: s.ativo } }
 
 const EXEMPLOS_SCRIPTS = [
   { nome: 'Info do banco',          descricao: 'Versão e informações do servidor PostgreSQL', sql: `SELECT version() AS versao_postgres,\n  current_database() AS banco,\n  current_user AS usuario,\n  NOW() AS data_hora_servidor,\n  pg_size_pretty(pg_database_size(current_database())) AS tamanho_banco` },
@@ -18,42 +21,54 @@ export default function SecaoScripts() {
   const [executando, setExecutando] = useState(false)
 
   useEffect(() => {
-    carregarSecao('Scripts').then(s => {
-      const lista = s.length ? s : [{
-        id: genId(), nome: 'Consulta inicial', sql: 'SELECT NOW() AS agora, current_database() AS banco, current_user AS usuario', descricao: 'Informações do banco',
-      }]
-      setScripts(lista); setAtivo(lista[0].id)
+    window.api.funcoes.listarScripts().then(async res => {
+      let lista = res.ok ? res.data.map(daApi) : []
+      if (!lista.length) {
+        const criado = await window.api.funcoes.criarScript(paraApi({
+          nome: 'Consulta inicial',
+          sql: 'SELECT NOW() AS agora, current_database() AS banco, current_user AS usuario',
+        }))
+        if (criado.ok) lista = [daApi(criado.data)]
+      }
+      setScripts(lista); setAtivo(lista[0]?.id ?? null)
     })
   }, [])
 
   const carregarExemplos = useCallback(async (all) => {
-    const novos = EXEMPLOS_SCRIPTS.map(e => ({ ...e, id: genId() }))
-    const nova = [...all, ...novos]
-    setScripts(nova); setAtivo(novos[0].id); await salvarSecao('Scripts', nova)
-    mostrarAlerta(`${novos.length} scripts de exemplo carregados!`, 'sucesso')
-  }, [])
+    const criados = []
+    for (const e of EXEMPLOS_SCRIPTS) {
+      const res = await window.api.funcoes.criarScript(paraApi({ nome: e.nome, sql: e.sql }))
+      if (res.ok) criados.push(daApi(res.data))
+    }
+    const nova = [...all, ...criados]
+    setScripts(nova); setAtivo(criados[0]?.id ?? ativo)
+    mostrarAlerta(`${criados.length} scripts de exemplo carregados!`, 'sucesso')
+  }, [ativo])
 
   const scriptAtivo = scripts.find(s => s.id === ativo)
 
   const atualizar = useCallback((id, patch) => {
     setScripts(prev => {
       const nova = prev.map(s => s.id === id ? { ...s, ...patch } : s)
-      salvarSecao('Scripts', nova)
+      const atualizado = nova.find(s => s.id === id)
+      window.api.funcoes.atualizarScript(paraApi(atualizado))
       return nova
     })
   }, [])
 
-  const novoScript = () => {
-    const s = { id: genId(), nome: 'Novo Script', sql: '-- Escreva seu SQL aqui\nSELECT ', descricao: '' }
-    setScripts(prev => { const nova = [...prev, s]; salvarSecao('Scripts', nova); return nova })
+  const novoScript = async () => {
+    const res = await window.api.funcoes.criarScript(paraApi({ nome: 'Novo Script', sql: '-- Escreva seu SQL aqui\nSELECT ' }))
+    if (!res.ok) return
+    const s = daApi(res.data)
+    setScripts(prev => [...prev, s])
     setAtivo(s.id); setResultado(null)
   }
 
-  const remover = (id) => {
+  const remover = async (id) => {
     if (!confirm('Excluir este script?')) return
+    await window.api.funcoes.excluirScript(id)
     setScripts(prev => {
       const nova = prev.filter(s => s.id !== id)
-      salvarSecao('Scripts', nova)
       if (ativo === id) setAtivo(nova[0]?.id || null)
       return nova
     })

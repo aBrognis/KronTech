@@ -726,6 +726,74 @@ export async function initDb() {
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_dt ON agenda_eventos(dt_evento)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_grupo ON agenda_eventos(recorrencia_grupo_id)`).catch(() => {})
 
+  // Motor de execução da aba Funções (Scripts/Integrações/Notificações/
+  // Automações/Agendamentos/Fluxos) — substitui a persistência antiga em
+  // .ini (saveSectionConfig só suporta pares chave=valor simples, corrompia
+  // silenciosamente ao receber arrays de objetos).
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_scripts (
+      id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL, sql_texto TEXT NOT NULL,
+      ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_scripts (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_integracoes (
+      id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL,
+      url TEXT NOT NULL, metodo VARCHAR(10) DEFAULT 'GET',
+      headers JSONB DEFAULT '{}', body TEXT DEFAULT '',
+      auth_tipo VARCHAR(20) DEFAULT 'none', auth_token TEXT DEFAULT '', auth_key_header VARCHAR(100) DEFAULT '',
+      ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_integracoes (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_notificacoes (
+      id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL, tipo VARCHAR(20) NOT NULL,
+      titulo VARCHAR(200) DEFAULT '', mensagem TEXT DEFAULT '', tipo_toast VARCHAR(20) DEFAULT 'info', url TEXT DEFAULT '',
+      ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_notificacoes (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_automacoes (
+      id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL,
+      trigger_tipo VARCHAR(30) NOT NULL, trigger_campo VARCHAR(100) DEFAULT '', trigger_tabela VARCHAR(100) DEFAULT '',
+      condicoes JSONB DEFAULT '[]', acoes JSONB DEFAULT '[]',
+      ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_automacoes (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_agendamentos (
+      id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL,
+      intervalo VARCHAR(10) NOT NULL, cron VARCHAR(100) DEFAULT '',
+      acao JSONB NOT NULL,
+      ultima_execucao TIMESTAMP, proxima_execucao TIMESTAMP,
+      ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_agendamentos (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_fluxos (
+      id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL, descricao TEXT DEFAULT '',
+      gatilho VARCHAR(30) NOT NULL, trigger_tabela VARCHAR(100) DEFAULT '',
+      etapas JSONB DEFAULT '[]',
+      ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_fluxos (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_execucoes_log (
+      id SERIAL PRIMARY KEY,
+      origem_tipo VARCHAR(20) NOT NULL,
+      origem_id INTEGER NOT NULL,
+      sucesso BOOLEAN NOT NULL, mensagem TEXT DEFAULT '', duracao_ms INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_execucoes_log (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_execucoes_log_origem ON kr_execucoes_log(origem_tipo, origem_id)`).catch(() => {})
+
   // Remove constraints problemáticos a cada startup (idempotente)
   await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
 

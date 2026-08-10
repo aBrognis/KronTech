@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, Monitor, Globe, Mail, Play, Save, X, Edit2, Trash2, Plus, BookOpen } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
-import { genId, carregarSecao, salvarSecao, Btn, FInput, FSelect, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
+import { Btn, FInput, FSelect, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
+
+function paraApi(n) {
+  return { id: n.id, nome: n.nome, tipo: n.tipo, titulo: n.titulo || '', mensagem: n.mensagem || '', tipo_toast: n.tipoToast || 'info', url: n.url || '', ativo: n.ativo ?? true }
+}
+function daApi(n) {
+  return { id: n.id, nome: n.nome, tipo: n.tipo, titulo: n.titulo || '', mensagem: n.mensagem || '', tipoToast: n.tipo_toast || 'info', url: n.url || '', ativo: n.ativo }
+}
 
 const EXEMPLOS_NOTIFICACOES = [
   { nome: 'Salvo com sucesso', tipo: 'toast', titulo: 'KronTech', mensagem: 'Registro salvo com sucesso!', tipoToast: 'sucesso', url: '' },
@@ -16,43 +23,46 @@ export default function SecaoNotificacoes() {
   const [testando, setTestando] = useState(null)
 
   const carregarExemplos = useCallback(async () => {
-    const novos = EXEMPLOS_NOTIFICACOES.map(e => ({ ...e, id: genId() }))
-    const nova = [...lista, ...novos]; setLista(nova); await salvarSecao('Notificacoes', nova)
-    mostrarAlerta(`${novos.length} notificações de exemplo carregadas!`, 'sucesso')
-  }, [lista])
+    const criados = []
+    for (const e of EXEMPLOS_NOTIFICACOES) {
+      const res = await window.api.funcoes.criarNotificacao(paraApi(e))
+      if (res.ok) criados.push(daApi(res.data))
+    }
+    setLista(prev => [...prev, ...criados])
+    mostrarAlerta(`${criados.length} notificações de exemplo carregadas!`, 'sucesso')
+  }, [])
 
-  useEffect(() => { carregarSecao('Notificacoes').then(setLista) }, [])
+  useEffect(() => {
+    window.api.funcoes.listarNotificacoes().then(res => res.ok && setLista(res.data.map(daApi)))
+  }, [])
 
   const salvar = useCallback(async (item) => {
-    const nova = lista.some(n => n.id === item.id)
-      ? lista.map(n => n.id === item.id ? item : n)
-      : [...lista, item]
-    setLista(nova); await salvarSecao('Notificacoes', nova); setEditando(null)
+    const existe = lista.some(n => n.id === item.id)
+    const res = existe
+      ? await window.api.funcoes.atualizarNotificacao(paraApi(item))
+      : await window.api.funcoes.criarNotificacao(paraApi(item))
+    if (!res.ok) { mostrarAlerta(res.erro || 'Erro ao salvar', 'erro'); return }
+    const salvo = daApi(res.data)
+    setLista(prev => existe ? prev.map(n => n.id === salvo.id ? salvo : n) : [...prev, salvo])
+    setEditando(null)
     mostrarAlerta('Notificação salva!', 'sucesso')
   }, [lista])
 
   const remover = useCallback(async (id) => {
     if (!confirm('Excluir esta notificação?')) return
-    const nova = lista.filter(n => n.id !== id); setLista(nova); await salvarSecao('Notificacoes', nova)
-  }, [lista])
+    await window.api.funcoes.excluirNotificacao(id)
+    setLista(prev => prev.filter(n => n.id !== id))
+  }, [])
 
   const testar = useCallback(async (item) => {
     setTestando(item.id)
-    try {
-      if (item.tipo === 'desktop') {
-        new Notification(item.titulo || 'KronTech', { body: item.mensagem || 'Notificação de teste' })
-        mostrarAlerta('Notificação desktop disparada!', 'sucesso')
-      } else if (item.tipo === 'toast') {
-        mostrarAlerta(item.mensagem || 'Mensagem de teste', item.tipoToast || 'info')
-      } else if (item.tipo === 'webhook') {
-        await fetch(item.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mensagem: item.mensagem, sistema: 'KronTech', timestamp: new Date().toISOString() }) })
-        mostrarAlerta('Webhook enviado!', 'sucesso')
-      }
-    } catch (e) { mostrarAlerta('Erro: ' + e.message, 'erro') }
-    finally { setTestando(null) }
+    const res = await window.api.funcoes.testarNotificacao(item.id)
+    if (res.ok) mostrarAlerta('Notificação disparada!', 'sucesso')
+    else mostrarAlerta('Erro: ' + res.erro, 'erro')
+    setTestando(null)
   }, [])
 
-  const novo = () => setEditando({ id: genId(), nome: '', tipo: 'toast', titulo: 'KronTech', mensagem: '', tipoToast: 'info', url: '' })
+  const novo = () => setEditando({ id: null, nome: '', tipo: 'toast', titulo: 'KronTech', mensagem: '', tipoToast: 'info', url: '' })
   const iconTipo = { toast: Bell, desktop: Monitor, webhook: Globe, email: Mail }
 
   if (editando) return (
