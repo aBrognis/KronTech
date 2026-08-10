@@ -1,5 +1,6 @@
 import { executarScript, executarIntegracao, enviarNotificacao, logExecucao } from '../services/execucaoService'
 import { calcularProximaExecucao, executarAgendamento } from '../services/agendamentoService'
+import { dispararAutomacoes } from '../services/automacaoService'
 
 export function registerFuncoesHandlers({ ipcMain, wrap, query, queryOne }) {
 
@@ -158,5 +159,39 @@ export function registerFuncoesHandlers({ ipcMain, wrap, query, queryOne }) {
     if (!ag) throw new Error('Agendamento não encontrado.')
     await executarAgendamento(ag)
     return queryOne(`SELECT * FROM kr_agendamentos WHERE id=$1`, [id])
+  }))
+
+  // ── Automações ─────────────────────────────────────────────────────────
+  ipcMain.handle('funcoes:listarAutomacoes', wrap(async () => {
+    return query(`SELECT * FROM kr_automacoes ORDER BY nome`)
+  }))
+
+  ipcMain.handle('funcoes:criarAutomacao', wrap(async (_, d) => {
+    if (!d.nome?.trim()) throw new Error('Nome é obrigatório.')
+    if (!d.trigger_tipo) throw new Error('Gatilho é obrigatório.')
+    return queryOne(
+      `INSERT INTO kr_automacoes (nome, trigger_tipo, trigger_campo, trigger_tabela, condicoes, acoes, ativo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [d.nome.trim(), d.trigger_tipo, d.trigger_campo || '', d.trigger_tabela || '',
+       JSON.stringify(d.condicoes || []), JSON.stringify(d.acoes || []), d.ativo ?? true]
+    )
+  }))
+
+  ipcMain.handle('funcoes:atualizarAutomacao', wrap(async (_, d) => {
+    if (!d.nome?.trim()) throw new Error('Nome é obrigatório.')
+    return queryOne(
+      `UPDATE kr_automacoes SET nome=$1, trigger_tipo=$2, trigger_campo=$3, trigger_tabela=$4,
+       condicoes=$5, acoes=$6, ativo=$7, alterado_em=NOW() WHERE id=$8 RETURNING *`,
+      [d.nome.trim(), d.trigger_tipo, d.trigger_campo || '', d.trigger_tabela || '',
+       JSON.stringify(d.condicoes || []), JSON.stringify(d.acoes || []), d.ativo ?? true, d.id]
+    )
+  }))
+
+  ipcMain.handle('funcoes:excluirAutomacao', wrap(async (_, id) => {
+    await query(`DELETE FROM kr_automacoes WHERE id=$1`, [id])
+  }))
+
+  ipcMain.handle('automacao:disparar', wrap(async (_, payload) => {
+    return dispararAutomacoes(payload || {})
   }))
 }

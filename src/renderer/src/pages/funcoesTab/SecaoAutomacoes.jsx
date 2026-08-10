@@ -1,7 +1,22 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Zap, Plus, Save, Trash2, Edit2, X, Power, PowerOff, Filter, BookOpen } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
-import { genId, carregarSecao, salvarSecao, Btn, FInput, FSelect, Row, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
+import { genId, Btn, FInput, FSelect, Row, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
+
+function paraApi(a) {
+  return {
+    id: a.id, nome: a.nome, ativo: a.ativo ?? true,
+    trigger_tipo: a.trigger.tipo, trigger_campo: a.trigger.campo || '', trigger_tabela: a.trigger.tabela || '',
+    condicoes: a.condicoes, acoes: a.acoes,
+  }
+}
+function daApi(a) {
+  return {
+    id: a.id, nome: a.nome, ativo: a.ativo,
+    trigger: { tipo: a.trigger_tipo, campo: a.trigger_campo || '', tabela: a.trigger_tabela || '' },
+    condicoes: a.condicoes || [], acoes: a.acoes || [],
+  }
+}
 
 const TRIGGERS = [
   { value: 'ao_abrir',     label: 'Ao abrir tela'    },
@@ -82,36 +97,43 @@ export default function SecaoAutomacoes({ telas }) {
   const [editando, setEditando] = useState(null)
   const [busca, setBusca]     = useState('')
 
-  useEffect(() => { carregarSecao('Automacoes').then(setLista) }, [])
+  useEffect(() => {
+    window.api.funcoes.listarAutomacoes().then(res => res.ok && setLista(res.data.map(daApi)))
+  }, [])
 
   const carregarExemplos = useCallback(async () => {
     const novos = EXEMPLOS_AUTOMACOES.map(e => ({ ...e, id: genId(), acoes: e.acoes.map(a => ({ ...a, id: genId() })), condicoes: e.condicoes.map(c => ({ ...c, id: genId() })) }))
-    const nova = [...lista, ...novos]; setLista(nova); await salvarSecao('Automacoes', nova)
-    mostrarAlerta(`${novos.length} automações de exemplo carregadas!`, 'sucesso')
-  }, [lista])
+    const criadas = []
+    for (const a of novos) {
+      const res = await window.api.funcoes.criarAutomacao(paraApi(a))
+      if (res.ok) criadas.push(daApi(res.data))
+    }
+    setLista(prev => [...prev, ...criadas])
+    mostrarAlerta(`${criadas.length} automações de exemplo carregadas!`, 'sucesso')
+  }, [])
 
   const salvar = useCallback(async (atualizada) => {
-    const nova = lista.some(a => a.id === atualizada.id)
-      ? lista.map(a => a.id === atualizada.id ? atualizada : a)
-      : [...lista, atualizada]
-    setLista(nova)
-    await salvarSecao('Automacoes', nova)
+    const existe = lista.some(a => a.id === atualizada.id)
+    const res = existe
+      ? await window.api.funcoes.atualizarAutomacao(paraApi(atualizada))
+      : await window.api.funcoes.criarAutomacao(paraApi(atualizada))
+    if (!res.ok) { mostrarAlerta(res.erro || 'Erro ao salvar', 'erro'); return }
+    const salva = daApi(res.data)
+    setLista(prev => existe ? prev.map(a => a.id === salva.id ? salva : a) : [...prev, salva])
     setEditando(null)
     mostrarAlerta('Automação salva!', 'sucesso')
   }, [lista])
 
   const remover = useCallback(async (id) => {
     if (!confirm('Excluir esta automação?')) return
-    const nova = lista.filter(a => a.id !== id)
-    setLista(nova)
-    await salvarSecao('Automacoes', nova)
-  }, [lista])
+    await window.api.funcoes.excluirAutomacao(id)
+    setLista(prev => prev.filter(a => a.id !== id))
+  }, [])
 
-  const toggleAtivo = useCallback(async (id) => {
-    const nova = lista.map(a => a.id === id ? { ...a, ativo: !a.ativo } : a)
-    setLista(nova)
-    await salvarSecao('Automacoes', nova)
-  }, [lista])
+  const toggleAtivo = useCallback(async (a) => {
+    const res = await window.api.funcoes.atualizarAutomacao(paraApi({ ...a, ativo: !a.ativo }))
+    if (res.ok) setLista(prev => prev.map(x => x.id === a.id ? daApi(res.data) : x))
+  }, [])
 
   const novaAutomacao = () => setEditando({
     id: genId(), nome: '', ativo: true,
@@ -151,6 +173,13 @@ export default function SecaoAutomacoes({ telas }) {
             <FInput label="Nome do campo" value={editando.trigger.campo || ''}
               onChange={e => setEditando(p => ({ ...p, trigger: { ...p.trigger, campo: e.target.value } }))}
               placeholder="nome_do_campo" />
+          )}
+          {editando.trigger.tipo !== 'manual' && (
+            <FSelect label="Tela" value={editando.trigger.tabela || ''}
+              onChange={e => setEditando(p => ({ ...p, trigger: { ...p.trigger, tabela: e.target.value } }))} style={{ minWidth: 200 }}>
+              <option value="">Todas as telas</option>
+              {telas.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
+            </FSelect>
           )}
         </div>
       </Card>
@@ -234,7 +263,7 @@ export default function SecaoAutomacoes({ telas }) {
               </div>
               <StatusBadge ativo={a.ativo} />
               <div style={{ display: 'flex', gap: 5 }}>
-                <button className="btn btn-ghost" style={{ height: 30, color: a.ativo ? 'var(--green)' : 'var(--t3)' }} onClick={() => toggleAtivo(a.id)} title={a.ativo ? 'Desativar' : 'Ativar'}>
+                <button className="btn btn-ghost" style={{ height: 30, color: a.ativo ? 'var(--green)' : 'var(--t3)' }} onClick={() => toggleAtivo(a)} title={a.ativo ? 'Desativar' : 'Ativar'}>
                   {a.ativo ? <Power size={13} /> : <PowerOff size={13} />}
                 </button>
                 <button className="btn btn-ghost" style={{ height: 30 }} onClick={() => setEditando(a)}><Edit2 size={13} /></button>

@@ -171,11 +171,18 @@ const api = {
     atualizarAgendamento: (d) => ipcRenderer.invoke('funcoes:atualizarAgendamento', d),
     excluirAgendamento:   (id) => ipcRenderer.invoke('funcoes:excluirAgendamento', id),
     executarAgendamentoAgora: (id) => ipcRenderer.invoke('funcoes:executarAgendamentoAgora', id),
+    listarAutomacoes:   ()  => ipcRenderer.invoke('funcoes:listarAutomacoes'),
+    criarAutomacao:     (d) => ipcRenderer.invoke('funcoes:criarAutomacao', d),
+    atualizarAutomacao: (d) => ipcRenderer.invoke('funcoes:atualizarAutomacao', d),
+    excluirAutomacao:   (id) => ipcRenderer.invoke('funcoes:excluirAutomacao', id),
     onToast: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('funcoes:toast', fn)
       return () => ipcRenderer.removeListener('funcoes:toast', fn)
     },
+  },
+  automacao: {
+    disparar: (payload) => ipcRenderer.invoke('automacao:disparar', payload),
   },
 }
 

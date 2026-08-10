@@ -120,6 +120,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   const [lkpPopover,      setLkpPopover]      = useState(null) // { label, x, y }
 
   const [allItems, setAllItems] = useState([]) // todos os registros, carregado uma vez
+  const [camposOcultos, setCamposOcultos] = useState(() => new Set())
 
   // Redefinir senha
   const [redefinirOpen,    setRedefinirOpen]    = useState(false)
@@ -163,6 +164,22 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   } = useFormBuilderAcesso({ nomeTabela, tela, registros, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab })
 
   useEffect(() => { init() }, [nomeTabela])
+  useEffect(() => { dispararAutomacao('ao_abrir') }, [nomeTabela])
+
+  // Gatilho campo_muda: dispara automação por campo alterado, com debounce
+  // de "parar de digitar" (não a cada tecla, evita excesso de disparos).
+  const formAnteriorRef = useRef(form)
+  useEffect(() => {
+    if (mode === 'view') { formAnteriorRef.current = form; return }
+    const timer = setTimeout(() => {
+      const anterior = formAnteriorRef.current
+      for (const campo of Object.keys(form)) {
+        if (form[campo] !== anterior[campo]) dispararAutomacao('campo_muda', campo)
+      }
+      formAnteriorRef.current = form
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [form, mode])
 
   useEffect(() => {
     function onTelasUpdated() { init() }
@@ -297,6 +314,30 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     carregarForm(tela, registros[currentIdx]); setMode('edit'); setErro(null)
   }
 
+  async function dispararAutomacao(triggerTipo, triggerCampo) {
+    try {
+      const res = await window.api.automacao.disparar({
+        triggerTipo, triggerTabela: nomeTabela, triggerCampo: triggerCampo || '', dados: form,
+      })
+      if (!res.ok || !res.data?.length) return
+      for (const efeito of res.data) {
+        if (efeito.tipo === 'alerta') {
+          mostrarAlerta(efeito.mensagem || '', efeito.tipoAlerta || 'info')
+        } else if (efeito.tipo === 'definir_valor' && efeito.campo) {
+          setField(efeito.campo, efeito.valor ?? '')
+        } else if (efeito.tipo === 'mostrar_campo' && efeito.campo) {
+          setCamposOcultos(prev => { const n = new Set(prev); n.delete(efeito.campo); return n })
+        } else if (efeito.tipo === 'ocultar_campo' && efeito.campo) {
+          setCamposOcultos(prev => new Set(prev).add(efeito.campo))
+        } else if (efeito.tipo === 'navegar' && efeito.destino) {
+          abrirTela(efeito.destino)
+        } else if (efeito.tipo === 'exportar_csv' && registros.length) {
+          exportarCSV(registros, `${nomeTabela}.csv`)
+        }
+      }
+    } catch { /* automação não deve travar o fluxo principal */ }
+  }
+
   async function handleGravar() {
     setErro(null)
     for (const c of tela.campos.filter(c => c.ativo && c.obrigatorio && !c.sequencial)) {
@@ -346,6 +387,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         await carregar(tela, pagina, busca, idAtual)
       }
       setMode('view')
+      dispararAutomacao('ao_salvar')
     } catch(e) { setErro(e.message) }
     finally    { setSaving(false) }
   }
@@ -726,6 +768,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
               <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'row', gap: 16, minHeight: 0, alignItems: 'flex-start' }}>
                 <div style={{ position: 'relative', width: cfgW, minWidth: cfgW, minHeight: canvasH, flexShrink: 0, overflow: 'visible' }}>
                   {campos.map(campo => {
+                    if (camposOcultos.has(campo.nome_campo)) return null
                     const x = campo.x_pos || 0
                     const y = campo.y_pos || 0
                     const w = campo.w_px  || 280
@@ -826,6 +869,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
               /* Layout grade */
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
                 {campos.map(campo => {
+                  if (camposOcultos.has(campo.nome_campo)) return null
                   if (campo.tipo === 'divisor') return (
                     <div key={campo.id} style={{ gridColumn: '1 / -1', position: 'relative', height: 20, margin: '4px 0' }}>
                       <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, transform: 'translateY(-50%)', background: 'var(--bd2)' }} />
