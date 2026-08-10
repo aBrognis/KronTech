@@ -9,6 +9,7 @@ import {
 import '../App.css'
 import { thS, tdS } from './formBuilderView/gridStyles.js'
 import PaginacaoBar from './formBuilderView/PaginacaoBar.jsx'
+import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const CATEGORIAS = ['Contrato', 'Manual', 'Financeiro', 'Relatório', 'Script', 'Imagem', 'Apresentação', 'Outro']
@@ -28,10 +29,13 @@ const CAMPOS_BUSCA = [
   { val: 'arquivo_ext', label: 'Extensão' },
 ]
 
-const MODOS_MODAL = [
-  { val: 'iniciando', label: 'Iniciando'               },
-  { val: 'contendo',  label: 'Contendo a(s) Palavra(s)' },
-  { val: 'igual',     label: 'Igual'                   },
+const COLUNAS_MODAL_ARQUIVOS = [
+  { nome_campo: 'codigo',          label: 'Código'    },
+  { nome_campo: 'nome',            label: 'Nome'       },
+  { nome_campo: 'categoria',       label: 'Categoria'  },
+  { nome_campo: 'pasta',           label: 'Pasta'      },
+  { nome_campo: 'arquivo_ext',     label: 'Ext.'       },
+  { nome_campo: 'arquivo_tamanho', label: 'Tamanho'    },
 ]
 
 // extensões que abrimos com preview interno
@@ -89,13 +93,6 @@ export default function Arquivos({ newTrigger }) {
 
   // Modal Pesquisa Padrão
   const [showConsulta, setShowConsulta] = useState(false)
-  const [mCampo,       setMCampo]       = useState('nome')
-  const [mOrdem,       setMOrdem]       = useState('asc')
-  const [mModo,        setMModo]        = useState('contendo')
-  const [mBusca,       setMBusca]       = useState('')
-  const [mResultados,  setMResultados]  = useState([])
-  const [mSelId,       setMSelId]       = useState(null)
-  const mBuscaRef = useRef(null)
 
   // Filtros aba Acesso (server-side, paginado — só roda ao clicar Buscar)
   const [fCategoria,  setFCategoria]  = useState('')
@@ -320,25 +317,8 @@ export default function Arquivos({ newTrigger }) {
   }
 
   // ── Modal Pesquisa Padrão ─────────────────────────────────────────────────
-  function rodarConsultaModal(campo, ordem, modo, busca) {
-    let list = [...items]
-    if (busca.trim()) list = list.filter(i => filtrarStr(String(i[campo] ?? ''), busca, modo))
-    list.sort((a, b) => {
-      const va = String(a[campo] ?? '').toLowerCase()
-      const vb = String(b[campo] ?? '').toLowerCase()
-      return ordem === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
-    })
-    setMResultados(list)
-    const curId = items[currentIdx]?.id
-    setMSelId(list.find(i => i.id === curId) ? curId : (list[0]?.id ?? null))
-  }
-
   function abrirConsulta() {
-    const campo = 'nome', ordem = 'asc', modo = 'contendo', busca = ''
-    setMCampo(campo); setMOrdem(ordem); setMModo(modo); setMBusca(busca)
-    rodarConsultaModal(campo, ordem, modo, busca)
     setShowConsulta(true)
-    setTimeout(() => mBuscaRef.current?.focus(), 60)
   }
 
   async function handleImportarPasta() {
@@ -781,108 +761,26 @@ export default function Arquivos({ newTrigger }) {
 
       {/* ── Modal Pesquisa Padrão ── */}
       {showConsulta && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.5)' }}>
-          <div
-            style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 860, maxWidth: '96vw', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-            onKeyDown={e => {
-              if (e.key === 'Escape') setShowConsulta(false)
-              if (e.key === 'Enter') { const item = mResultados.find(i => i.id === mSelId); if (item) selecionarDaConsulta(item) }
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', boxShadow: 'var(--hi)' }}>
-              <span style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--t1)' }}>Pesquisa Padrão — ARQ_001</span>
-              <button onClick={() => setShowConsulta(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}><X size={15} /></button>
-            </div>
-
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--bd)', background: 'var(--s3)', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--t2)', whiteSpace: 'nowrap', minWidth: 26 }}>Por:</label>
-                  <select className="form-select" style={{ flex: 1, height: 30, fontSize: 12 }} value={mCampo} onChange={e => { const v = e.target.value; setMCampo(v); rodarConsultaModal(v, mOrdem, mModo, mBusca) }}>
-                    {CAMPOS_BUSCA.map(c => <option key={c.val} value={c.val}>{c.label}</option>)}
-                  </select>
-                  <select className="form-select" style={{ width: 124, height: 30, fontSize: 12 }} value={mOrdem} onChange={e => { const v = e.target.value; setMOrdem(v); rodarConsultaModal(mCampo, v, mModo, mBusca) }}>
-                    <option value="asc">Crescente</option>
-                    <option value="desc">Decrescente</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--t2)', whiteSpace: 'nowrap', minWidth: 46 }}>Buscar:</label>
-                  <input ref={mBuscaRef} className="form-input" style={{ flex: 1, height: 30, fontSize: 12 }} value={mBusca}
-                    onChange={e => { const v = e.target.value; setMBusca(v); rodarConsultaModal(mCampo, mOrdem, mModo, v) }}
-                    placeholder="Digite para filtrar..." />
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                <div style={{ border: '1px solid var(--bd)', borderRadius: 10, padding: '8px 14px', background: 'var(--s1)', boxShadow: 'var(--sh-xs)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 }}>Buscar</div>
-                  {MODOS_MODAL.map(m => (
-                    <label key={m.val} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11.5, color: mModo === m.val ? 'var(--t1)' : 'var(--t3)', fontWeight: mModo === m.val ? 600 : 400, userSelect: 'none', marginBottom: 3 }}>
-                      <input type="radio" checked={mModo === m.val} onChange={() => { setMModo(m.val); rodarConsultaModal(mCampo, mOrdem, m.val, mBusca) }} style={{ accentColor: 'var(--or)', cursor: 'pointer' }} />
-                      {m.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                  <tr>
-                    <th style={{ ...thS, width: 18, padding: '7px 0 7px 8px' }}></th>
-                    <th style={{ ...thS, textAlign: 'center', width: 36 }}>#</th>
-                    <th style={{ ...thS, textAlign: 'center', width: 60 }}>Código</th>
-                    <th style={{ ...thS, width: '34%' }}>Nome</th>
-                    <th style={thS}>Categoria</th>
-                    <th style={thS}>Pasta</th>
-                    <th style={{ ...thS, textAlign: 'center' }}>Ext.</th>
-                    <th style={thS}>Tamanho</th>
-                    <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mResultados.map((r, ri) => {
-                    const isSel = mSelId === r.id
-                    return (
-                      <tr key={r.id} onClick={() => setMSelId(r.id)} onDoubleClick={() => selecionarDaConsulta(r)}
-                        style={{ cursor: 'pointer', background: isSel ? 'rgba(255,107,43,.06)' : ri % 2 !== 0 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                        onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'var(--s3)' }}
-                        onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = ri % 2 !== 0 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                      >
-                        <td style={{ padding: '7px 0 7px 8px', width: 18, color: 'var(--or)', fontSize: 13, fontWeight: 700 }}>
-                          {isSel ? '›' : ''}
-                        </td>
-                        <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{ri + 1}</td>
-                        <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || '—'}</td>
-                        <td style={{ ...tdS, color: 'var(--t1)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}><ExtIcon ext={r.arquivo_ext} size={12} />{r.nome}</td>
-                        <td style={tdS}>{r.categoria || '—'}</td>
-                        <td style={tdS}>{r.pasta || '—'}</td>
-                        <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontSize: 11, textTransform: 'uppercase' }}>{r.arquivo_ext || '—'}</td>
-                        <td style={tdS}>{fmtSize(r.arquivo_tamanho)}</td>
-                        <td style={{ ...tdS, textAlign: 'center' }}>
-                          {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                  {mResultados.length === 0 && (
-                    <tr><td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderTop: '1px solid var(--bd)', background: 'var(--s3)' }}>
-              <button className="btn btn-primary" onClick={() => { const item = mResultados.find(i => i.id === mSelId); if (item) selecionarDaConsulta(item) }} disabled={!mSelId}><Search size={13} /> Confirmar</button>
-              <button className="btn btn-ghost"   onClick={() => setShowConsulta(false)}><X size={13} /> Fechar</button>
-              <span style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 4 }}>
-                {mResultados.length} arquivo{mResultados.length !== 1 ? 's' : ''}
-                {mSelId ? ' — Enter ou duplo clique para abrir' : ' — selecione uma linha'}
-              </span>
-            </div>
-          </div>
-        </div>
+        <PesquisaPadraoModal
+          titulo="Pesquisa Padrão — ARQ_001"
+          campos={CAMPOS_BUSCA.map(c => ({ nome_campo: c.val, label: c.label }))}
+          colunasExibidas={COLUNAS_MODAL_ARQUIVOS}
+          campoInicial="nome"
+          mostrarFavorito
+          onBuscar={async (campo, modo, busca, ordenar, direcao) => {
+            const res = await window.api.arquivos.listarFiltrado({ campo, modo, busca, ordenar, direcao, porPagina: 1000, pagina: 1 })
+            if (!res.ok) throw new Error(res.erro)
+            return res.data
+          }}
+          onSelecionar={selecionarDaConsulta}
+          onFechar={() => setShowConsulta(false)}
+          renderCelula={(r, c) => {
+            if (c.nome_campo === 'nome') return <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExtIcon ext={r.arquivo_ext} size={12} />{r.nome}</span>
+            if (c.nome_campo === 'arquivo_ext') return <span style={{ textTransform: 'uppercase' }}>{r.arquivo_ext || '—'}</span>
+            if (c.nome_campo === 'arquivo_tamanho') return fmtSize(r.arquivo_tamanho)
+            return String(r[c.nome_campo] ?? '—')
+          }}
+        />
       )}
 
       {/* ── Modal Preview ── */}
