@@ -1,5 +1,6 @@
-import { BrowserWindow, app, shell } from 'electron'
+import { BrowserWindow, app, shell, nativeTheme } from 'electron'
 import { join } from 'path'
+import { getIcon } from '../appIcon'
 
 let _designerWin = null
 
@@ -12,6 +13,7 @@ function createDesignerWindow() {
     width: 1440, height: 900, minWidth: 1000, minHeight: 700,
     show: false, frame: false, titleBarStyle: 'hidden',
     backgroundColor: '#0A0A0A',
+    icon: getIcon(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false, contextIsolation: true,
@@ -19,6 +21,9 @@ function createDesignerWindow() {
   })
   _designerWin.on('ready-to-show', () => { _designerWin.show(); _designerWin.maximize() })
   _designerWin.on('closed', () => { _designerWin = null })
+  const onThemeUpdate = () => { if (!_designerWin.isDestroyed()) _designerWin.setIcon(getIcon()) }
+  nativeTheme.on('updated', onThemeUpdate)
+  _designerWin.on('closed', () => nativeTheme.off('updated', onThemeUpdate))
   _designerWin.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' } })
   _designerWin.webContents.on('before-input-event', (_ev, input) => {
     if (input.type === 'keyDown' && input.code === 'F12') {

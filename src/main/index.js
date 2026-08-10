@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, nativeImage, nativeTheme } from 'electron'
+import { app, shell, BrowserWindow, nativeTheme } from 'electron'
 import { join } from 'path'
 import { loadConfig, encryptSensitiveConfig } from './config'
 import { registerHandlers } from './ipcHandlers'
@@ -7,6 +7,7 @@ import { startReminderCheck } from './services/reminder'
 import { setupAutoUpdater } from './services/updater'
 import { confirmarStatus } from './handlers/agenda'
 import { query, queryOne } from './db'
+import { getIcon } from './appIcon'
 
 function broadcast(channel, data) {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -50,11 +51,6 @@ async function handleAgendaProtocolo(url) {
 
 function findProtocoloUrl(argv) {
   return argv.find(a => a.startsWith('krontech://'))
-}
-
-function getIcon() {
-  const name = nativeTheme.shouldUseDarkColors ? 'icon.ico' : 'icon-light.ico'
-  return nativeImage.createFromPath(join(__dirname, '../../resources', name))
 }
 
 function createWindow() {
