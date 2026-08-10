@@ -28,19 +28,19 @@ export default function PainelDia({ year, month, day, events, onOpenNew, onOpenE
         ) : dayEvs.map(ev => {
           const cor = corEvento(ev)
           const stCor = corStatus(ev)
+          const corAuto = corStatusAuto(ev)
           const atrasado = ev.status_auto === 'atrasado'
-          const corAtraso = corStatusAuto(ev)
           return (
             <div key={ev.id} onClick={()=>onOpenEdit(ev)}
               style={{
                 background:'var(--s2)', border:`1px solid var(--bd)`, borderLeft:`3px solid ${cor}`,
-                outline: atrasado ? `2px dashed ${corAtraso}` : 'none', outlineOffset:-1,
+                outline: corAuto ? `2px ${atrasado?'dashed':'solid'} ${corAuto}` : 'none', outlineOffset:-1,
                 borderRadius:7, padding:'8px 10px', cursor:'pointer',
               }}
               onMouseEnter={e=>e.currentTarget.style.background='var(--s3)'}
               onMouseLeave={e=>e.currentTarget.style.background='var(--s2)'}>
               <div style={{ fontSize:12, fontWeight:600, color:'var(--t1)', marginBottom:3, display:'flex', alignItems:'center', gap:5 }}>
-                {atrasado && <Clock3 size={11} color={corAtraso} style={{ flexShrink:0 }}/>}
+                {corAuto && <Clock3 size={11} color={corAuto} style={{ flexShrink:0 }}/>}
                 {ev.titulo}
               </div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>

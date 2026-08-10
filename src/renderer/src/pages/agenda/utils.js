@@ -103,11 +103,11 @@ export const STATUS_AUTO_LABEL = {
 // null = 'agendado', sem destaque especial.
 export function corStatusAuto(ev) {
   switch (ev.status_auto) {
-    case 'atrasado':       return '#EF4444'
-    case 'em_andamento':   return '#22C55E'
-    case 'concluido':      return '#6B7280'
-    case 'nao_compareceu': return '#F59E0B'
-    case 'cancelado':      return '#6B7280'
+    case 'atrasado':       return '#EF4444' // vermelho
+    case 'em_andamento':   return '#22C55E' // verde
+    case 'concluido':      return '#3B82F6' // azul
+    case 'nao_compareceu': return '#F59E0B' // amarelo/âmbar
+    case 'cancelado':      return '#9CA3AF' // cinza
     default:                return null
   }
 }
