@@ -175,6 +175,10 @@ const api = {
     criarAutomacao:     (d) => ipcRenderer.invoke('funcoes:criarAutomacao', d),
     atualizarAutomacao: (d) => ipcRenderer.invoke('funcoes:atualizarAutomacao', d),
     excluirAutomacao:   (id) => ipcRenderer.invoke('funcoes:excluirAutomacao', id),
+    listarFluxos:      ()  => ipcRenderer.invoke('funcoes:listarFluxos'),
+    criarFluxo:        (d) => ipcRenderer.invoke('funcoes:criarFluxo', d),
+    atualizarFluxo:    (d) => ipcRenderer.invoke('funcoes:atualizarFluxo', d),
+    excluirFluxo:      (id) => ipcRenderer.invoke('funcoes:excluirFluxo', id),
     onToast: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('funcoes:toast', fn)
@@ -183,6 +187,9 @@ const api = {
   },
   automacao: {
     disparar: (payload) => ipcRenderer.invoke('automacao:disparar', payload),
+  },
+  fluxo: {
+    executar: (id, dadosIniciais) => ipcRenderer.invoke('fluxo:executar', id, dadosIniciais),
   },
 }
 

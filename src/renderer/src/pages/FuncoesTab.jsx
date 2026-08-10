@@ -81,7 +81,7 @@ export default function FuncoesTab({ telas = [] }) {
         {secao === 'agendamentos'  && <SecaoAgendamentos scripts={scripts} />}
         {secao === 'notificacoes'  && <SecaoNotificacoes />}
         {secao === 'relatorios'    && <SecaoRelatorios />}
-        {secao === 'fluxos'        && <SecaoFluxos />}
+        {secao === 'fluxos'        && <SecaoFluxos telas={telas} />}
         {secao === 'minhasfuncoes' && <SecaoMinhasFuncoes />}
         {secao === 'biblioteca'    && <SecaoBiblioteca telas={telas} />}
       </div>

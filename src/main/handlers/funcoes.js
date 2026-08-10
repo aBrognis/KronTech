@@ -1,6 +1,7 @@
 import { executarScript, executarIntegracao, enviarNotificacao, logExecucao } from '../services/execucaoService'
 import { calcularProximaExecucao, executarAgendamento } from '../services/agendamentoService'
 import { dispararAutomacoes } from '../services/automacaoService'
+import { executarFluxo } from '../services/fluxoService'
 
 export function registerFuncoesHandlers({ ipcMain, wrap, query, queryOne }) {
 
@@ -193,5 +194,37 @@ export function registerFuncoesHandlers({ ipcMain, wrap, query, queryOne }) {
 
   ipcMain.handle('automacao:disparar', wrap(async (_, payload) => {
     return dispararAutomacoes(payload || {})
+  }))
+
+  // ── Fluxos ─────────────────────────────────────────────────────────────
+  ipcMain.handle('funcoes:listarFluxos', wrap(async () => {
+    return query(`SELECT * FROM kr_fluxos ORDER BY nome`)
+  }))
+
+  ipcMain.handle('funcoes:criarFluxo', wrap(async (_, d) => {
+    if (!d.nome?.trim()) throw new Error('Nome é obrigatório.')
+    if (!d.gatilho) throw new Error('Gatilho é obrigatório.')
+    return queryOne(
+      `INSERT INTO kr_fluxos (nome, descricao, gatilho, trigger_tabela, etapas, ativo)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [d.nome.trim(), d.descricao || '', d.gatilho, d.trigger_tabela || '', JSON.stringify(d.etapas || []), d.ativo ?? true]
+    )
+  }))
+
+  ipcMain.handle('funcoes:atualizarFluxo', wrap(async (_, d) => {
+    if (!d.nome?.trim()) throw new Error('Nome é obrigatório.')
+    return queryOne(
+      `UPDATE kr_fluxos SET nome=$1, descricao=$2, gatilho=$3, trigger_tabela=$4, etapas=$5,
+       ativo=$6, alterado_em=NOW() WHERE id=$7 RETURNING *`,
+      [d.nome.trim(), d.descricao || '', d.gatilho, d.trigger_tabela || '', JSON.stringify(d.etapas || []), d.ativo ?? true, d.id]
+    )
+  }))
+
+  ipcMain.handle('funcoes:excluirFluxo', wrap(async (_, id) => {
+    await query(`DELETE FROM kr_fluxos WHERE id=$1`, [id])
+  }))
+
+  ipcMain.handle('fluxo:executar', wrap(async (_, id, dadosIniciais) => {
+    await executarFluxo(id, dadosIniciais || {})
   }))
 }
