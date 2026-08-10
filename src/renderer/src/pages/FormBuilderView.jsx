@@ -8,6 +8,7 @@ import {
   FolderInput, Settings, Clipboard, Upload, Eye, EyeOff,
 } from 'lucide-react'
 import { CANVAS_W, CANVAS_H_MIN } from '../components/FormDesigner'
+import PesquisaPadraoModal from '../components/PesquisaPadraoModal'
 import {
   exportarCSV, copiarTexto, mostrarAlerta,
   abrirTela, abrirEmNovaAba, voltarTela, limparFormulario, exportarPDF,
@@ -150,10 +151,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   } = useLookupModal({ form, setField })
 
   const {
-    showConsulta, setShowConsulta, mTodos, mLoading, mCampo, setMCampo,
-    mOrdem, setMOrdem, mModo, setMModo, mBusca, setMBusca, mResultados, mSelId, mBuscaRef,
-    rodarModal, abrirConsulta, selecionarDaConsulta,
-  } = useConsultaModal({ tela, nomeTabela, registros, currentIdx, allItems, setAllItems, filtrarStr, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab })
+    showConsulta, setShowConsulta, campoInicial,
+    abrirConsulta, selecionarDaConsulta,
+  } = useConsultaModal({ tela, registros, currentIdx, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab })
 
   const {
     fFiltros, setFiltroCampo, fBusca, setFBusca, fResultados, fLoading,
@@ -871,130 +871,28 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
       {/* ── Modal Pesquisa Padrão ── */}
       {showConsulta && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.5)' }}>
-          <div
-            style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 920, maxWidth: '96vw', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-            onKeyDown={e => {
-              if (e.key === 'Escape') setShowConsulta(false)
-              if (e.key === 'Enter') { const r = mResultados.find(r => r.id === mSelId); if (r) selecionarDaConsulta(r) }
-            }}
-          >
-            {/* cabeçalho */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', background: 'var(--s2)', borderBottom: '1px solid var(--bd)' }}>
-              <span style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--t1)' }}>Pesquisa Padrão — {tela?.nome_tela}</span>
-              <button onClick={() => setShowConsulta(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}><X size={15} /></button>
-            </div>
-
-            {/* controles */}
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--bd)', background: 'var(--s3)', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--t2)', whiteSpace: 'nowrap', minWidth: 26 }}>Por:</label>
-                  <select className="form-select" style={{ flex: 1, height: 30, fontSize: 12 }} value={mCampo}
-                    onChange={e => { const v = e.target.value; setMCampo(v); rodarModal(v, mOrdem, mModo, mBusca) }}>
-                    {camposModal.map(c => <option key={c.id} value={c.nome_campo}>{c.label}</option>)}
-                  </select>
-                  <select className="form-select" style={{ width: 124, height: 30, fontSize: 12 }} value={mOrdem}
-                    onChange={e => { const v = e.target.value; setMOrdem(v); rodarModal(mCampo, v, mModo, mBusca) }}>
-                    <option value="asc">Crescente</option>
-                    <option value="desc">Decrescente</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--t2)', whiteSpace: 'nowrap', minWidth: 46 }}>Buscar:</label>
-                  <input ref={mBuscaRef} className="form-input" style={{ flex: 1, height: 30, fontSize: 12 }} value={mBusca}
-                    onChange={e => { const v = e.target.value; setMBusca(v); rodarModal(mCampo, mOrdem, mModo, v) }}
-                    placeholder="Digite para filtrar..." />
-                </div>
-              </div>
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, padding: '8px 14px', background: 'var(--s1)', boxShadow: 'var(--sh-xs)', flexShrink: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 }}>Buscar</div>
-                {MODOS_MODAL.map(m => (
-                  <label key={m.val} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11.5, color: mModo === m.val ? 'var(--t1)' : 'var(--t3)', fontWeight: mModo === m.val ? 600 : 400, userSelect: 'none', marginBottom: 3 }}>
-                    <input type="radio" checked={mModo === m.val}
-                      onChange={() => { setMModo(m.val); rodarModal(mCampo, mOrdem, m.val, mBusca) }}
-                      style={{ accentColor: 'var(--or)', cursor: 'pointer' }} />
-                    {m.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* grid de resultados */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {mLoading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--t3)', fontSize: 12 }}>Carregando registros...</div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <tr>
-                      <th style={{ ...thS, width: 20, padding: '7px 4px' }}></th>
-                      <th style={{ ...thS, textAlign: 'center' }}>ID</th>
-                      {camposModal.slice(0, 5).map(c => <th key={c.id} style={thS}>{c.label}</th>)}
-                      {tela.col_favorito !== false && <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mResultados.map((r, ri) => {
-                      const isSel = mSelId === r.id
-                      return (
-                        <tr key={r.id}
-                          onClick={() => setMSelId(r.id)}
-                          onDoubleClick={() => selecionarDaConsulta(r)}
-                          style={{ cursor: 'pointer', background: ri % 2 !== 0 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--s3)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = ri % 2 !== 0 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                        >
-                          <td style={{ padding: '7px 4px', width: 20, textAlign: 'center', color: 'var(--or)' }}>
-                            {isSel ? <ChevronRight size={12} strokeWidth={2.5} /> : null}
-                          </td>
-                          <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 11, fontFamily: 'monospace' }}>{r.id}</td>
-                          {camposModal.slice(0, 5).map((c, ci) => {
-                            const v = r[c.nome_campo]
-                            let display = String(v ?? '—')
-                            if (c.tipo === 'lookup') {
-                              const lbl = (lookupOpcoes[c.nome_campo] || []).find(o => o.id === Number(v))?.label
-                              display = lbl || (v ? `#${v}` : '—')
-                            }
-                            return (
-                              <td key={c.id} style={{ ...tdS, color: ci === 0 ? 'var(--t1)' : 'var(--t2)', fontWeight: ci === 0 ? 500 : 400 }}>
-                                {display}
-                              </td>
-                            )
-                          })}
-                          {tela.col_favorito !== false && (
-                            <td style={{ ...tdS, textAlign: 'center' }}>
-                              {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
-                            </td>
-                          )}
-                        </tr>
-                      )
-                    })}
-                    {mResultados.length === 0 && (
-                      <tr><td colSpan={camposModal.slice(0, 5).length + (tela.col_favorito !== false ? 3 : 2)} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* rodapé modal */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderTop: '1px solid var(--bd)', background: 'var(--s3)' }}>
-              <button className="btn btn-primary"
-                onClick={() => { const r = mResultados.find(r => r.id === mSelId); if (r) selecionarDaConsulta(r) }}
-                disabled={!mSelId} title="Confirmar (Enter)">
-                <Check size={13} /> Confirmar
-              </button>
-              <button className="btn btn-ghost" onClick={() => setShowConsulta(false)} title="Fechar (Esc)">
-                <X size={13} /> Fechar
-              </button>
-              <span style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 4 }}>
-                {mResultados.length} registro{mResultados.length !== 1 ? 's' : ''}
-                {mSelId ? ' — Enter ou duplo clique para abrir' : ' — selecione uma linha'}
-              </span>
-            </div>
-          </div>
-        </div>
+        <PesquisaPadraoModal
+          titulo={`Pesquisa Padrão — ${tela?.nome_tela}`}
+          campos={camposModal}
+          colunasExibidas={camposModal.slice(0, 5)}
+          campoInicial={campoInicial}
+          mostrarFavorito={tela.col_favorito !== false}
+          onBuscar={async (campo, modo, busca, ordenar, direcao) => {
+            const res = await window.api.formBuilder.pesquisarRegistros(nomeTabela, { campo, modo, busca, ordenar, direcao })
+            if (!res.ok) throw new Error(res.erro)
+            return res.data
+          }}
+          onSelecionar={selecionarDaConsulta}
+          onFechar={() => setShowConsulta(false)}
+          renderCelula={(r, c) => {
+            const v = r[c.nome_campo]
+            if (c.tipo === 'lookup') {
+              const lbl = (lookupOpcoes[c.nome_campo] || []).find(o => o.id === Number(v))?.label
+              return lbl || (v ? `#${v}` : '—')
+            }
+            return String(v ?? '—')
+          }}
+        />
       )}
 
       {/* ── Modal Lookup ── */}
