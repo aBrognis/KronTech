@@ -28,6 +28,7 @@ export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSe
   ipcMain.handle('fb:listarRegistros',  wrap((_, tbl, opts) => fb.listarRegistros(tbl, opts)))
   ipcMain.handle('fb:listarRegistrosFiltrado', wrap((_, tbl, opts) => fb.listarRegistrosFiltrado(tbl, opts)))
   ipcMain.handle('fb:getAllRegistros',  wrap((_, tbl)       => fb.getAllRegistros(tbl)))
+  ipcMain.handle('fb:pesquisarRegistros', wrap((_, tbl, opts) => fb.pesquisarRegistros(tbl, opts)))
   ipcMain.handle('fb:inserirRegistro',  wrap(async (_, tbl, dados) => {
     const dadosHash = await hashCamposSenha(tbl, dados)
     return fb.inserirRegistro(tbl, dadosHash)

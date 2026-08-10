@@ -421,6 +421,42 @@ export async function listarRegistrosFiltrado(nomeTabela, {
   return { registros, total: parseInt(total.n), pagina: pag, porPagina: porPag, totalPaginas: Math.ceil(parseInt(total.n) / porPag) || 1 }
 }
 
+const LIMITE_PESQUISA_PADRAO = 1000
+
+// Busca do modal "Pesquisa Padrão" (botão Consultar): um campo escolhido
+// pelo usuário, modo iniciando/contendo/igual, cortada em LIMITE_PESQUISA_PADRAO
+// via SQL — evita trazer tabelas grandes inteiras para o navegador (ex: arq_001
+// com ~15 mil linhas).
+export async function pesquisarRegistros(nomeTabela, { campo, modo = 'contendo', busca = '', ordenar, direcao = 'ASC' } = {}) {
+  const tela = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
+  if (!tela) throw new Error(`Tela "${nomeTabela}" não encontrada.`)
+
+  const camposTela = await query(
+    'SELECT nome_campo FROM kr_tela_campos WHERE tela_id=$1 AND ativo=TRUE',
+    [tela.id]
+  )
+  const nomesValidos = new Set(camposTela.map(c => c.nome_campo).concat(['id']))
+
+  const params = []
+  const conds = ['ativo=TRUE']
+  if (busca.trim() && nomesValidos.has(campo)) {
+    const c = col(campo)
+    if (modo === 'iniciando')      { params.push(`${busca.trim()}%`);  conds.push(`CAST(${c} AS TEXT) ILIKE $${params.length}`) }
+    else if (modo === 'igual')     { params.push(busca.trim());        conds.push(`CAST(${c} AS TEXT) = $${params.length}`) }
+    else /* contendo */            { params.push(`%${busca.trim()}%`); conds.push(`CAST(${c} AS TEXT) ILIKE $${params.length}`) }
+  }
+  const where = 'WHERE ' + conds.join(' AND ')
+  const colOrdem = ordenar && nomesValidos.has(ordenar) ? col(ordenar) : 'id'
+  const dir = direcao === 'desc' || direcao === 'DESC' ? 'DESC' : 'ASC'
+  params.push(LIMITE_PESQUISA_PADRAO)
+
+  const [registros, total] = await Promise.all([
+    query(`SELECT * FROM ${tbl(nomeTabela)} ${where} ORDER BY ${colOrdem} ${dir} LIMIT $${params.length}`, params),
+    queryOne(`SELECT COUNT(*) AS n FROM ${tbl(nomeTabela)} ${where}`, params.slice(0, params.length - 1)),
+  ])
+  return { registros, total: parseInt(total.n), limitado: parseInt(total.n) > LIMITE_PESQUISA_PADRAO, limite: LIMITE_PESQUISA_PADRAO }
+}
+
 export async function inserirRegistro(nomeTabela, dados) {
   const colunas = Object.keys(dados).map(col)
   const valores = Object.values(dados)

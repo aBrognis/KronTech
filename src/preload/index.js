@@ -91,6 +91,7 @@ const api = {
     listarRegistros:   (tbl, opts)     => ipcRenderer.invoke('fb:listarRegistros', tbl, opts),
     listarRegistrosFiltrado: (tbl, opts) => ipcRenderer.invoke('fb:listarRegistrosFiltrado', tbl, opts),
     getAllRegistros:    (tbl)           => ipcRenderer.invoke('fb:getAllRegistros', tbl),
+    pesquisarRegistros: (tbl, opts)     => ipcRenderer.invoke('fb:pesquisarRegistros', tbl, opts),
     inserirRegistro:   (tbl, dados)    => ipcRenderer.invoke('fb:inserirRegistro', tbl, dados),
     atualizarRegistro: (tbl, id, d, hasTs) => ipcRenderer.invoke('fb:atualizarRegistro', tbl, id, d, hasTs),
     reordenarTelas:    (items)          => ipcRenderer.invoke('fb:reordenarTelas', items),

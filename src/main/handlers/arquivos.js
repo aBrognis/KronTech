@@ -16,23 +16,34 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
 
   // Listagem filtrada + paginada da aba Acesso — não roda automaticamente,
   // só quando o usuário clica "Buscar" (schema fixo, não precisa do motor
-  // dinâmico do FormBuilder).
+  // dinâmico do FormBuilder). Também serve o modal "Pesquisa Padrão" (botão
+  // Consultar), que passa campo+modo em vez dos filtros fixos de nome/
+  // categoria/pasta/tags — quando campo vem preenchido, os filtros fixos são
+  // ignorados e a condição é montada dinamicamente sobre a coluna escolhida.
   ipcMain.handle('arquivos:listarFiltrado', wrap(async (_, {
     nome = '', categoria = '', pasta = '', tags = '', ext = '',
+    campo = '', modo = 'contendo', busca = '',
     pagina = 1, porPagina = 50, ordenar = 'dt_criacao', direcao = 'DESC',
   } = {}) => {
     const COLS_ORDENAVEIS = new Set(['codigo', 'nome', 'categoria', 'pasta', 'arquivo_ext', 'arquivo_tamanho', 'dt_criacao', 'dt_atualizacao'])
     const params = []
     const conds = []
-    if (nome.trim())      { params.push(`%${nome.trim()}%`);      conds.push(`nome ILIKE $${params.length}`) }
-    if (categoria)         { params.push(categoria);               conds.push(`categoria = $${params.length}`) }
-    if (pasta)              { params.push(pasta);                    conds.push(`pasta = $${params.length}`) }
-    if (tags.trim())      { params.push(`%${tags.trim()}%`);      conds.push(`tags ILIKE $${params.length}`) }
-    if (ext)                { params.push(ext);                      conds.push(`arquivo_ext = $${params.length}`) }
+
+    if (campo && COLS_ORDENAVEIS.has(campo) && busca.trim()) {
+      if (modo === 'iniciando')  { params.push(`${busca.trim()}%`);  conds.push(`CAST(${campo} AS TEXT) ILIKE $${params.length}`) }
+      else if (modo === 'igual') { params.push(busca.trim());        conds.push(`CAST(${campo} AS TEXT) = $${params.length}`) }
+      else /* contendo */        { params.push(`%${busca.trim()}%`); conds.push(`CAST(${campo} AS TEXT) ILIKE $${params.length}`) }
+    } else {
+      if (nome.trim())      { params.push(`%${nome.trim()}%`);      conds.push(`nome ILIKE $${params.length}`) }
+      if (categoria)         { params.push(categoria);               conds.push(`categoria = $${params.length}`) }
+      if (pasta)              { params.push(pasta);                    conds.push(`pasta = $${params.length}`) }
+      if (tags.trim())      { params.push(`%${tags.trim()}%`);      conds.push(`tags ILIKE $${params.length}`) }
+      if (ext)                { params.push(ext);                      conds.push(`arquivo_ext = $${params.length}`) }
+    }
 
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
     const pag = Math.max(1, pagina)
-    const porPag = Math.min(200, Math.max(1, porPagina))
+    const porPag = Math.min(1000, Math.max(1, porPagina))
     const offset = (pag - 1) * porPag
     const colOrdem = COLS_ORDENAVEIS.has(ordenar) ? ordenar : 'dt_criacao'
     const dir = direcao === 'ASC' ? 'ASC' : 'DESC'
@@ -45,7 +56,8 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
       query(`SELECT * FROM arq_001 ${where} ORDER BY favorito DESC, ${colOrdem} ${dir} LIMIT $${pL} OFFSET $${pO}`, params),
       queryOne(`SELECT COUNT(*) AS n FROM arq_001 ${where}`, countParams),
     ])
-    return { registros, total: parseInt(total.n), pagina: pag, porPagina: porPag, totalPaginas: Math.ceil(parseInt(total.n) / porPag) || 1 }
+    const totalN = parseInt(total.n)
+    return { registros, total: totalN, pagina: pag, porPagina: porPag, totalPaginas: Math.ceil(totalN / porPag) || 1, limitado: totalN > porPag }
   }))
 
   ipcMain.handle('arquivos:selecionar', wrap(async (e) => {
