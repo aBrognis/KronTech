@@ -1,6 +1,6 @@
 // Tipos "básicos" (família cartesiana + card/gauge/tabela)
 import ReactECharts from 'echarts-for-react'
-import { fmtNum, isNumCol } from '../format'
+import { fmtNum, isNumCol, isStatusCol, corStatusValor } from '../format'
 import { grad, TT, AX, NoData, SqlErr, ComparisonBadge } from '../echartsHelpers'
 import { PALETA } from '../constants'
 
@@ -214,22 +214,45 @@ export function radar({ rows, fields, color, chartStyle }) {
 
 export function grid({ rows, fields, fillHeight }) {
   if (!rows.length) return <NoData />
-  const cols    = fields?.length ? fields : Object.keys(rows[0])
-  const numCols = new Set(cols.filter(c => isNumCol(rows, c)))
+  const cols       = fields?.length ? fields : Object.keys(rows[0])
+  const numCols    = new Set(cols.filter(c => isNumCol(rows, c)))
+  const statusCols = new Set(cols.filter(c => !numCols.has(c) && isStatusCol(rows, c)))
   const tableContent = (
-    <table className="dash-table">
+    <table className="dash-table dash-table-zebra">
       <thead>
         <tr>{cols.map(c => <th key={c} className={numCols.has(c)?'num':''}>{c.replace(/_/g,' ')}</th>)}</tr>
       </thead>
       <tbody>
         {rows.map((row, ri) => (
-          <tr key={ri}>{cols.map(c => <td key={c} className={numCols.has(c)?'num':''}>{row[c]!=null?(numCols.has(c)?fmtNum(row[c]):String(row[c])):'—'}</td>)}</tr>
+          <tr key={ri}>{cols.map(c => {
+            const v = row[c]
+            if (v == null) return <td key={c} className={numCols.has(c)?'num':''}>—</td>
+            if (statusCols.has(c)) {
+              const cor = corStatusValor(v)
+              return (
+                <td key={c}>
+                  <span className="dash-table-badge" style={cor ? { color: cor, background: `${cor}1c`, borderColor: `${cor}44` } : undefined}>
+                    {String(v)}
+                  </span>
+                </td>
+              )
+            }
+            return <td key={c} className={numCols.has(c)?'num':''}>{numCols.has(c)?fmtNum(v):String(v)}</td>
+          })}</tr>
         ))}
       </tbody>
     </table>
   )
-  if (fillHeight) return (
+  // Só ocupa a altura toda do card quando há linhas o bastante para justificar
+  // — com poucas linhas, a tabela fica compacta em vez de esticar um vazio.
+  const precisaScroll = rows.length > 6
+  if (fillHeight && precisaScroll) return (
     <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, overflowX:'auto', overflowY:'auto', border:'1px solid var(--bd)', borderRadius:6 }}>
+      {tableContent}
+    </div>
+  )
+  if (fillHeight) return (
+    <div style={{ position:'absolute', top:0, left:0, right:0, overflowX:'auto', border:'1px solid var(--bd)', borderRadius:6 }}>
       {tableContent}
     </div>
   )

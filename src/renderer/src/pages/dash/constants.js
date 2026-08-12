@@ -38,3 +38,16 @@ export const INTERVALOS = [
   { label: '15 minutos',           value: 900  },
   { label: '1 hora',               value: 3600 },
 ]
+
+// Tipos de widget que preenchem 100% da altura/largura do card sem padding
+// (a maioria dos gráficos ECharts) — os demais (card, grid/tabela, gauge)
+// recebem padding interno normal.
+export const FILL_HEIGHT_TIPOS = new Set([
+  'line','bar','bar_h','pie','scatter','radar',
+  'bar_stacked','line_area','funnel','heatmap','calendar_heatmap','treemap','sunburst',
+  'boxplot','candlestick','graph','tree','sankey','theme_river','pictorial_bar','parallel',
+])
+
+export function isFillHeight(tipo) {
+  return FILL_HEIGHT_TIPOS.has(tipo)
+}
