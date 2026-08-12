@@ -31,10 +31,12 @@ const api = {
     criarCategoria:    (d)  => ipcRenderer.invoke('agenda:criarCategoria', d),
     atualizarCategoria:(d)  => ipcRenderer.invoke('agenda:atualizarCategoria', d),
     excluirCategoria:  (id) => ipcRenderer.invoke('agenda:excluirCategoria', id),
+    pesquisarCategorias:(opts) => ipcRenderer.invoke('agenda:pesquisarCategorias', opts),
     listarStatus:      ()   => ipcRenderer.invoke('agenda:listarStatus'),
     criarStatus:       (d)  => ipcRenderer.invoke('agenda:criarStatus', d),
     atualizarStatus:   (d)  => ipcRenderer.invoke('agenda:atualizarStatus', d),
     excluirStatus:     (id) => ipcRenderer.invoke('agenda:excluirStatus', id),
+    pesquisarStatus:   (opts) => ipcRenderer.invoke('agenda:pesquisarStatus', opts),
     confirmarStatus:   (d)  => ipcRenderer.invoke('agenda:confirmarStatus', d),
     onStatusAtualizado: (cb) => {
       const fn = (_, data) => cb(data)

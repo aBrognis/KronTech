@@ -30,6 +30,7 @@ export default function Agenda({ newTrigger }) {
   const [lookupErro, setLookupErro] = useState(null)
   const [selectedDay, setSelectedDay] = useState(null)
   const [modal, setModal]         = useState(null)
+  const [modoEvento, setModoEvento] = useState('view')   // 'view' | 'new' | 'edit'
   const [gerenciarAberto, setGerenciarAberto] = useState(false)
   const [form, setForm]           = useState(EMPTY_FORM)
   const [saving, setSaving]       = useState(false)
@@ -159,6 +160,7 @@ export default function Agenda({ newTrigger }) {
     setForm({...EMPTY_FORM, dt_evento: dt||''})
     setErro(null)
     setModal('new')
+    setModoEvento('new')
   }
 
   function openEdit(ev) {
@@ -178,6 +180,17 @@ export default function Agenda({ newTrigger }) {
     })
     setErro(null)
     setModal(ev)
+    setModoEvento('view')
+  }
+
+  function handleAlterar() {
+    setModoEvento('edit')
+  }
+
+  function handleDesistir() {
+    if (modoEvento === 'new') { setModal(null); return }
+    if (modal && modal !== 'new') openEdit(modal)   // recarrega o form original, descarta edições
+    setModoEvento('view')
   }
 
   async function handleSave() {
@@ -197,7 +210,11 @@ export default function Agenda({ newTrigger }) {
         ? await window.api.agenda.create(payload)
         : await window.api.agenda.update({id:modal.id, ...payload})
       if (!res.ok) { setErro(res.erro); return }
-      setModal(null)
+      if (modal === 'new') {
+        setModal(null)
+      } else {
+        setModoEvento('view')
+      }
       await loadEvents()
     } finally { setSaving(false) }
   }
@@ -382,9 +399,10 @@ export default function Agenda({ newTrigger }) {
       {/* ── Modal ── */}
       {modal && (
         <EventoModal
-          modal={modal} form={form} setForm={setForm}
+          modal={modal} modo={modoEvento} form={form} setForm={setForm}
           categorias={categorias} statuses={statuses} clientes={clientes}
           saving={saving} erro={erro} onSave={handleSave} onDelete={handleDelete} onClose={()=>setModal(null)}
+          onAlterar={handleAlterar} onDesistir={handleDesistir}
           onConfirmarStatus={handleConfirmarStatus}
         />
       )}

@@ -11,12 +11,12 @@ export const RECORRENCIAS = [
 ]
 
 export const MIN_OPTIONS = [
-  { label:'5 minutos antes',  value:5 },
-  { label:'15 minutos antes', value:15 },
-  { label:'30 minutos antes', value:30 },
-  { label:'1 hora antes',     value:60 },
-  { label:'2 horas antes',    value:120 },
-  { label:'1 dia antes',      value:1440 },
+  ...Array.from({ length: 12 }, (_, i) => {
+    const v = (i + 1) * 5
+    return { label: `${v} minutos antes`, value: v }
+  }),
+  { label:'2 horas antes', value:120 },
+  { label:'1 dia antes',   value:1440 },
 ]
 
 export const COR_FALLBACK = '#6366F1'

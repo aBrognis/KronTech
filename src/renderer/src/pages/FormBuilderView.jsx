@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { CANVAS_W, CANVAS_H_MIN } from '../components/FormDesigner'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal'
+import FormToolbar from '../components/FormToolbar'
 import {
   exportarCSV, copiarTexto, mostrarAlerta,
   abrirTela, abrirEmNovaAba, voltarTela, limparFormulario, exportarPDF,
@@ -1181,33 +1182,18 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
       {/* Rodapé (só na aba Cadastro) */}
       {activeTab === 'cadastro' && (
-      <div className="page-footer">
-        <div className="page-footer-nav">
-          <button className="page-footer-nav-btn" onClick={() => navTo(0)} disabled={currentIdx <= 0}><ChevronsLeft size={13} /></button>
-          <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx - 1)} disabled={currentIdx <= 0}><ChevronLeft size={13} /></button>
-          <span className="page-footer-counter">{registros.length > 0 ? `${currentIdx + 1} / ${total}` : '0 / 0'}</span>
-          <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx + 1)} disabled={currentIdx >= registros.length - 1}><ChevronRight size={13} /></button>
-          <button className="page-footer-nav-btn" onClick={() => navTo(registros.length - 1)} disabled={currentIdx >= registros.length - 1}><ChevronsRight size={13} /></button>
-        </div>
-
-        <div style={{ width: 1, height: 22, background: 'var(--bd)', flexShrink: 0 }} />
-
-        <div className="page-footer-actions">
-          {isRO ? (
-            <>
-              <button className="btn btn-primary"  onClick={handleIncluir}><Plus size={13} /> Incluir</button>
-              <button className="btn btn-ghost"    onClick={handleAlterar} disabled={!registros.length}><Edit2 size={13} /> Alterar</button>
-              <button className="btn btn-danger"   onClick={handleExcluir} disabled={!registros.length}><Trash2 size={13} /> Excluir</button>
-              <button className="btn btn-ghost"    onClick={abrirConsulta}><Search size={13} /> Consultar</button>
-            </>
-          ) : (
-            <>
-              <button className="btn btn-primary" onClick={handleGravar} disabled={saving}><Save size={13} /> {saving ? 'Salvando...' : 'Gravar'}</button>
-              <button className="btn btn-ghost"   onClick={handleDesistir}><X size={13} /> Desistir</button>
-            </>
-          )}
-        </div>
-      </div>
+        <FormToolbar
+          mode={mode}
+          nav={{ currentIdx, total: registros.length > 0 ? total : 0, onNav: navTo }}
+          temRegistros={!!registros.length}
+          saving={saving}
+          onIncluir={handleIncluir}
+          onAlterar={handleAlterar}
+          onExcluir={handleExcluir}
+          onConsultar={abrirConsulta}
+          onGravar={handleGravar}
+          onDesistir={handleDesistir}
+        />
       )}
 
       {/* Modal de confirmação de exclusão */}

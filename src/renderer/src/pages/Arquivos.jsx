@@ -10,6 +10,7 @@ import '../App.css'
 import { thS, tdS } from './formBuilderView/gridStyles.js'
 import PaginacaoBar from './formBuilderView/PaginacaoBar.jsx'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
+import FormToolbar from '../components/FormToolbar.jsx'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const CATEGORIAS = ['Contrato', 'Manual', 'Financeiro', 'Relatório', 'Script', 'Imagem', 'Apresentação', 'Outro']
@@ -809,33 +810,18 @@ export default function Arquivos({ newTrigger }) {
 
       {/* ── Rodapé (só na aba Cadastro) ── */}
       {activeTab === 'cadastro' && (
-      <div className="page-footer">
-        <div className="page-footer-nav">
-          <button className="page-footer-nav-btn" onClick={() => navTo(0)} disabled={currentIdx <= 0 || items.length === 0} title="Primeiro"><ChevronsLeft size={13} /></button>
-          <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx - 1)} disabled={currentIdx <= 0} title="Anterior"><ChevronLeft size={13} /></button>
-          <span className="page-footer-counter">{items.length > 0 ? `${currentIdx + 1} / ${items.length}` : '0 / 0'}</span>
-          <button className="page-footer-nav-btn" onClick={() => navTo(currentIdx + 1)} disabled={currentIdx >= items.length - 1} title="Próximo"><ChevronRight size={13} /></button>
-          <button className="page-footer-nav-btn" onClick={() => navTo(items.length - 1)} disabled={currentIdx >= items.length - 1 || items.length === 0} title="Último"><ChevronsRight size={13} /></button>
-        </div>
-
-        <div style={{ width: 1, height: 22, background: 'var(--bd)', flexShrink: 0 }} />
-
-        <div className="page-footer-actions">
-          {isRO ? (
-            <>
-              <button className="btn btn-primary" onClick={handleIncluir}><Plus size={13} /> Incluir</button>
-              <button className="btn btn-ghost"   onClick={handleAlterar} disabled={items.length === 0}><Edit2 size={13} /> Alterar</button>
-              <button className="btn btn-danger"  onClick={handleExcluir} disabled={items.length === 0}><Trash2 size={13} /> Excluir</button>
-              <button className="btn btn-ghost"   onClick={abrirConsulta}><Search size={13} /> Consultar</button>
-            </>
-          ) : (
-            <>
-              <button className="btn btn-primary" onClick={handleGravar} disabled={saving}><Save size={13} /> {saving ? 'Salvando...' : 'Gravar'}</button>
-              <button className="btn btn-ghost"   onClick={handleDesistir}><X size={13} /> Desistir</button>
-            </>
-          )}
-        </div>
-      </div>
+        <FormToolbar
+          mode={mode}
+          nav={{ currentIdx, total: items.length, onNav: navTo }}
+          temRegistros={items.length > 0}
+          saving={saving}
+          onIncluir={handleIncluir}
+          onAlterar={handleAlterar}
+          onExcluir={handleExcluir}
+          onConsultar={abrirConsulta}
+          onGravar={handleGravar}
+          onDesistir={handleDesistir}
+        />
       )}
     </div>
   )

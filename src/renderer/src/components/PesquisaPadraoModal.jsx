@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Check, ChevronRight, Star } from 'lucide-react'
 
 const MODOS_MODAL = [
@@ -65,8 +66,12 @@ export default function PesquisaPadraoModal({
 
   const colunas = colunasExibidas || campos.slice(0, 5)
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.5)' }}>
+  // Renderizado via portal direto no body: telas que abrem este modal por
+  // cima de outro modal (ex: EventoModal da Agenda) têm um ancestral com
+  // backdrop-filter, que cria um containing block para position:fixed e
+  // encolhe/confina o modal ao tamanho do pai. O portal escapa disso.
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(4px)' }}>
       <div
         style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 920, maxWidth: '96vw', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         onKeyDown={e => {
@@ -184,6 +189,7 @@ export default function PesquisaPadraoModal({
           </span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

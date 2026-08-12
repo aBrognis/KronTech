@@ -15,6 +15,33 @@ async function gravarLembretes(client, eventoId, lembretes) {
 
 export const STATUS_AUTO_VALIDOS = ['agendado', 'em_andamento', 'concluido', 'atrasado', 'nao_compareceu', 'cancelado']
 
+const LIMITE_PESQUISA = 200
+
+// Pesquisa genérica para tabelas fixas da Agenda (categorias/status) que não
+// passam pelo mecanismo de pesquisa do FormBuilder (não estão em kr_telas).
+// Segue o mesmo contrato de fb:pesquisarRegistros para o PesquisaPadraoModal.
+const COLUNAS_ORDENAVEIS = new Set(['id', 'codigo', 'nome', 'ordem'])
+
+async function pesquisarLista(tabela, campoBusca, { modo = 'contendo', busca = '', ordenar, direcao = 'ASC' } = {}, query, queryOne) {
+  const params = []
+  const conds = ['ativo=TRUE']
+  if (busca.trim()) {
+    if (modo === 'iniciando')      { params.push(`${busca.trim()}%`);  conds.push(`${campoBusca} ILIKE $${params.length}`) }
+    else if (modo === 'igual')     { params.push(busca.trim());        conds.push(`${campoBusca} = $${params.length}`) }
+    else /* contendo */            { params.push(`%${busca.trim()}%`); conds.push(`${campoBusca} ILIKE $${params.length}`) }
+  }
+  const where = 'WHERE ' + conds.join(' AND ')
+  const colOrdem = COLUNAS_ORDENAVEIS.has(ordenar) ? ordenar : campoBusca
+  const dir = direcao === 'desc' || direcao === 'DESC' ? 'DESC' : 'ASC'
+  params.push(LIMITE_PESQUISA)
+
+  const [registros, total] = await Promise.all([
+    query(`SELECT * FROM ${tabela} ${where} ORDER BY ${colOrdem} ${dir} LIMIT $${params.length}`, params),
+    queryOne(`SELECT COUNT(*) AS n FROM ${tabela} ${where}`, params.slice(0, params.length - 1)),
+  ])
+  return { registros, total: parseInt(total.n), limitado: parseInt(total.n) > LIMITE_PESQUISA }
+}
+
 // Exportada separadamente do handler IPC porque statusAutomatico.js (polling
 // de atraso) e o handler de second-instance (clique em botão da notificação)
 // também precisam chamar essa lógica internamente, sem passar pelo IPC.
@@ -80,6 +107,8 @@ export function registerAgendaHandlers({ ipcMain, wrap, query, queryOne }) {
     await query('DELETE FROM agenda_categorias WHERE id=$1', [id])
   }))
 
+  ipcMain.handle('agenda:pesquisarCategorias', wrap((_, opts) => pesquisarLista('agenda_categorias', 'nome', opts, query, queryOne)))
+
   // ── Status ─────────────────────────────────────────────────────────────
   ipcMain.handle('agenda:listarStatus', wrap(async () => {
     return query(`SELECT * FROM agenda_status WHERE ativo=TRUE ORDER BY ordem, nome`)
@@ -110,6 +139,8 @@ export function registerAgendaHandlers({ ipcMain, wrap, query, queryOne }) {
     if (uso.n > 0) throw new Error(`Status em uso por ${uso.n} evento(s). Não é possível excluir.`)
     await query('DELETE FROM agenda_status WHERE id=$1', [id])
   }))
+
+  ipcMain.handle('agenda:pesquisarStatus', wrap((_, opts) => pesquisarLista('agenda_status', 'nome', opts, query, queryOne)))
 
   // ── Eventos ────────────────────────────────────────────────────────────
   const SELECT_EVENTOS = `

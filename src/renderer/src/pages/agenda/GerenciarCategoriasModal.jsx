@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Plus, Trash2, Pencil, Check } from 'lucide-react'
+import { X, Plus, Trash2, Pencil, Save } from 'lucide-react'
 import ConfirmModal from './ConfirmModal'
 
 const EMPTY_ITEM = { codigo:'', nome:'', cor:'#6366F1', ordem:99 }
@@ -121,10 +121,10 @@ export default function GerenciarCategoriasModal({ categorias, statuses, onClose
               )}
               {erro && <div style={{ fontSize:11, color:'var(--red)' }}>{erro}</div>}
               <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
-                <button className="btn btn-ghost" style={{ height:28, fontSize:11 }} onClick={cancelar}>Cancelar</button>
-                <button className="btn btn-primary" style={{ height:28, fontSize:11 }} onClick={salvar} disabled={saving}>
-                  <Check size={12}/> {saving?'Salvando...':'Salvar'}
+                <button className="btn btn-primary" onClick={salvar} disabled={saving}>
+                  <Save size={13}/> {saving?'Salvando...':'Gravar'}
                 </button>
+                <button className="btn btn-ghost" onClick={cancelar}><X size={13}/> Desistir</button>
               </div>
             </div>
           ) : (
