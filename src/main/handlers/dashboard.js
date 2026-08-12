@@ -18,22 +18,14 @@ export function registerDashboardHandlers({ ipcMain, wrap, query, queryOne }) {
   }))
 
   ipcMain.handle('dash:update', wrap(async (_, d) => {
-    // grid_x/grid_y usam COALESCE: a posição no grid é gerenciada pelo
-    // drag-and-drop (dash:updateLayout, debounced), não pelo formulário —
-    // um save sem grid_x/grid_y informado (ex: só mudou o SQL) não pode
-    // resetar de volta para 0 a posição que o usuário acabou de arrastar.
-    // grid_w/grid_h continuam diretos: são controlados pelos sliders do
-    // próprio formulário, então o form sempre os informa.
     return queryOne(
       `UPDATE dash_001 SET titulo=$1, tipo=$2, sql_query=$3, icone=$4, icone_lucide=$5, cor=$6,
-         tamanho=$7, intervalo=$8, posicao=$9,
-         grid_x=COALESCE($10, grid_x), grid_y=COALESCE($11, grid_y),
-         grid_w=$12, grid_h=$13,
+         tamanho=$7, intervalo=$8, posicao=$9, grid_x=$10, grid_y=$11, grid_w=$12, grid_h=$13,
          comparar_anterior=$14, sql_query_anterior=$15
        WHERE id=$16 RETURNING *`,
       [d.titulo, d.tipo, d.sql_query, d.icone ?? 'bar-chart', d.icone_lucide ?? null,
        d.cor ?? '#FF6B2B', d.tamanho ?? 'pequeno', d.intervalo ?? 0,
-       d.posicao ?? 0, d.grid_x ?? null, d.grid_y ?? null, d.grid_w ?? 3, d.grid_h ?? 4,
+       d.posicao ?? 0, d.grid_x ?? 0, d.grid_y ?? 0, d.grid_w ?? 3, d.grid_h ?? 4,
        d.comparar_anterior ?? false, d.sql_query_anterior ?? null, d.id]
     )
   }))

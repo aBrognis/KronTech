@@ -1,11 +1,177 @@
-import { Settings2, LayoutDashboard } from 'lucide-react'
-import { WidgetCard, WidgetGrid, useDashboardWidgets } from './dash'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { RefreshCw, Settings2, AlertTriangle, LayoutDashboard } from 'lucide-react'
+import GridLayout from 'react-grid-layout'
+import 'react-grid-layout/css/styles.css'
+import 'react-resizable/css/styles.css'
+import { LucideIcon, WidgetBody, fmtInterval } from './dash'
+
+// ── Widget card ───────────────────────────────────────────────────────────────
+
+function Widget({ widget, onRefresh, loading, error }) {
+  const isFillH = ['line','bar','bar_h','pie','scatter','radar',
+    'bar_stacked','line_area','funnel','heatmap','calendar_heatmap','treemap','sunburst',
+    'boxplot','candlestick','graph','tree','sankey','theme_river','pictorial_bar','parallel',
+  ].includes(widget.tipo)
+  return (
+    <div className="dash-widget-card" style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', cursor:'default' }}>
+      <div
+        className="widget-drag-handle"
+        style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 12px 8px', cursor:'grab', flexShrink:0, borderBottom:'1px solid var(--bd)', background:'var(--s2)', borderRadius:'8px 8px 0 0' }}
+      >
+        {widget.icone_lucide && (
+          <LucideIcon name={widget.icone_lucide} size={13} color={widget.cor || '#FF6B2B'} />
+        )}
+        <span style={{ flex:1, fontSize:11, fontWeight:600, letterSpacing:.4, color:'var(--t2)', textTransform:'uppercase', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {widget.titulo}
+        </span>
+        {widget.intervalo > 0 && (
+          <span style={{ fontSize:9, color:'var(--t3)', background:'var(--s3)', borderRadius:10, padding:'1px 6px', letterSpacing:.5 }}>
+            {fmtInterval(widget.intervalo)}
+          </span>
+        )}
+        <button
+          className="icon-btn"
+          onClick={e => { e.stopPropagation(); onRefresh(widget.id) }}
+          disabled={loading}
+          style={{ opacity: loading ? .5 : 1 }}
+          title="Atualizar dados"
+        >
+          <RefreshCw size={11} style={{ animation: loading ? 'spin .8s linear infinite' : 'none' }} />
+        </button>
+      </div>
+
+      <div className="dash-widget-card-body" style={{ flex:1, position:'relative', overflow:'hidden', padding: isFillH ? 0 : '12px 14px' }}>
+        {loading && <div className="skel" style={{ position:'absolute', inset:0, zIndex:2, borderRadius: isFillH ? 0 : 6 }} />}
+        {error ? (
+          <div style={{ display:'flex', alignItems:'center', gap:6, color:'#F87171', fontSize:11, padding: isFillH ? 12 : 0 }}>
+            <AlertTriangle size={13} />{error}
+          </div>
+        ) : widget._rows ? (
+          <WidgetBody widget={widget} rows={widget._rows} fields={widget._fields}
+            prevRows={widget._prevRows} prevFields={widget._prevFields} fillHeight={isFillH} />
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
+// ── Dashboard (apresentação) ──────────────────────────────────────────────────
 
 export default function Dashboard({ onNavigate }) {
-  const {
-    widgets, layout, loading, loadingIds, errorMap,
-    containerRef, containerW, refreshOne, handleLayoutChange,
-  } = useDashboardWidgets()
+  const [widgets,    setWidgets]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [loadingIds, setLoadingIds] = useState(new Set())
+  const [errorMap,   setErrorMap]   = useState({})
+  const [containerW, setContainerW] = useState(800)
+  const [layout,     setLayout]     = useState([])
+  const containerRef = useRef(null)
+  const timersRef    = useRef({})
+  const layoutDebRef = useRef(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect?.width
+      if (w) setContainerW(w)
+    })
+    ro.observe(containerRef.current)
+    // Login/maximização da janela terminam depois deste mount — o container pode
+    // reportar uma largura desatualizada na primeira medição do ResizeObserver.
+    // Reafirma a largura real em seguida (raf + timeout) para não depender só
+    // de um evento de resize físico que talvez nunca chegue a disparar de novo.
+    const raf = requestAnimationFrame(() => {
+      if (containerRef.current) setContainerW(containerRef.current.getBoundingClientRect().width)
+    })
+    const t = setTimeout(() => {
+      if (containerRef.current) setContainerW(containerRef.current.getBoundingClientRect().width)
+    }, 300)
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); clearTimeout(t) }
+  }, [])
+
+  const loadWidget = useCallback(async (w) => {
+    setLoadingIds(s => new Set([...s, w.id]))
+    setErrorMap(m => { const n = { ...m }; delete n[w.id]; return n })
+    try {
+      const sql = (w.sql_query || '').trim()
+      if (!sql) return { ...w, _rows: [], _fields: [] }
+      const sqlAnterior = w.comparar_anterior ? (w.sql_query_anterior || '').trim() : ''
+      const [res, resPrev] = await Promise.all([
+        window.api.sql.execute(sql),
+        sqlAnterior ? window.api.sql.execute(sqlAnterior).catch(() => null) : Promise.resolve(null),
+      ])
+      if (!res.ok) {
+        setErrorMap(m => ({ ...m, [w.id]: res.erro.split('\n')[0].slice(0, 80) }))
+        return { ...w, _rows: [], _fields: [] }
+      }
+      const prevOk = resPrev && resPrev.ok
+      return {
+        ...w, _rows: res.data.rows || [], _fields: res.data.fields || [],
+        _prevRows: prevOk ? (resPrev.data.rows || []) : undefined,
+        _prevFields: prevOk ? (resPrev.data.fields || []) : undefined,
+      }
+    } catch (e) {
+      setErrorMap(m => ({ ...m, [w.id]: String(e).slice(0, 80) }))
+      return { ...w, _rows: [], _fields: [] }
+    } finally {
+      setLoadingIds(s => { const n = new Set(s); n.delete(w.id); return n })
+    }
+  }, [])
+
+  const loadAll = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await window.api.dash.getAll()
+      const filled = await Promise.all((res.ok ? res.data : []).map(loadWidget))
+      setWidgets(filled)
+      setLayout(filled.map(w => ({
+        i: String(w.id),
+        x: w.grid_x ?? 0, y: w.grid_y ?? 0,
+        w: w.grid_w ?? 3,  h: w.grid_h ?? 2,
+        minW: 2, minH: 2,
+      })))
+    } finally {
+      setLoading(false)
+    }
+  }, [loadWidget])
+
+  useEffect(() => { loadAll() }, [loadAll])
+
+  useEffect(() => {
+    window.addEventListener('dash:widgets-changed', loadAll)
+    return () => window.removeEventListener('dash:widgets-changed', loadAll)
+  }, [loadAll])
+
+  // auto-refresh timers
+  useEffect(() => {
+    Object.values(timersRef.current).forEach(clearInterval)
+    timersRef.current = {}
+    widgets.forEach(w => {
+      if (w.intervalo > 0) {
+        timersRef.current[w.id] = setInterval(async () => {
+          const updated = await loadWidget(w)
+          setWidgets(prev => prev.map(x => x.id === w.id ? updated : x))
+        }, w.intervalo * 1000)
+      }
+    })
+    return () => Object.values(timersRef.current).forEach(clearInterval)
+  }, [widgets, loadWidget])
+
+  async function handleRefresh(id) {
+    const w = widgets.find(x => x.id === id)
+    if (!w) return
+    const updated = await loadWidget(w)
+    setWidgets(prev => prev.map(x => x.id === id ? updated : x))
+  }
+
+  function handleLayoutChange(newLayout) {
+    setLayout(newLayout)
+    if (layoutDebRef.current) clearTimeout(layoutDebRef.current)
+    layoutDebRef.current = setTimeout(() => {
+      window.api.dash.updateLayout(
+        newLayout.map(item => ({ i: Number(item.i), x: item.x, y: item.y, w: item.w, h: item.h }))
+      ).catch(() => {})
+    }, 600)
+  }
 
   if (!loading && widgets.length === 0) {
     return (
@@ -31,18 +197,28 @@ export default function Dashboard({ onNavigate }) {
             {[...Array(6)].map((_,i) => <div key={i} className="skel" style={{ height:180, borderRadius:10 }} />)}
           </div>
         ) : (
-          <WidgetGrid layout={layout} width={containerW} onLayoutChange={handleLayoutChange}>
+          <GridLayout
+            layout={layout}
+            cols={12}
+            rowHeight={72}
+            width={containerW}
+            draggableHandle=".widget-drag-handle"
+            resizeHandles={['se']}
+            onLayoutChange={handleLayoutChange}
+            margin={[14, 14]}
+            containerPadding={[0, 0]}
+          >
             {widgets.map(w => (
               <div key={String(w.id)}>
-                <WidgetCard
+                <Widget
                   widget={w}
                   loading={loadingIds.has(w.id)}
                   error={errorMap[w.id]}
-                  onRefresh={refreshOne}
+                  onRefresh={handleRefresh}
                 />
               </div>
             ))}
-          </WidgetGrid>
+          </GridLayout>
         )}
       </div>
 

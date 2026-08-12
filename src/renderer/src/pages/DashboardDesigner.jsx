@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Trash2, RefreshCw, Database, Lock, Unlock, LayoutGrid } from 'lucide-react'
-import { LucideIcon, TIPOS, WidgetForm, WidgetCard, WidgetGrid, useDashboardWidgets } from './dash'
+import { useState, useEffect, useRef } from 'react'
+import { ArrowLeft, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
+         Check, X, Search, AlertCircle, Copy, RefreshCw, Database } from 'lucide-react'
+import { getAllIcons, LucideIcon, WidgetBody,
+         TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
 
 function nextPos(widgets) {
   if (!widgets.length) return { x: 0, y: 0 }
@@ -9,15 +11,12 @@ function nextPos(widgets) {
 }
 
 function emptyForm() {
-  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_x: 0, grid_y: 0, grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '' }
+  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '' }
 }
 
 export default function DashboardDesigner({ newTrigger, onNavigate }) {
-  const {
-    widgets, layout, loading, loadingIds, errorMap,
-    containerRef, containerW, refreshOne, handleLayoutChange, loadAll,
-  } = useDashboardWidgets({ autoRefresh: false })
-
+  const [widgets,       setWidgets]       = useState([])
+  const [loading,       setLoading]       = useState(true)
   const [selected,      setSelected]      = useState(null)
   const [form,          setForm]          = useState(emptyForm())
   const [saving,        setSaving]        = useState(false)
@@ -30,17 +29,20 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [prevPreviewRows,   setPrevPreviewRows]   = useState(null)
   const [prevPreviewFields, setPrevPreviewFields] = useState([])
   const [prevPreviewErr,    setPrevPreviewErr]    = useState(null)
+  const [searchIcon,    setSearchIcon]    = useState('')
+  const [showGuide,     setShowGuide]     = useState(false)
+  const [iconOpen,      setIconOpen]      = useState(false)
   const [seeding,       setSeeding]       = useState(false)
   const [clearingDemo,  setClearingDemo]  = useState(false)
   const [demoMsg,       setDemoMsg]       = useState(null)
-  const [layoutLocked,  setLayoutLocked]  = useState(false)
+  const iconRef  = useRef(null)
+  const allIcons = getAllIcons()
 
   async function handleSeedDemo() {
     setSeeding(true); setDemoMsg(null)
     try {
       const res = await window.api.dash.seedDemo()
       setDemoMsg(res.ok ? { ok:true, texto:`${res.data.inserted} linhas geradas` } : { ok:false, texto: res.erro })
-      if (res.ok) loadAll()
     } catch (e) {
       setDemoMsg({ ok:false, texto: String(e) })
     } finally {
@@ -53,7 +55,6 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     try {
       const res = await window.api.dash.clearDemo()
       setDemoMsg(res.ok ? { ok:true, texto:'Dados demo removidos' } : { ok:false, texto: res.erro })
-      if (res.ok) loadAll()
     } catch (e) {
       setDemoMsg({ ok:false, texto: String(e) })
     } finally {
@@ -62,13 +63,29 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   }
 
   useEffect(() => {
+    window.api.dash.getAll()
+      .then(res => { setWidgets(res.ok ? res.data : []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
     if (newTrigger > 0) openNew()
   }, [newTrigger])
+
+  useEffect(() => {
+    if (!iconOpen) return
+    function handler(e) {
+      if (iconRef.current && !iconRef.current.contains(e.target)) setIconOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [iconOpen])
 
   function openNew() {
     setSelected('new')
     setForm(emptyForm())
     resetPreview()
+    setShowGuide(false)
   }
 
   function openEdit(w) {
@@ -88,6 +105,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       sql_query_anterior: w.sql_query_anterior || '',
     })
     resetPreview()
+    setShowGuide(false)
   }
 
   function resetPreview() {
@@ -99,13 +117,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     if (key === 'tipo') {
       const meta = TIPOS.find(t => t.value === val)
       setForm(prev => ({ ...prev, tipo: val, grid_w: meta?.defW ?? prev.grid_w, grid_h: meta?.defH ?? prev.grid_h }))
-      resetPreview()
-      return
-    }
-    if (key === 'sql_query' || key === 'sql_query_anterior') {
-      setForm(prev => ({ ...prev, [key]: val }))
-      if (key === 'sql_query') { setPreviewRows(null); setPreviewFields([]); setPreviewErr(null) }
-      else { setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null) }
+      resetPreview(); setShowGuide(false)
       return
     }
     setForm(prev => ({ ...prev, [key]: val }))
@@ -120,11 +132,13 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         const payload = { ...form, grid_x: pos.x, grid_y: pos.y }
         const res = await window.api.dash.create(payload)
         if (!res.ok) return
+        const newW = { ...payload, id: res.data.id }
+        setWidgets(prev => [...prev, newW])
         setSelected(res.data.id)
       } else {
         await window.api.dash.update({ id: selected, ...form })
+        setWidgets(prev => prev.map(w => w.id === selected ? { ...w, ...form } : w))
       }
-      await loadAll()
       window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setSaving(false)
@@ -136,8 +150,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     setDeleting(id)
     try {
       await window.api.dash.delete(id)
+      setWidgets(prev => prev.filter(w => w.id !== id))
       if (selected === id) { setSelected(null); setForm(emptyForm()); resetPreview() }
-      await loadAll()
       window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setDeleting(null)
@@ -170,11 +184,18 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     finally     { setTestingPrev(false) }
   }
 
+  const iconFiltered = searchIcon
+    ? allIcons.filter(n => n.includes(searchIcon.toLowerCase().replace(/\s+/g, '-')))
+    : allIcons
+
+  const guide   = SQL_GUIDE[form.tipo]
+  const sqlHint = SQL_HINTS[form.tipo]
+
   return (
     <div className="dash-wrapper" style={{ display:'flex', flexDirection:'row' }}>
 
-      {/* ── PAINEL 1: lista de widgets ─────────────────────────────────────── */}
-      <div style={{ width:240, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid var(--bd)', overflow:'hidden', background:'var(--bg)' }}>
+      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
+      <div style={{ width:260, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid var(--bd)', overflow:'hidden', background:'var(--bg)' }}>
 
         <div style={{ padding:'14px 12px 10px', borderBottom:'1px solid var(--bd)', background:'var(--s2)' }}>
           <button
@@ -270,8 +291,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         </div>
       </div>
 
-      {/* ── PAINEL 2: formulário ───────────────────────────────────────────── */}
-      <div style={{ width:'clamp(380px, 32%, 520px)', flexShrink:0, overflowY:'auto', padding:'28px 26px', borderRight:'1px solid var(--bd)' }}>
+      {/* ── RIGHT PANEL (editor) ───────────────────────────────────────────── */}
+      <div style={{ flex:1, overflowY:'auto', padding:'28px 32px' }}>
         {!selected ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:14, color:'var(--t3)' }}>
             <LucideIcon name="layout-dashboard" size={48} />
@@ -280,82 +301,370 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
             </div>
           </div>
         ) : (
-          <WidgetForm
-            selected={selected}
-            form={form}
-            f={f}
-            previewRows={previewRows}
-            previewFields={previewFields}
-            previewErr={previewErr}
-            testing={testing}
-            onTestSql={handleTestSql}
-            testingPrev={testingPrev}
-            prevPreviewRows={prevPreviewRows}
-            prevPreviewFields={prevPreviewFields}
-            prevPreviewErr={prevPreviewErr}
-            onTestSqlAnterior={handleTestSqlAnterior}
-            saving={saving}
-            deleting={deleting}
-            onSave={handleSave}
-            onDelete={() => handleDelete(selected)}
-            onCancel={() => { setSelected(null); setForm(emptyForm()); resetPreview() }}
-          />
+          <div style={{ maxWidth:680 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'var(--t1)', marginBottom:24, letterSpacing:-.3 }}>
+              {selected === 'new' ? 'Novo Widget' : 'Editar Widget'}
+            </div>
+
+            {/* ── Tipo ── */}
+            <Label>Tipo de visualização</Label>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:7, marginBottom:20 }}>
+              {TIPOS.map(t => {
+                const active = form.tipo === t.value
+                return (
+                  <button
+                    key={t.value}
+                    onClick={() => f('tipo', t.value)}
+                    title={t.desc}
+                    style={{
+                      display:'flex', alignItems:'center', gap:6, padding:'7px 13px',
+                      borderRadius:8, cursor:'pointer', fontSize:11, fontWeight:500, transition:'all .12s',
+                      border: active ? '1.5px solid var(--or)' : '1.5px solid var(--bd)',
+                      background: active ? 'var(--or3)' : 'var(--s2)',
+                      color: active ? 'var(--or)' : 'var(--t2)',
+                    }}
+                  >
+                    <LucideIcon name={t.icon} size={12} color={active ? undefined : undefined} />
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* ── Título + Ícone ── */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 210px', gap:14, marginBottom:16 }}>
+              <div>
+                <Label>Título</Label>
+                <input
+                  className="form-input"
+                  value={form.titulo}
+                  onChange={e => f('titulo', e.target.value)}
+                  placeholder="Ex: Total de O.S. abertas"
+                  style={{ width:'100%' }}
+                />
+              </div>
+              <div style={{ position:'relative' }} ref={iconRef}>
+                <Label>Ícone Lucide</Label>
+                <div
+                  onClick={() => setIconOpen(v => !v)}
+                  style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px', border:'1px solid var(--bd)', borderRadius:7, cursor:'pointer', background:'var(--s2)', userSelect:'none' }}
+                >
+                  <LucideIcon name={form.icone_lucide || 'image-off'} size={14} color={form.cor || '#FF6B2B'} />
+                  <span style={{ flex:1, fontSize:11, color: form.icone_lucide ? 'var(--t1)' : 'var(--t3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {form.icone_lucide || 'Selecionar...'}
+                  </span>
+                  <ChevronDown size={11} style={{ color:'var(--t3)', transition:'transform .15s', transform: iconOpen ? 'rotate(180deg)' : 'none' }} />
+                </div>
+
+                {iconOpen && (
+                  <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:300, background:'var(--bg)', border:'1px solid var(--bd)', borderRadius:9, boxShadow:'0 8px 28px rgba(0,0,0,.35)', padding:8, minWidth:220 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 8px', background:'var(--s2)', borderRadius:6, marginBottom:6 }}>
+                      <Search size={11} style={{ color:'var(--t3)', flexShrink:0 }} />
+                      <input
+                        autoFocus
+                        value={searchIcon}
+                        onChange={e => setSearchIcon(e.target.value)}
+                        placeholder="Buscar ícone..."
+                        style={{ background:'none', border:'none', outline:'none', fontSize:11, color:'var(--t1)', width:'100%' }}
+                      />
+                      {searchIcon && (
+                        <button onClick={() => setSearchIcon('')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--t3)', padding:0, lineHeight:1 }}>
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, maxHeight:200, overflowY:'auto' }}>
+                      {iconFiltered.slice(0, 210).map(name => (
+                        <button
+                          key={name}
+                          title={name}
+                          onClick={() => { f('icone_lucide', name); setIconOpen(false); setSearchIcon('') }}
+                          style={{
+                            display:'flex', alignItems:'center', justifyContent:'center', padding:6,
+                            borderRadius:5, border:'none', cursor:'pointer',
+                            background: form.icone_lucide === name ? (form.cor || '#FF6B2B') + '25' : 'transparent',
+                            transition:'background .1s',
+                          }}
+                          onMouseEnter={e => { if (form.icone_lucide !== name) e.currentTarget.style.background = 'var(--s3)' }}
+                          onMouseLeave={e => { if (form.icone_lucide !== name) e.currentTarget.style.background = 'transparent' }}
+                        >
+                          <LucideIcon name={name} size={14} color={form.icone_lucide === name ? (form.cor || '#FF6B2B') : undefined} />
+                        </button>
+                      ))}
+                    </div>
+                    {iconFiltered.length > 210 && (
+                      <div style={{ fontSize:9, color:'var(--t3)', textAlign:'center', marginTop:4, padding:2 }}>
+                        +{iconFiltered.length - 210} ícones · refine a busca
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Cor + Intervalo ── */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:20 }}>
+              <div>
+                <Label>Cor de destaque</Label>
+                <div style={{ display:'flex', gap:5, flexWrap:'wrap', alignItems:'center' }}>
+                  {PALETA.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => f('cor', c)}
+                      style={{ width:22, height:22, borderRadius:'50%', background:c, border: form.cor===c ? '2.5px solid var(--t1)' : '2px solid transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'transform .1s', transform: form.cor===c ? 'scale(1.18)' : 'scale(1)' }}
+                    >
+                      {form.cor === c && <Check size={10} color="#fff" strokeWidth={3} />}
+                    </button>
+                  ))}
+                  <input
+                    type="color"
+                    value={form.cor}
+                    onChange={e => f('cor', e.target.value)}
+                    title="Cor personalizada"
+                    style={{ width:22, height:22, borderRadius:'50%', border:'none', cursor:'pointer', padding:0, background:'none' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Auto-atualização</Label>
+                <select className="form-select" value={form.intervalo} onChange={e => f('intervalo', Number(e.target.value))} style={{ width:'100%', height:37 }}>
+                  {INTERVALOS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* ── Tamanho do card ── */}
+            <div style={{ marginBottom:20 }}>
+              <Label>Tamanho do card</Label>
+              <div style={{ display:'flex', alignItems:'center', gap:18 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:11, color:'var(--t3)', width:52 }}>Largura</span>
+                  <input
+                    type="range" min={2} max={12} step={1}
+                    value={form.grid_w}
+                    onChange={e => f('grid_w', Number(e.target.value))}
+                    style={{ width:120 }}
+                  />
+                  <span style={{ fontSize:11, color:'var(--t1)', fontWeight:600, width:44 }}>{form.grid_w}/12</span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:11, color:'var(--t3)', width:52 }}>Altura</span>
+                  <input
+                    type="range" min={1} max={8} step={1}
+                    value={form.grid_h}
+                    onChange={e => f('grid_h', Number(e.target.value))}
+                    style={{ width:120 }}
+                  />
+                  <span style={{ fontSize:11, color:'var(--t1)', fontWeight:600 }}>{form.grid_h} lin.</span>
+                </div>
+              </div>
+              <div style={{ marginTop:10, display:'flex', alignItems:'flex-end', height:88, gap:2 }}>
+                <div style={{
+                  width: `${form.grid_w / 12 * 100}%`, maxWidth: 260,
+                  height: Math.min(form.grid_h * 12, 88),
+                  background:'var(--or3)', border:'1.5px solid var(--or)', borderRadius:6,
+                  transition:'width .1s, height .1s',
+                }} />
+                <span style={{ fontSize:10, color:'var(--t3)', marginLeft:8, marginBottom:2 }}>prévia proporcional</span>
+              </div>
+            </div>
+
+            {/* ── SQL ── */}
+            <div style={{ marginBottom:14 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                <Label style={{ marginBottom:0 }}>Query SQL</Label>
+                <div style={{ display:'flex', gap:10 }}>
+                  {!form.sql_query && sqlHint && (
+                    <button
+                      onClick={() => f('sql_query', sqlHint)}
+                      style={{ fontSize:10, color:'var(--or)', background:'none', border:'none', cursor:'pointer' }}
+                    >
+                      Inserir exemplo
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowGuide(v => !v)}
+                    style={{ display:'flex', alignItems:'center', gap:3, fontSize:10, color:'var(--t3)', background:'none', border:'none', cursor:'pointer' }}
+                  >
+                    {showGuide ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+                    Guia SQL
+                  </button>
+                </div>
+              </div>
+
+              {showGuide && guide && (
+                <div style={{ marginBottom:8, padding:'12px 14px', background:'var(--s2)', borderRadius:8, border:'1px solid var(--bd)', fontSize:11 }}>
+                  <div style={{ color:'var(--t2)', marginBottom:10, fontWeight:500, lineHeight:1.5 }}>{guide.regra}</div>
+                  {guide.exemplos.map((ex, i) => (
+                    <div key={i} style={{ marginBottom: i < guide.exemplos.length-1 ? 10 : 0 }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+                        <span style={{ fontSize:10, fontWeight:600, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5 }}>{ex.label}</span>
+                        <button
+                          onClick={() => { f('sql_query', ex.sql); setShowGuide(false) }}
+                          style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:'var(--or)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
+                        >
+                          <Copy size={9} />Usar este
+                        </button>
+                      </div>
+                      <pre style={{ margin:0, padding:'7px 10px', background:'var(--s3)', borderRadius:5, fontSize:10, color:'var(--t2)', overflowX:'auto', whiteSpace:'pre-wrap', wordBreak:'break-all', fontFamily:'monospace', lineHeight:1.6 }}>{ex.sql}</pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <textarea
+                className="form-textarea"
+                value={form.sql_query}
+                onChange={e => { f('sql_query', e.target.value); setPreviewRows(null); setPreviewFields([]); setPreviewErr(null) }}
+                placeholder={sqlHint || 'SELECT ...'}
+                spellCheck={false}
+                style={{ width:'100%', height:120, fontFamily:'monospace', fontSize:11, resize:'vertical', lineHeight:1.65 }}
+              />
+
+              <div style={{ display:'flex', gap:8, marginTop:7, alignItems:'center' }}>
+                <button
+                  onClick={handleTestSql}
+                  disabled={testing || !form.sql_query.trim()}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s2)', color:'var(--t1)', cursor: testing||!form.sql_query.trim() ? 'not-allowed' : 'pointer', fontSize:11, fontWeight:500, opacity: !form.sql_query.trim() ? .5 : 1 }}
+                >
+                  {testing
+                    ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
+                    : <Play size={11} />
+                  }
+                  Testar SQL
+                </button>
+                {previewRows && (
+                  <span style={{ fontSize:10, color:'var(--t3)' }}>
+                    {previewRows.length} linha{previewRows.length!==1?'s':''} · {previewFields.length} coluna{previewFields.length!==1?'s':''}
+                  </span>
+                )}
+                {previewErr && (
+                  <div style={{ display:'flex', alignItems:'center', gap:4, color:'#F87171', fontSize:10, flex:1, overflow:'hidden' }}>
+                    <AlertCircle size={11} style={{ flexShrink:0 }} />
+                    <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{previewErr}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Comparação com período anterior ── */}
+            <div style={{ marginBottom:20, padding:'12px 14px', border:'1px solid var(--bd)', borderRadius:10, background:'var(--s2)' }}>
+              <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--t1)' }}>
+                <input
+                  type="checkbox"
+                  checked={form.comparar_anterior}
+                  onChange={e => f('comparar_anterior', e.target.checked)}
+                  style={{ width:14, height:14, cursor:'pointer' }}
+                />
+                Comparar com período anterior
+              </label>
+              {form.comparar_anterior && (
+                <div style={{ marginTop:10 }}>
+                  <div style={{ fontSize:10, color:'var(--t3)', marginBottom:6, lineHeight:1.5 }}>
+                    Escreva uma query que retorne o mesmo formato de colunas, referente ao período anterior.
+                    Para gráficos, as categorias devem estar na mesma ordem da query principal.
+                  </div>
+                  <textarea
+                    className="form-textarea"
+                    value={form.sql_query_anterior}
+                    onChange={e => { f('sql_query_anterior', e.target.value); setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null) }}
+                    placeholder="SELECT ... (mesmo formato, período anterior)"
+                    spellCheck={false}
+                    style={{ width:'100%', height:90, fontFamily:'monospace', fontSize:11, resize:'vertical', lineHeight:1.65 }}
+                  />
+                  <div style={{ display:'flex', gap:8, marginTop:7, alignItems:'center' }}>
+                    <button
+                      type="button"
+                      onClick={handleTestSqlAnterior}
+                      disabled={testingPrev || !form.sql_query_anterior.trim()}
+                      style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s3)', color:'var(--t1)', cursor: testingPrev||!form.sql_query_anterior.trim() ? 'not-allowed' : 'pointer', fontSize:11, fontWeight:500, opacity: !form.sql_query_anterior.trim() ? .5 : 1 }}
+                    >
+                      {testingPrev
+                        ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
+                        : <Play size={11} />
+                      }
+                      Testar SQL
+                    </button>
+                    {prevPreviewRows && (
+                      <span style={{ fontSize:10, color:'var(--t3)' }}>
+                        {prevPreviewRows.length} linha{prevPreviewRows.length!==1?'s':''} · {prevPreviewFields.length} coluna{prevPreviewFields.length!==1?'s':''}
+                      </span>
+                    )}
+                    {prevPreviewErr && (
+                      <div style={{ display:'flex', alignItems:'center', gap:4, color:'#F87171', fontSize:10, flex:1, overflow:'hidden' }}>
+                        <AlertCircle size={11} style={{ flexShrink:0 }} />
+                        <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{prevPreviewErr}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Preview ── */}
+            {previewRows && previewRows.length > 0 && (
+              <div style={{ marginBottom:20 }}>
+                <Label>Pré-visualização</Label>
+                <div style={{ background:'var(--s2)', borderRadius:10, border:'1px solid var(--bd)', padding:'14px 16px', minHeight:90, position:'relative' }}>
+                  <WidgetBody
+                    widget={form}
+                    rows={previewRows}
+                    fields={previewFields}
+                    prevRows={prevPreviewRows}
+                    prevFields={prevPreviewFields}
+                    fillHeight={false}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ── Actions ── */}
+            <div style={{ display:'flex', gap:10, paddingTop:18, borderTop:'1px solid var(--bd)', marginTop:6 }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={saving || !form.titulo.trim()}
+                style={{ display:'flex', alignItems:'center', gap:6 }}
+              >
+                {saving
+                  ? <RefreshCw size={12} style={{ animation:'spin .7s linear infinite' }} />
+                  : <Save size={12} />
+                }
+                {selected === 'new' ? 'Criar Widget' : 'Salvar Alterações'}
+              </button>
+
+              {selected !== 'new' && (
+                <button
+                  onClick={() => handleDelete(selected)}
+                  disabled={!!deleting}
+                  style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, border:'1px solid #EF444466', background:'transparent', color:'#F87171', cursor:'pointer', fontSize:12, fontWeight:500 }}
+                >
+                  <Trash2 size={12} />
+                  Excluir Widget
+                </button>
+              )}
+
+              <button
+                onClick={() => { setSelected(null); setForm(emptyForm()); resetPreview() }}
+                style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 12px', borderRadius:8, border:'1px solid var(--bd)', background:'transparent', color:'var(--t3)', cursor:'pointer', fontSize:12 }}
+              >
+                <X size={12} />
+                Cancelar
+              </button>
+            </div>
+
+          </div>
         )}
       </div>
 
-      {/* ── PAINEL 3: dashboard ao vivo ─────────────────────────────────────── */}
-      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderBottom:'1px solid var(--bd)', background:'var(--s2)', flexShrink:0 }}>
-          <LayoutGrid size={13} color="var(--t3)" />
-          <span style={{ fontSize:11, fontWeight:600, color:'var(--t2)' }}>Dashboard ao vivo</span>
-          <span style={{ fontSize:10, color:'var(--t3)' }}>
-            {widgets.length} widget{widgets.length !== 1 ? 's' : ''}
-          </span>
-          <button
-            onClick={() => setLayoutLocked(v => !v)}
-            title={layoutLocked ? 'Destravar layout (arrastar/redimensionar)' : 'Travar layout'}
-            style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:7, border:'1px solid var(--bd)', background: layoutLocked ? 'var(--s3)' : 'transparent', color:'var(--t2)', cursor:'pointer', fontSize:10.5, fontWeight:500 }}
-          >
-            {layoutLocked ? <Lock size={11} /> : <Unlock size={11} />}
-            {layoutLocked ? 'Layout travado' : 'Layout livre'}
-          </button>
-        </div>
+    </div>
+  )
+}
 
-        <div ref={containerRef} style={{ flex:1, overflowY:'auto', padding:'12px 16px' }}>
-          {loading ? (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
-              {[...Array(4)].map((_,i) => <div key={i} className="skel" style={{ height:150, borderRadius:10 }} />)}
-            </div>
-          ) : widgets.length === 0 ? (
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:10, color:'var(--t3)' }}>
-              <LayoutGrid size={40} style={{ opacity:.3 }} />
-              <div style={{ fontSize:12 }}>Nenhum widget ainda — crie um pelo painel ao lado.</div>
-            </div>
-          ) : (
-            <WidgetGrid
-              layout={layout}
-              width={containerW}
-              onLayoutChange={handleLayoutChange}
-              isDraggable={!layoutLocked}
-              isResizable={!layoutLocked}
-            >
-              {widgets.map(w => (
-                <div key={String(w.id)}>
-                  <WidgetCard
-                    widget={w}
-                    loading={loadingIds.has(w.id)}
-                    error={errorMap[w.id]}
-                    onRefresh={refreshOne}
-                    selected={selected === w.id}
-                    onSelect={() => openEdit(w)}
-                  />
-                </div>
-              ))}
-            </WidgetGrid>
-          )}
-        </div>
-      </div>
-
+function Label({ children, style }) {
+  return (
+    <div style={{ fontSize:10, fontWeight:600, letterSpacing:1, color:'var(--t3)', textTransform:'uppercase', marginBottom:6, ...style }}>
+      {children}
     </div>
   )
 }
