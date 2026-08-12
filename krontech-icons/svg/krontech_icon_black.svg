@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 190 190" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Anéis orbitais externos -->
+  <circle cx="95" cy="95" r="89"
+    fill="none" stroke="#1A1A1A" stroke-width="0.9"
+    stroke-dasharray="6 9" opacity="0.7"/>
+
+  <circle cx="95" cy="95" r="74"
+    fill="none" stroke="#111111" stroke-width="0.75"
+    stroke-dasharray="3 11" opacity="0.45"/>
+
+  <circle cx="95" cy="95" r="60"
+    fill="none" stroke="#0A0A0A" stroke-width="0.6"
+    stroke-dasharray="2 9" opacity="0.3"/>
+
+  <!-- Círculo principal -->
+  <circle cx="95" cy="95" r="44"
+    fill="#F0F0F0" stroke="#0A0A0A" stroke-width="1.4"/>
+
+  <!-- KT monograma -->
+  <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+
+    <!-- K: vertical -->
+    <line x1="76" y1="72" x2="76" y2="118"
+      stroke="#0A0A0A" stroke-width="3"/>
+    <!-- K: braço superior -->
+    <line x1="76" y1="95" x2="93" y2="72"
+      stroke="#0A0A0A" stroke-width="3"/>
+    <!-- K: braço inferior -->
+    <line x1="76" y1="95" x2="95" y2="118"
+      stroke="#0A0A0A" stroke-width="3"/>
+
+    <!-- T: barra horizontal -->
+    <line x1="103" y1="72" x2="122" y2="72"
+      stroke="#1A1A1A" stroke-width="3"/>
+    <!-- T: vertical -->
+    <line x1="112.5" y1="72" x2="112.5" y2="118"
+      stroke="#1A1A1A" stroke-width="3"/>
+
+    <!-- Separador -->
+    <line x1="98" y1="78" x2="98" y2="112"
+      stroke="#C8C8C8" stroke-width="0.9" opacity="0.6"/>
+
+  </g>
+</svg>
