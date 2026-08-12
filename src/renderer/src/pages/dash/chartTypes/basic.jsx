@@ -1,6 +1,6 @@
 // Tipos "básicos" (família cartesiana + card/gauge/tabela)
 import ReactECharts from 'echarts-for-react'
-import { fmtNum, isNumCol } from '../format'
+import { fmtNum, isNumCol, isStatusCol, corStatusValor } from '../format'
 import { grad, TT, AX, NoData, SqlErr, ComparisonBadge } from '../echartsHelpers'
 import { PALETA } from '../constants'
 
@@ -214,27 +214,44 @@ export function radar({ rows, fields, color, chartStyle }) {
 
 export function grid({ rows, fields, fillHeight }) {
   if (!rows.length) return <NoData />
-  const cols    = fields?.length ? fields : Object.keys(rows[0])
-  const numCols = new Set(cols.filter(c => isNumCol(rows, c)))
+  const cols       = fields?.length ? fields : Object.keys(rows[0])
+  const numCols    = new Set(cols.filter(c => isNumCol(rows, c)))
+  const statusCols = new Set(cols.filter(c => !numCols.has(c) && isStatusCol(rows, c)))
+  const adaptiveHeight = rows.length > 6
   const tableContent = (
-    <table className="dash-table">
+    <table className="dash-table dash-table-zebra">
       <thead>
         <tr>{cols.map(c => <th key={c} className={numCols.has(c)?'num':''}>{c.replace(/_/g,' ')}</th>)}</tr>
       </thead>
       <tbody>
         {rows.map((row, ri) => (
-          <tr key={ri}>{cols.map(c => <td key={c} className={numCols.has(c)?'num':''}>{row[c]!=null?(numCols.has(c)?fmtNum(row[c]):String(row[c])):'—'}</td>)}</tr>
+          <tr key={ri}>
+            {cols.map(c => {
+              const val = row[c]
+              if (statusCols.has(c) && val != null) {
+                const cor = corStatusValor(val)
+                return (
+                  <td key={c}>
+                    {cor
+                      ? <span className="dash-table-badge" style={{ background:cor.bg, color:cor.fg }}>{String(val)}</span>
+                      : String(val)}
+                  </td>
+                )
+              }
+              return <td key={c} className={numCols.has(c)?'num':''}>{val!=null?(numCols.has(c)?fmtNum(val):String(val)):'—'}</td>
+            })}
+          </tr>
         ))}
       </tbody>
     </table>
   )
-  if (fillHeight) return (
+  if (fillHeight || adaptiveHeight) return (
     <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, overflowX:'auto', overflowY:'auto', border:'1px solid var(--bd)', borderRadius:6 }}>
       {tableContent}
     </div>
   )
   return (
-    <div style={{ overflowX:'auto', maxHeight:200, overflowY:'auto', border:'1px solid var(--bd)', borderRadius:6 }}>
+    <div style={{ overflowX:'auto', border:'1px solid var(--bd)', borderRadius:6 }}>
       {tableContent}
     </div>
   )
