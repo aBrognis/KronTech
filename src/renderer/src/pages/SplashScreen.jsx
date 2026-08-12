@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { derivarCor } from '../lib/corPersonalizada'
 
 const CSS = `
 .sp-vignette{position:absolute;inset:0;pointer-events:none}
@@ -36,10 +37,10 @@ const STEPS = [
   { pct: 100, msg: 'Inicialização concluída.'         },
 ]
 
-const DARK_C  = ['#FF6B2B','#444','#383838','#2e2e2e','#555','#333','#404040']
-const LIGHT_C = ['#E85A1A','#CC7744','#AAA','#999','#BBBBBB','#888']
-
-export default function SplashScreen({ onDone }) {
+export default function SplashScreen({ onDone, accentColor }) {
+  const c = derivarCor(accentColor || '#D95218')
+  const DARK_C  = [c.hex, '#444','#383838','#2e2e2e','#555','#333','#404040']
+  const LIGHT_C = [c.escurecida, '#CC7744','#AAA','#999','#BBBBBB','#888']
   const canvasRef = useRef(null)
   const fillRef   = useRef(null)
   const msgRef    = useRef(null)
@@ -56,46 +57,46 @@ export default function SplashScreen({ onDone }) {
   const [verIn,   setVerIn]   = useState(false)
   const [fading,  setFading]  = useState(false)
 
-  // tokens por tema
+  // tokens por tema (cor de destaque personalizável via accentColor)
   const tk = isDark ? {
     bg:         '#080808',
     vignette:   'radial-gradient(ellipse 100% 100% at 50% 50%,transparent 30%,rgba(0,0,0,.65) 100%)',
-    glow:       'radial-gradient(ellipse 55% 45% at 50% 50%,rgba(255,107,43,.04) 0%,transparent 70%)',
-    hline:      'linear-gradient(90deg,transparent,rgba(255,107,43,.07) 25%,rgba(255,107,43,.07) 75%,transparent)',
-    accent:     '#FF6B2B',
+    glow:       `radial-gradient(ellipse 55% 45% at 50% 50%,rgba(${c.rgb},.04) 0%,transparent 70%)`,
+    hline:      `linear-gradient(90deg,transparent,rgba(${c.rgb},.07) 25%,rgba(${c.rgb},.07) 75%,transparent)`,
+    accent:     c.hex,
     nameColor:  '#ffffff',
     tagColor:   '#6a6a6a',   // legível no escuro
     subColor:   '#484848',   // legível no escuro
     trackBg:    '#181818',
-    fillGrad:   'linear-gradient(90deg,#C94D13,#FF6B2B,#FF9055)',
-    fillSh:     '0 0 14px rgba(255,107,43,.7),0 0 5px rgba(255,107,43,.4)',
+    fillGrad:   `linear-gradient(90deg,${c.escurecida},${c.hex},${c.clara})`,
+    fillSh:     `0 0 14px rgba(${c.rgb},.7),0 0 5px rgba(${c.rgb},.4)`,
     msgColor:   '#5a5a5a',   // legível no escuro
-    msgDone:    '#FF6B2B',
+    msgDone:    c.hex,
     pctColor:   '#3a3a3a',   // legível no escuro
     verColor:   '#363636',   // legível no escuro
-    dotBg:      '#FF6B2B',
-    dotSh:      '0 0 8px #FF6B2B',
-    cornerClr:  '#FF6B2B',
+    dotBg:      c.hex,
+    dotSh:      `0 0 8px ${c.hex}`,
+    cornerClr:  c.hex,
     COLORS:     DARK_C,
   } : {
     bg:         '#F0F1F5',
     vignette:   'radial-gradient(ellipse 100% 100% at 50% 50%,transparent 30%,rgba(180,180,190,.35) 100%)',
-    glow:       'radial-gradient(ellipse 55% 45% at 50% 50%,rgba(232,90,26,.07) 0%,transparent 70%)',
-    hline:      'linear-gradient(90deg,transparent,rgba(232,90,26,.08) 25%,rgba(232,90,26,.08) 75%,transparent)',
-    accent:     '#E85A1A',
+    glow:       `radial-gradient(ellipse 55% 45% at 50% 50%,rgba(${c.rgb},.07) 0%,transparent 70%)`,
+    hline:      `linear-gradient(90deg,transparent,rgba(${c.rgb},.08) 25%,rgba(${c.rgb},.08) 75%,transparent)`,
+    accent:     c.escurecida,
     nameColor:  '#0e0f14',
     tagColor:   '#7a7c8a',   // legível no claro
     subColor:   '#9a9caa',   // legível no claro
     trackBg:    '#d8d9e0',
-    fillGrad:   'linear-gradient(90deg,#B84510,#E85A1A,#FF7A3A)',
-    fillSh:     '0 0 12px rgba(232,90,26,.5)',
+    fillGrad:   `linear-gradient(90deg,${c.hex},${c.escurecida},${c.clara})`,
+    fillSh:     `0 0 12px rgba(${c.rgb},.5)`,
     msgColor:   '#5a5c70',   // legível no claro
-    msgDone:    '#E85A1A',
+    msgDone:    c.escurecida,
     pctColor:   '#7a7c8a',   // legível no claro
     verColor:   '#9a9caa',   // legível no claro
-    dotBg:      '#E85A1A',
-    dotSh:      '0 0 8px #E85A1A',
-    cornerClr:  '#E85A1A',
+    dotBg:      c.escurecida,
+    dotSh:      `0 0 8px ${c.escurecida}`,
+    cornerClr:  c.escurecida,
     COLORS:     LIGHT_C,
   }
 

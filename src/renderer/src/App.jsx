@@ -309,6 +309,7 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, sho
 export default function App() {
   const [appPhase, setAppPhase] = useState(import.meta.env.DEV ? 'app' : 'splash')
   const [sessao,   setSessao]   = useState(null) // { usuario, nome, registro }
+  const [accentColor, setAccentColor] = useState('#D95218') // cor personalizada, usada por Splash/Login antes do CSS global carregar
 
   // Abas: cada aba tem { id, pageId, label }
   const [tabs,        setTabs]        = useState(() => [makeTab('dashboard')])
@@ -338,7 +339,7 @@ export default function App() {
     window.api.config.get().then(res => {
       let hex = res.ok ? res.data?.Personalizacao?.cor_primaria : null
       if (hex === '#FF6B2B') hex = '#D95218'
-      if (hex) aplicarCorSistema(hex)
+      if (hex) { aplicarCorSistema(hex); setAccentColor(hex) }
     }).catch(() => {})
     window.api.formBuilder.listarTelas(true).then(res => res.ok && setTelasDin(res.data)).catch(() => {})
   }, [])
@@ -454,8 +455,8 @@ export default function App() {
     }
   }
 
-  if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} />
-  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); setAppPhase('app') }} /><UpdateBanner /></>
+  if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} accentColor={accentColor} />
+  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); setAppPhase('app') }} accentColor={accentColor} /><UpdateBanner /></>
 
   return (
     <div className="app">
@@ -468,7 +469,7 @@ export default function App() {
             <h1 className="tb-title">{topMeta.title}</h1>
             <span className="tb-sub">{topMeta.sub}</span>
             {import.meta.env.DEV && (
-              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,107,43,.15)', color: 'var(--or)', border: '1px solid rgba(255,107,43,.3)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '2px 7px', borderRadius: 4, background: 'var(--or3)', color: 'var(--or)', border: '1px solid var(--or3)', textTransform: 'uppercase' }}>
                 DEV
               </span>
             )}

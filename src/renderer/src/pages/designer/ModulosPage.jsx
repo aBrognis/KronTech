@@ -210,12 +210,25 @@ export default function ModulosPage() {
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
 
         {/* ─── COLUNA ESQUERDA: gerenciamento de módulos ─── */}
-        <div style={{ flex: '0 0 360px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', minWidth: 0 }}>
+        <div style={{ flex: '0 0 360px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            background: 'var(--s1)', border: '1px solid var(--bd)',
+            borderRadius: 12, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column', minHeight: 440,
+          }}>
 
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 1 }}>Módulos</span>
-            <span style={{ fontSize: 11, color: 'var(--t3)' }}>— agrupe telas no sidebar</span>
-          </div>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '10px 14px', borderBottom: '1px solid var(--bd)',
+              background: 'var(--s1)', flexShrink: 0,
+            }}>
+              <LayoutGrid size={13} color="var(--or)" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Módulos</span>
+              <span style={{ fontSize: 11, color: 'var(--t3)' }}>— agrupe telas no sidebar</span>
+            </div>
+
+          <div style={{ padding: '12px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
           {/* Criar módulo */}
           <div style={{
@@ -355,12 +368,14 @@ export default function ModulosPage() {
               })}
             </div>
           )}
+          </div>
+          </div>
         </div>
 
         {/* ─── COLUNA DIREITA: menu lateral ─── */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{
-            background: 'var(--s2)', border: '1px solid var(--bd)',
+            background: 'var(--s1)', border: '1px solid var(--bd)',
             borderRadius: 12, overflow: 'hidden',
             display: 'flex', flexDirection: 'column', minHeight: 440,
           }}>
@@ -402,8 +417,8 @@ export default function ModulosPage() {
                   {ordemGlobal.map((item, idx) => (
                     <div key={item.id} style={{
                       display: 'flex', gap: 6, alignItems: 'center',
-                      height: 36, background: 'var(--bg)',
-                      border: '1px solid var(--bd)', borderRadius: 7, padding: '0 8px',
+                      height: 36, background: 'var(--s2)',
+                      border: '1.5px solid var(--bd)', borderRadius: 7, padding: '0 8px',
                     }}>
                       <span style={{ fontSize: 10, color: 'var(--t3)', width: 14, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
                       {item.tipo === 'fixo' ? (
@@ -443,8 +458,8 @@ export default function ModulosPage() {
                           {gr.map((t, idx) => (
                             <div key={t.id} style={{
                               display: 'flex', alignItems: 'center', gap: 6,
-                              height: 36, background: 'var(--bg)',
-                              border: '1px solid var(--bd)', borderRadius: 7, padding: '0 8px',
+                              height: 36, background: 'var(--s2)',
+                              border: '1.5px solid var(--bd)', borderRadius: 7, padding: '0 8px',
                             }}>
                               <span style={{ fontSize: 10, color: 'var(--t3)', width: 14, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
                               <span style={{ flex: 1, fontSize: 12, color: 'var(--t1)', fontWeight: 500 }}>{t.nome_tela}</span>

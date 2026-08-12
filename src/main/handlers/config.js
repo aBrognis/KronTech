@@ -5,7 +5,18 @@ export function registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, sa
 
   ipcMain.handle('config:get',        wrap(() => getConfigForFrontend()))
   ipcMain.handle('config:set',        wrap((_, { section, key, value }) => saveConfig(section, key, value)))
-  ipcMain.handle('config:setSection', wrap((_, { section, kvs })        => saveSectionConfig(section, kvs)))
+  ipcMain.handle('config:setSection', wrap((_, { section, kvs }) => {
+    const result = saveSectionConfig(section, kvs)
+    // Personalização (cor/identidade) precisa refletir em todas as janelas
+    // abertas (app principal + Designer, que roda em BrowserWindow separada
+    // e não recebe window.dispatchEvent da outra janela).
+    if (section === 'Personalizacao') {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) win.webContents.send('config:personalizacaoAlterada', kvs)
+      }
+    }
+    return result
+  }))
   ipcMain.handle('config:getIniPath', wrap(() => INI_PATH))
 
   ipcMain.handle('config:selecionarPasta', wrap(async (e) => {

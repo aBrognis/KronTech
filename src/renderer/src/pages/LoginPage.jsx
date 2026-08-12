@@ -1,30 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
+import { derivarCor } from '../lib/corPersonalizada'
 
-/* ── CSS injetado (porta exata do HTML standalone) ───────────────────────── */
-const CSS = `
+/* ── CSS injetado — cor de destaque parametrizada por accentColor ────────── */
+function buildCss(cDark, cLight) {
+  return `
 .lp-left canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .lp-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:44px 44px}
 html.light .lp-grid{background-image:linear-gradient(rgba(0,0,0,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.02) 1px,transparent 1px)}
 .lp-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 30%,rgba(0,0,0,.55) 100%)}
 html.light .lp-vignette{background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 30%,rgba(180,180,180,.12) 100%)}
-.lp-glow-c{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 65% 60% at 50% 50%,rgba(255,107,43,.03) 0%,transparent 70%)}
-html.light .lp-glow-c{background:radial-gradient(ellipse 65% 60% at 50% 50%,rgba(232,90,26,.04) 0%,transparent 70%)}
+.lp-glow-c{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 65% 60% at 50% 50%,rgba(${cDark.rgb},.03) 0%,transparent 70%)}
+html.light .lp-glow-c{background:radial-gradient(ellipse 65% 60% at 50% 50%,rgba(${cLight.rgb},.04) 0%,transparent 70%)}
 .lp-scan{position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.008) 0,rgba(255,255,255,.008) 1px,transparent 1px,transparent 3px)}
 html.light .lp-scan{background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.01) 0,rgba(0,0,0,.01) 1px,transparent 1px,transparent 3px)}
-.lp-edge-r{position:absolute;top:0;right:0;bottom:0;width:1px;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(255,107,43,.18) 30%,rgba(255,107,43,.18) 70%,transparent)}
-html.light .lp-edge-r{background:linear-gradient(180deg,transparent,rgba(232,90,26,.14) 30%,rgba(232,90,26,.14) 70%,transparent)}
-.lp-tag-item{padding:3.5px 9px;border-radius:20px;border:.5px solid rgba(255,107,43,.13);background:rgba(255,107,43,.07);color:rgba(255,107,43,.42);font-size:8px;letter-spacing:2px;font-weight:600}
-html.light .lp-tag-item{border-color:rgba(232,90,26,.14);background:rgba(232,90,26,.06);color:rgba(200,75,20,.5)}
+.lp-edge-r{position:absolute;top:0;right:0;bottom:0;width:1px;pointer-events:none;background:linear-gradient(180deg,transparent,rgba(${cDark.rgb},.18) 30%,rgba(${cDark.rgb},.18) 70%,transparent)}
+html.light .lp-edge-r{background:linear-gradient(180deg,transparent,rgba(${cLight.rgb},.14) 30%,rgba(${cLight.rgb},.14) 70%,transparent)}
+.lp-tag-item{padding:3.5px 9px;border-radius:20px;border:.5px solid rgba(${cDark.rgb},.13);background:rgba(${cDark.rgb},.07);color:rgba(${cDark.rgb},.42);font-size:8px;letter-spacing:2px;font-weight:600}
+html.light .lp-tag-item{border-color:rgba(${cLight.rgb},.14);background:rgba(${cLight.rgb},.06);color:rgba(${cLight.rgb},.5)}
 .lp-win-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--lp-input-bd,#222);background:transparent;color:var(--lp-t3,#303030);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .22s;outline:none}
 .lp-win-btn:hover{background:var(--lp-input-bg,rgba(255,255,255,.04));color:var(--lp-t1,#f0f0f0)}
 .lp-win-btn.danger:hover{background:rgba(248,113,113,.1);color:#F87171;border-color:rgba(248,113,113,.35)}
-.lp-badge-dot{width:5px;height:5px;border-radius:50%;background:#D95218;box-shadow:0 0 10px #D95218,0 0 4px #D95218;animation:lp-pulse 2.4s ease-in-out infinite}
+.lp-badge-dot{width:5px;height:5px;border-radius:50%;background:${cDark.hex};box-shadow:0 0 10px ${cDark.hex},0 0 4px ${cDark.hex};animation:lp-pulse 2.4s ease-in-out infinite}
 @keyframes lp-pulse{0%,100%{opacity:.35}50%{opacity:1}}
 .lp-input{width:100%;height:46px;padding:0 14px;border-radius:10px;outline:none;font-size:13.5px;font-family:inherit;transition:border-color .22s,background .22s,box-shadow .22s;box-sizing:border-box}
 .lp-input::placeholder{opacity:.45}
-.lp-input:focus{border-color:#D95218 !important;background:rgba(217,82,24,.05) !important;box-shadow:0 0 0 3px rgba(217,82,24,.28),0 2px 8px rgba(0,0,0,.12) !important}
+.lp-input:focus{border-color:${cDark.hex} !important;background:rgba(${cDark.rgb},.05) !important;box-shadow:0 0 0 3px rgba(${cDark.rgb},.28),0 2px 8px rgba(0,0,0,.12) !important}
 .lp-input-icon{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;display:flex;transition:color .22s}
-.lp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(217,82,24,.45) 50%,transparent)}
+.lp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(${cDark.rgb},.45) 50%,transparent)}
 .lp-btn{margin-top:6px;height:48px;border-radius:12px;border:none;color:#fff;font-size:14px;font-weight:700;letter-spacing:.2px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden;transition:transform .22s,box-shadow .22s}
 .lp-btn:hover:not(:disabled){transform:translateY(-2px)}
 .lp-btn:active:not(:disabled){transform:translateY(0)}
@@ -32,7 +34,7 @@ html.light .lp-tag-item{border-color:rgba(232,90,26,.14);background:rgba(232,90,
 .lp-btn-shine{position:absolute;inset:0;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.12) 50%,transparent 70%);opacity:0;transition:opacity .2s;pointer-events:none}
 .lp-btn:hover .lp-btn-shine{opacity:1}
 .lp-check{width:17px;height:17px;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .22s;cursor:pointer}
-.lp-check.on{box-shadow:0 0 8px rgba(255,107,43,.45)}
+.lp-check.on{box-shadow:0 0 8px rgba(${cDark.rgb},.45)}
 .lp-corner-dec{position:absolute;pointer-events:none;opacity:.18}
 .lp-corner-dec.tl{top:16px;left:16px}
 .lp-corner-dec.bl{bottom:16px;left:16px;transform:scaleY(-1)}
@@ -51,9 +53,8 @@ html.light .lp-tag-item{border-color:rgba(232,90,26,.14);background:rgba(232,90,
 @keyframes kr-br{0%,100%{opacity:.72}50%{opacity:1}}
 @keyframes kr-op{0%,100%{opacity:.35}50%{opacity:1}}
 `
+}
 
-const DARK_C  = ['#FF6B2B','#444','#383838','#2e2e2e','#555','#333','#404040']
-const LIGHT_C = ['#E85A1A','#CC7744','#AAA','#999','#BBBBBB','#888']
 const TAGS    = ['AGENDA','ARQUIVOS','SQL','FORMULÁRIOS','DASHBOARD','RELATÓRIOS']
 const FF      = "'Segoe UI Variable','Segoe UI',system-ui,sans-serif"
 
@@ -123,7 +124,11 @@ function startParticles(canvas, getColors, count = 92) {
 }
 
 /* ── LoginPage ───────────────────────────────────────────────────────────── */
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, accentColor }) {
+  const c = derivarCor(accentColor || '#D95218')
+  const DARK_C  = [c.hex, '#444','#383838','#2e2e2e','#555','#333','#404040']
+  const LIGHT_C = [c.escurecida, '#CC7744','#AAA','#999','#BBBBBB','#888']
+
   const canvasRef  = useRef(null)
   const colorsRef  = useRef(DARK_C)
   const tagsRef    = useRef(null)
@@ -140,13 +145,16 @@ export default function LoginPage({ onLogin }) {
   const [rightIn,  setRightIn]  = useState(false)
   const [tagsBuilt,setTagsBuilt]= useState(false)
 
-  /* injetar CSS */
+  /* injetar CSS (reage a mudança de accentColor) */
   useEffect(() => {
-    if (document.getElementById('lp-css')) return
-    const s = document.createElement('style')
-    s.id = 'lp-css'; s.textContent = CSS
-    document.head.appendChild(s)
-  }, [])
+    let s = document.getElementById('lp-css')
+    if (!s) {
+      s = document.createElement('style')
+      s.id = 'lp-css'
+      document.head.appendChild(s)
+    }
+    s.textContent = buildCss(derivarCor(accentColor || '#D95218'), derivarCor(accentColor || '#D95218'))
+  }, [accentColor])
 
   /* tema inicial */
   useEffect(() => {
@@ -225,29 +233,29 @@ export default function LoginPage({ onLogin }) {
     }
   }
 
-  /* tokens dark/light */
+  /* tokens dark/light (cor de destaque personalizável via accentColor) */
   const dk = {
     bg:'#080808', leftBg:'#0d0d0d', rightBg:'#141414', border:'#1f1f1f',
-    cardBg:'rgba(16,16,16,.9)', cardBd:'rgba(255,107,43,.14)',
+    cardBg:'rgba(16,16,16,.9)', cardBd:`rgba(${c.rgb},.14)`,
     inputBg:'rgba(255,255,255,.04)', inputBd:'#222',
-    t1:'#f0f0f0', t2:'#707070', t3:'#303030', accent:'#FF6B2B',
-    rightGlow:'radial-gradient(ellipse 90% 100% at 50% 0%,rgba(255,107,43,.025) 0%,transparent 70%)',
-    btnBg:'linear-gradient(135deg,#B84510 0%,#E85A1A 55%,#FF7A3A 100%)',
-    btnSh:'0 6px 28px rgba(192,72,18,.4),0 2px 8px rgba(192,72,18,.2)',
-    btnShH:'0 10px 36px rgba(192,72,18,.55),0 3px 12px rgba(192,72,18,.3)',
+    t1:'#f0f0f0', t2:'#707070', t3:'#303030', accent:c.hex,
+    rightGlow:`radial-gradient(ellipse 90% 100% at 50% 0%,rgba(${c.rgb},.025) 0%,transparent 70%)`,
+    btnBg:`linear-gradient(135deg,${c.escurecida} 0%,${c.hex} 55%,${c.clara} 100%)`,
+    btnSh:`0 6px 28px rgba(${c.rgb},.4),0 2px 8px rgba(${c.rgb},.2)`,
+    btnShH:`0 10px 36px rgba(${c.rgb},.55),0 3px 12px rgba(${c.rgb},.3)`,
     cardSh:'0 32px 80px rgba(0,0,0,.55),0 8px 24px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.04)',
     divLine:'#1f1f1f', checkBd:'#2a2a2a',
     errBg:'rgba(248,113,113,.07)', errBd:'rgba(248,113,113,.2)', errC:'#F87171',
   }
   const lk = {
     bg:'#ECEDF2', leftBg:'#F8F8FB', rightBg:'#FFFFFF', border:'#DDDDE8',
-    cardBg:'rgba(255,255,255,.88)', cardBd:'rgba(232,90,26,.16)',
+    cardBg:'rgba(255,255,255,.88)', cardBd:`rgba(${c.rgb},.16)`,
     inputBg:'rgba(0,0,0,.03)', inputBd:'#DDDDE8',
-    t1:'#0e0f14', t2:'#5a5c72', t3:'#a8aac0', accent:'#E85A1A',
-    rightGlow:'radial-gradient(ellipse 90% 100% at 50% 0%,rgba(232,90,26,.04) 0%,transparent 70%)',
-    btnBg:'linear-gradient(135deg,#B84510 0%,#E85A1A 55%,#FF7A3A 100%)',
-    btnSh:'0 6px 28px rgba(232,90,26,.35),0 2px 8px rgba(232,90,26,.18)',
-    btnShH:'0 10px 36px rgba(232,90,26,.5),0 3px 12px rgba(232,90,26,.25)',
+    t1:'#0e0f14', t2:'#5a5c72', t3:'#a8aac0', accent:c.escurecida,
+    rightGlow:`radial-gradient(ellipse 90% 100% at 50% 0%,rgba(${c.rgb},.04) 0%,transparent 70%)`,
+    btnBg:`linear-gradient(135deg,${c.escurecida} 0%,${c.hex} 55%,${c.clara} 100%)`,
+    btnSh:`0 6px 28px rgba(${c.rgb},.35),0 2px 8px rgba(${c.rgb},.18)`,
+    btnShH:`0 10px 36px rgba(${c.rgb},.5),0 3px 12px rgba(${c.rgb},.25)`,
     cardSh:'0 32px 80px rgba(0,0,0,.07),0 8px 24px rgba(0,0,0,.04),inset 0 1px 0 rgba(255,255,255,.96)',
     divLine:'#DDDDE8', checkBd:'#C8C9D6',
     errBg:'rgba(220,38,38,.05)', errBd:'rgba(220,38,38,.18)', errC:'#DC2626',
@@ -282,7 +290,7 @@ export default function LoginPage({ onLogin }) {
           opacity: leftIn?1:0, transform: leftIn?'none':'translateY(14px)',
           transition:'opacity .75s ease .15s, transform .75s ease .15s',
         }}>
-          <LoginLogo isDark={isDark}/>
+          <LoginLogo isDark={isDark} accent={tk.accent}/>
 
           <div style={{marginTop:26,textAlign:'center'}}>
             <div style={{fontSize:29,letterSpacing:'-1px',lineHeight:1,color:tk.t1}}>
@@ -349,7 +357,7 @@ export default function LoginPage({ onLogin }) {
         <div className="lp-card" style={{
           width:360, background:tk.cardBg,
           border:`1px solid ${tk.cardBd}`,
-          borderTop:`1px solid ${isDark?'rgba(255,107,43,.22)':'rgba(232,90,26,.28)'}`,
+          borderTop:`1px solid rgba(${c.rgb},${isDark?.22:.28})`,
           borderRadius:18, padding:'38px 34px 32px',
           backdropFilter:'blur(32px)', WebkitBackdropFilter:'blur(32px)',
           boxShadow:tk.cardSh, position:'relative', overflow:'hidden',
@@ -436,7 +444,7 @@ export default function LoginPage({ onLogin }) {
           <div style={{marginTop:26,display:'flex',alignItems:'center',gap:10}}>
             <div style={{flex:1,height:1,background:tk.divLine}}/>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <MiniLogo isDark={isDark}/>
+              <MiniLogo isDark={isDark} accent={tk.accent}/>
               <span style={{fontSize:'9px',color:tk.t3,letterSpacing:'2px',fontWeight:600}}>KRONTECH</span>
             </div>
             <div style={{flex:1,height:1,background:tk.divLine}}/>
@@ -479,9 +487,9 @@ function BtnSubmit({ loading, isDark, tk }) {
 }
 
 /* ── Logos e ícones ──────────────────────────────────────────────────────── */
-function LoginLogo({ isDark, size = 104 }) {
+function LoginLogo({ isDark, size = 104, accent }) {
   const kC = isDark ? '#FFF' : '#111'
-  const tC = isDark ? '#FF6B2B' : '#E85A1A'
+  const tC = accent || (isDark ? '#FF6B2B' : '#E85A1A')
   const dF = isDark ? '#222' : '#EDEDEE'
   const r1 = isDark ? '#333' : '#DCDCDC'
   const r3 = isDark ? '#222' : '#CCCCCC'
@@ -524,8 +532,8 @@ function LoginLogo({ isDark, size = 104 }) {
   )
 }
 
-function MiniLogo({ isDark }) {
-  const accent = isDark ? '#FF6B2B' : '#E85A1A'
+function MiniLogo({ isDark, accent: accentProp }) {
+  const accent = accentProp || (isDark ? '#FF6B2B' : '#E85A1A')
   const kC     = isDark ? '#aaaaaa' : '#555555'
   const discF  = isDark ? '#1e1e1e' : '#e8e8e8'
   return (

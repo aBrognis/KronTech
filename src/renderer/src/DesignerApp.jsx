@@ -301,6 +301,14 @@ export default function DesignerApp() {
       if (hex) aplicarCorSistema(hex)
     }).catch(() => {})
     window.api.update?.version().then(res => res.ok && setVersion(res.data)).catch(() => {})
+
+    // Designer roda em BrowserWindow separada da janela principal — a cor só
+    // muda ao vivo aqui via IPC (window.dispatchEvent da tela de Personalização
+    // não atravessa processos de renderização diferentes).
+    const unsub = window.api.config.onPersonalizacaoAlterada?.((kvs) => {
+      if (kvs?.cor_primaria) aplicarCorSistema(kvs.cor_primaria)
+    })
+    return () => unsub?.()
   }, [])
 
   const handleNavigate = useCallback((pageId) => {
@@ -372,7 +380,7 @@ export default function DesignerApp() {
             </div>
 
             {import.meta.env.DEV && (
-              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,107,43,.15)', color: 'var(--or)', border: '1px solid rgba(255,107,43,.3)', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '2px 7px', borderRadius: 4, background: 'var(--or3)', color: 'var(--or)', border: '1px solid var(--or3)', textTransform: 'uppercase' }}>
                 DEV
               </span>
             )}

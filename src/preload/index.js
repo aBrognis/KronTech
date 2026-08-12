@@ -126,6 +126,11 @@ const api = {
     setSection:      (section, kvs)           => ipcRenderer.invoke('config:setSection', { section, kvs }),
     getIniPath:      ()                       => ipcRenderer.invoke('config:getIniPath'),
     selecionarPasta: ()                       => ipcRenderer.invoke('config:selecionarPasta'),
+    onPersonalizacaoAlterada: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('config:personalizacaoAlterada', fn)
+      return () => ipcRenderer.removeListener('config:personalizacaoAlterada', fn)
+    },
   },
   update: {
     check:         ()  => ipcRenderer.invoke('update:check'),
