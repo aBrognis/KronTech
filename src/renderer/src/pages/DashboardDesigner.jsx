@@ -9,7 +9,7 @@ function nextPos(widgets) {
 }
 
 function emptyForm() {
-  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '' }
+  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_x: 0, grid_y: 0, grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '' }
 }
 
 export default function DashboardDesigner({ newTrigger, onNavigate }) {
