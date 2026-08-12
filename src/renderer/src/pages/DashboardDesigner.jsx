@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Trash2, RefreshCw, Database } from 'lucide-react'
-import { LucideIcon, TIPOS, WidgetForm } from './dash'
+import { ArrowLeft, Plus, Trash2, RefreshCw, Database, Lock, Unlock, LayoutGrid } from 'lucide-react'
+import { LucideIcon, TIPOS, WidgetForm, WidgetCard, WidgetGrid, useDashboardWidgets } from './dash'
 
 function nextPos(widgets) {
   if (!widgets.length) return { x: 0, y: 0 }
@@ -13,8 +13,11 @@ function emptyForm() {
 }
 
 export default function DashboardDesigner({ newTrigger, onNavigate }) {
-  const [widgets,       setWidgets]       = useState([])
-  const [loading,       setLoading]       = useState(true)
+  const {
+    widgets, layout, loading, loadingIds, errorMap,
+    containerRef, containerW, refreshOne, handleLayoutChange, loadAll,
+  } = useDashboardWidgets({ autoRefresh: false })
+
   const [selected,      setSelected]      = useState(null)
   const [form,          setForm]          = useState(emptyForm())
   const [saving,        setSaving]        = useState(false)
@@ -30,12 +33,14 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [seeding,       setSeeding]       = useState(false)
   const [clearingDemo,  setClearingDemo]  = useState(false)
   const [demoMsg,       setDemoMsg]       = useState(null)
+  const [layoutLocked,  setLayoutLocked]  = useState(false)
 
   async function handleSeedDemo() {
     setSeeding(true); setDemoMsg(null)
     try {
       const res = await window.api.dash.seedDemo()
       setDemoMsg(res.ok ? { ok:true, texto:`${res.data.inserted} linhas geradas` } : { ok:false, texto: res.erro })
+      if (res.ok) loadAll()
     } catch (e) {
       setDemoMsg({ ok:false, texto: String(e) })
     } finally {
@@ -48,18 +53,13 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     try {
       const res = await window.api.dash.clearDemo()
       setDemoMsg(res.ok ? { ok:true, texto:'Dados demo removidos' } : { ok:false, texto: res.erro })
+      if (res.ok) loadAll()
     } catch (e) {
       setDemoMsg({ ok:false, texto: String(e) })
     } finally {
       setClearingDemo(false)
     }
   }
-
-  useEffect(() => {
-    window.api.dash.getAll()
-      .then(res => { setWidgets(res.ok ? res.data : []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
 
   useEffect(() => {
     if (newTrigger > 0) openNew()
@@ -120,13 +120,11 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         const payload = { ...form, grid_x: pos.x, grid_y: pos.y }
         const res = await window.api.dash.create(payload)
         if (!res.ok) return
-        const newW = { ...payload, id: res.data.id }
-        setWidgets(prev => [...prev, newW])
         setSelected(res.data.id)
       } else {
         await window.api.dash.update({ id: selected, ...form })
-        setWidgets(prev => prev.map(w => w.id === selected ? { ...w, ...form } : w))
       }
+      await loadAll()
       window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setSaving(false)
@@ -138,8 +136,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     setDeleting(id)
     try {
       await window.api.dash.delete(id)
-      setWidgets(prev => prev.filter(w => w.id !== id))
       if (selected === id) { setSelected(null); setForm(emptyForm()); resetPreview() }
+      await loadAll()
       window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setDeleting(null)
@@ -175,8 +173,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   return (
     <div className="dash-wrapper" style={{ display:'flex', flexDirection:'row' }}>
 
-      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
-      <div style={{ width:260, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid var(--bd)', overflow:'hidden', background:'var(--bg)' }}>
+      {/* ── PAINEL 1: lista de widgets ─────────────────────────────────────── */}
+      <div style={{ width:240, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid var(--bd)', overflow:'hidden', background:'var(--bg)' }}>
 
         <div style={{ padding:'14px 12px 10px', borderBottom:'1px solid var(--bd)', background:'var(--s2)' }}>
           <button
@@ -272,8 +270,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         </div>
       </div>
 
-      {/* ── RIGHT PANEL (editor) ───────────────────────────────────────────── */}
-      <div style={{ flex:1, overflowY:'auto', padding:'28px 32px' }}>
+      {/* ── PAINEL 2: formulário ───────────────────────────────────────────── */}
+      <div style={{ width:'clamp(380px, 32%, 520px)', flexShrink:0, overflowY:'auto', padding:'28px 26px', borderRight:'1px solid var(--bd)' }}>
         {!selected ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:14, color:'var(--t3)' }}>
             <LucideIcon name="layout-dashboard" size={48} />
@@ -303,6 +301,59 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
             onCancel={() => { setSelected(null); setForm(emptyForm()); resetPreview() }}
           />
         )}
+      </div>
+
+      {/* ── PAINEL 3: dashboard ao vivo ─────────────────────────────────────── */}
+      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', borderBottom:'1px solid var(--bd)', background:'var(--s2)', flexShrink:0 }}>
+          <LayoutGrid size={13} color="var(--t3)" />
+          <span style={{ fontSize:11, fontWeight:600, color:'var(--t2)' }}>Dashboard ao vivo</span>
+          <span style={{ fontSize:10, color:'var(--t3)' }}>
+            {widgets.length} widget{widgets.length !== 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={() => setLayoutLocked(v => !v)}
+            title={layoutLocked ? 'Destravar layout (arrastar/redimensionar)' : 'Travar layout'}
+            style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:7, border:'1px solid var(--bd)', background: layoutLocked ? 'var(--s3)' : 'transparent', color:'var(--t2)', cursor:'pointer', fontSize:10.5, fontWeight:500 }}
+          >
+            {layoutLocked ? <Lock size={11} /> : <Unlock size={11} />}
+            {layoutLocked ? 'Layout travado' : 'Layout livre'}
+          </button>
+        </div>
+
+        <div ref={containerRef} style={{ flex:1, overflowY:'auto', padding:'12px 16px' }}>
+          {loading ? (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 }}>
+              {[...Array(4)].map((_,i) => <div key={i} className="skel" style={{ height:150, borderRadius:10 }} />)}
+            </div>
+          ) : widgets.length === 0 ? (
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:10, color:'var(--t3)' }}>
+              <LayoutGrid size={40} style={{ opacity:.3 }} />
+              <div style={{ fontSize:12 }}>Nenhum widget ainda — crie um pelo painel ao lado.</div>
+            </div>
+          ) : (
+            <WidgetGrid
+              layout={layout}
+              width={containerW}
+              onLayoutChange={handleLayoutChange}
+              isDraggable={!layoutLocked}
+              isResizable={!layoutLocked}
+            >
+              {widgets.map(w => (
+                <div key={String(w.id)}>
+                  <WidgetCard
+                    widget={w}
+                    loading={loadingIds.has(w.id)}
+                    error={errorMap[w.id]}
+                    onRefresh={refreshOne}
+                    selected={selected === w.id}
+                    onSelect={() => openEdit(w)}
+                  />
+                </div>
+              ))}
+            </WidgetGrid>
+          )}
+        </div>
       </div>
 
     </div>
