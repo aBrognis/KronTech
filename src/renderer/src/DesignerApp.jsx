@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Sun, Moon, X, Plus, ChevronLeft, ChevronRight, LayoutGrid, Package, Zap,
+  Sun, Moon, X, Plus, ChevronLeft, ChevronRight, LayoutGrid, Package, Zap, Search,
 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import FuncoesTab from './pages/FuncoesTab'
 import TelasPage from './pages/designer/TelasPage'
 import ModulosPage from './pages/designer/ModulosPage'
+import MontaPesquisaTab from './pages/MontaPesquisaTab'
 import { aplicarCorSistema } from './pages/Configuracoes'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
@@ -14,15 +15,17 @@ import './App.css'
 // pageId do Designer → aba interna do FormBuilder
 // 'funcoes' → componente próprio
 const DESIGNER_PAGES = [
-  { pageId: 'telas',   label: 'Telas',   Icon: LayoutGrid, fbTab: 'telas'   },
-  { pageId: 'modulos', label: 'Módulos', Icon: Package,    fbTab: 'modulos' },
-  { pageId: 'funcoes', label: 'Funções', Icon: Zap,        fbTab: null      },
+  { pageId: 'telas',     label: 'Telas',     Icon: LayoutGrid, fbTab: 'telas'   },
+  { pageId: 'modulos',   label: 'Módulos',   Icon: Package,    fbTab: 'modulos' },
+  { pageId: 'funcoes',   label: 'Funções',   Icon: Zap,        fbTab: null      },
+  { pageId: 'pesquisas', label: 'Pesquisas', Icon: Search,     fbTab: null      },
 ]
 
 const PAGE_META = {
   telas:        { title: 'Telas',        sub: 'CRIADOR DE TELAS'          },
   modulos:      { title: 'Módulos',      sub: 'ORGANIZAÇÃO · MÓDULOS'     },
   funcoes:      { title: 'Funções',      sub: 'AUTOMAÇÃO · FUNÇÕES'       },
+  pesquisas:    { title: 'Pesquisas',    sub: 'MONTA PESQUISA'            },
   // páginas do KronTech principal que o Sidebar também pode navegar
   dashboard:           { title: 'Dashboard',         sub: 'VISÃO GERAL'          },
   agenda:              { title: 'Agenda',             sub: 'GESTÃO · COMPROMISSOS'},
@@ -54,44 +57,6 @@ function WinControls() {
         </svg>
       </button>
     </div>
-  )
-}
-
-// ── Logo KronTech (topbar) ───────────────────────────────────────────────────
-function KtLogo({ size = 22, isDark = true }) {
-  const accent = isDark ? '#FF6B2B' : '#E85A1A'
-  const kC     = isDark ? '#FFFFFF' : '#111111'
-  const dF0    = isDark ? '#2a2a2a' : '#e8e8e8'
-  const dF1    = isDark ? '#0e0e0e' : '#d0d0d0'
-  const r1     = isDark ? '#333'    : '#CCCCCC'
-  const r3     = isDark ? '#222'    : '#DDDDDD'
-  const id     = `kt-dg-${isDark ? 'd' : 'l'}`
-  return (
-    <svg viewBox="0 0 100 100" fill="none" overflow="visible"
-      style={{ width: size, height: size, flexShrink: 0 }}>
-      <defs>
-        <radialGradient id={id} cx="38%" cy="32%" r="70%">
-          <stop offset="0%" stopColor={dF0}/>
-          <stop offset="100%" stopColor={dF1}/>
-        </radialGradient>
-      </defs>
-      <circle cx="50" cy="50" r="47" fill="none" stroke={r3} strokeWidth="1" strokeDasharray="2 10"
-        style={{transformOrigin:'50px 50px',animation:'kr-rR 22s linear infinite'}}/>
-      <circle cx="50" cy="50" r="40" fill="none" stroke={r1} strokeWidth="1.2" strokeDasharray="4 7"
-        style={{transformOrigin:'50px 50px',animation:'kr-rR 32s linear infinite'}}/>
-      <circle cx="50" cy="50" r="32" fill="none" stroke={accent} strokeWidth="0.8" strokeDasharray="2 8" opacity="0.36"
-        style={{transformOrigin:'50px 50px',animation:'kr-rL 46s linear infinite'}}/>
-      <circle cx="50" cy="50" r="24" fill={`url(#${id})`} stroke={accent} strokeWidth="1"/>
-      <g strokeLinecap="round" strokeLinejoin="round" fill="none">
-        <line x1="37" y1="36" x2="37" y2="64" stroke={kC} strokeWidth="3.5"/>
-        <line x1="37" y1="50" x2="49" y2="36" stroke={kC} strokeWidth="3.5"/>
-        <line x1="37" y1="50" x2="50" y2="64" stroke={kC} strokeWidth="3.5"/>
-        <line x1="55" y1="36" x2="68" y2="36" stroke={accent} strokeWidth="3.5"/>
-        <line x1="61.5" y1="36" x2="61.5" y2="64" stroke={accent} strokeWidth="3.5"/>
-      </g>
-      <circle cx="50" cy="3"  r="2.6" fill={accent} style={{animation:'kr-op 3s ease-in-out infinite',animationDelay:'0s'}}/>
-      <circle cx="50" cy="97" r="2.6" fill={accent} style={{animation:'kr-op 3s ease-in-out infinite',animationDelay:'2s'}}/>
-    </svg>
   )
 }
 
@@ -260,10 +225,11 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, showPanel, on
 // ── Conteúdo de cada aba ─────────────────────────────────────────────────────
 function DesignerTabContent({ pageId }) {
   switch (pageId) {
-    case 'telas':   return <TelasPage />
-    case 'modulos': return <ModulosPage />
-    case 'funcoes': return <FuncoesTab />
-    default:        return <TelasPage />
+    case 'telas':     return <TelasPage />
+    case 'modulos':   return <ModulosPage />
+    case 'funcoes':   return <FuncoesTab />
+    case 'pesquisas': return <MontaPesquisaTab />
+    default:          return <TelasPage />
   }
 }
 
@@ -362,7 +328,6 @@ export default function DesignerApp() {
         {/* ── Topbar ── */}
         <header className="topbar drag-region">
           <div className="tb-left no-drag">
-            <KtLogo size={22} isDark={isDark} />
             <h1 className="tb-title">{topMeta.title}</h1>
             <span className="tb-sub">{topMeta.sub}</span>
 

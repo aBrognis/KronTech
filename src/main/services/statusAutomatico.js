@@ -45,7 +45,7 @@ async function checkInicioPendente() {
   try {
     const rows = await query(`
       SELECT id, titulo, hr_inicio
-      FROM agenda_eventos
+      FROM agenda_eventos_001
       WHERE ativo = true AND dt_evento = CURRENT_DATE
         AND hr_inicio IS NOT NULL AND status_auto = 'agendado'
     `)
@@ -71,7 +71,7 @@ async function checkAtraso() {
   try {
     const rows = await query(`
       SELECT id, hr_inicio, hr_fim
-      FROM agenda_eventos
+      FROM agenda_eventos_001
       WHERE ativo = true AND dt_evento = CURRENT_DATE
         AND hr_inicio IS NOT NULL AND status_auto = 'agendado'
     `)

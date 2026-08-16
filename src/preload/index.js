@@ -198,6 +198,14 @@ const api = {
   fluxo: {
     executar: (id, dadosIniciais) => ipcRenderer.invoke('fluxo:executar', id, dadosIniciais),
   },
+  pesquisa: {
+    listar:    ()             => ipcRenderer.invoke('pesquisa:listar'),
+    obter:     (codigo)       => ipcRenderer.invoke('pesquisa:obter', codigo),
+    salvar:    (dados)        => ipcRenderer.invoke('pesquisa:salvar', dados),
+    excluir:   (id)           => ipcRenderer.invoke('pesquisa:excluir', id),
+    testarSql: (sql)          => ipcRenderer.invoke('pesquisa:testarSql', sql),
+    executar:  (codigo, opts) => ipcRenderer.invoke('pesquisa:executar', codigo, opts),
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

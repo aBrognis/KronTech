@@ -10,12 +10,12 @@ function tbl(nome) { return '"' + assertIdent(nome) + '"' }
 function col(nome) { return '"' + assertIdent(nome) + '"' }
 
 // Resolve a configuração (subGridTabela/subGridParentColuna/subGridCampos)
-// de um campo sub_grid a partir de kr_tela_campos, dado a tela pai e o nome
+// de um campo sub_grid a partir de kr_tela_campos_001, dado a tela pai e o nome
 // do campo.
 export async function resolverConfigSubGrid(nomeTabelaPai, nomeCampoSubGrid) {
   const rows = await query(
-    `SELECT c.opcoes FROM kr_tela_campos c
-     JOIN kr_telas t ON t.id = c.tela_id
+    `SELECT c.opcoes FROM kr_tela_campos_001 c
+     JOIN kr_telas_001 t ON t.id = c.tela_id
      WHERE t.nome_tabela = $1 AND c.nome_campo = $2 AND c.tipo = 'sub_grid' AND c.ativo = TRUE
      LIMIT 1`,
     [nomeTabelaPai, nomeCampoSubGrid]

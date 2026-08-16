@@ -59,7 +59,7 @@ function generateDemoRows(n) {
 
 export function registerDashboardDemoHandlers({ ipcMain, wrap, query }) {
   ipcMain.handle('dash:seedDemo', wrap(async () => {
-    await query('TRUNCATE TABLE kr_demo_vendas RESTART IDENTITY')
+    await query('TRUNCATE TABLE kr_demo_vendas_001 RESTART IDENTITY')
     const rows = generateDemoRows(200)
     for (const chunk of chunksOf(rows, 50)) {
       const values = []
@@ -70,7 +70,7 @@ export function registerDashboardDemoHandlers({ ipcMain, wrap, query }) {
         return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},$${b + 8},$${b + 9},$${b + 10},$${b + 11})`
       }).join(',')
       await query(
-        `INSERT INTO kr_demo_vendas (vendedor,regiao,produto,categoria,canal,status,quantidade,valor,custo,avaliacao,data_venda) VALUES ${placeholders}`,
+        `INSERT INTO kr_demo_vendas_001 (vendedor,regiao,produto,categoria,canal,status,quantidade,valor,custo,avaliacao,data_venda) VALUES ${placeholders}`,
         values
       )
     }
@@ -78,6 +78,6 @@ export function registerDashboardDemoHandlers({ ipcMain, wrap, query }) {
   }))
 
   ipcMain.handle('dash:clearDemo', wrap(async () => {
-    await query('TRUNCATE TABLE kr_demo_vendas RESTART IDENTITY')
+    await query('TRUNCATE TABLE kr_demo_vendas_001 RESTART IDENTITY')
   }))
 }

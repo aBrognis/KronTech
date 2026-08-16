@@ -2,18 +2,15 @@ import { X, Bell, Clock3 } from 'lucide-react'
 import { RECORRENCIAS, MIN_OPTIONS, STATUS_AUTO_LABEL, corStatusAuto } from './utils'
 import SeletorBusca from '../../components/SeletorBusca'
 import FormToolbar from '../../components/FormToolbar'
-
-const CAMPOS_CATEGORIA = [{ nome_campo: 'nome', label: 'Nome' }, { nome_campo: 'codigo', label: 'Código' }]
-const CAMPOS_STATUS    = [{ nome_campo: 'nome', label: 'Nome' }, { nome_campo: 'codigo', label: 'Código' }]
-const CAMPOS_CLIENTE   = [
-  { nome_campo: 'nome',            label: 'Nome / Razão Social' },
-  { nome_campo: 'nome_fantasia',   label: 'Apelido / Nome Fantasia' },
-  { nome_campo: 'cpf_cnpj',        label: 'CPF / CNPJ' },
-]
+import usePesquisaConfig from '../../hooks/usePesquisaConfig'
 
 export default function EventoModal({ modal, modo, form, setForm, categorias, statuses, clientes, saving, erro, onSave, onDelete, onClose, onAlterar, onDesistir, onConfirmarStatus }) {
   const isNew = modal === 'new'
   const isRO  = modo === 'view'
+
+  const pesquisaCategoria = usePesquisaConfig('agenda_categoria')
+  const pesquisaStatus    = usePesquisaConfig('agenda_status')
+  const pesquisaCliente   = usePesquisaConfig('agenda_cliente')
   function set(k,v) { setForm(f=>({...f,[k]:v})) }
   const mostrarStatusAuto = !isNew && modal.status_auto && !['agendado','concluido','cancelado'].includes(modal.status_auto)
 
@@ -60,15 +57,12 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
               valorExibido={categoriaAtual?.nome}
               onLimpar={() => set('categoria_id', '')}
               disabled={isRO}
-              titulo="Pesquisa Padrão — Categorias da Agenda"
-              campos={CAMPOS_CATEGORIA}
-              colunasExibidas={CAMPOS_CATEGORIA}
-              campoInicial="nome"
-              onBuscar={async (campo, modo, busca, ordenar, direcao) => {
-                const res = await window.api.agenda.pesquisarCategorias({ campo, modo, busca, ordenar, direcao })
-                if (!res.ok) throw new Error(res.erro)
-                return res.data
-              }}
+              titulo={`Pesquisa Padrão — ${pesquisaCategoria.tabela || '...'}`}
+              campos={pesquisaCategoria.campos}
+              colunasExibidas={pesquisaCategoria.colunasExibidas}
+              campoInicial={pesquisaCategoria.campoInicial}
+              mostrarFavorito={pesquisaCategoria.mostrarFavorito}
+              onBuscar={pesquisaCategoria.onBuscar}
               onSelecionar={r => set('categoria_id', r.id)}
             />
             <SeletorBusca
@@ -77,15 +71,12 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
               valorExibido={statusAtual?.nome}
               onLimpar={() => set('status_id', '')}
               disabled={isRO}
-              titulo="Pesquisa Padrão — Status da Agenda"
-              campos={CAMPOS_STATUS}
-              colunasExibidas={CAMPOS_STATUS}
-              campoInicial="nome"
-              onBuscar={async (campo, modo, busca, ordenar, direcao) => {
-                const res = await window.api.agenda.pesquisarStatus({ campo, modo, busca, ordenar, direcao })
-                if (!res.ok) throw new Error(res.erro)
-                return res.data
-              }}
+              titulo={`Pesquisa Padrão — ${pesquisaStatus.tabela || '...'}`}
+              campos={pesquisaStatus.campos}
+              colunasExibidas={pesquisaStatus.colunasExibidas}
+              campoInicial={pesquisaStatus.campoInicial}
+              mostrarFavorito={pesquisaStatus.mostrarFavorito}
+              onBuscar={pesquisaStatus.onBuscar}
               onSelecionar={r => set('status_id', r.id)}
             />
           </div>
@@ -97,16 +88,12 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
             valorExibido={clienteAtual?.nome}
             onLimpar={() => set('cliente_id', '')}
             disabled={isRO}
-            titulo="Pesquisa Padrão — Cadastro de Entidade"
-            campos={CAMPOS_CLIENTE}
-            colunasExibidas={CAMPOS_CLIENTE}
-            campoInicial="nome"
-            mostrarFavorito
-            onBuscar={async (campo, modo, busca, ordenar, direcao) => {
-              const res = await window.api.formBuilder.pesquisarRegistros('entidade_001', { campo, modo, busca, ordenar, direcao })
-              if (!res.ok) throw new Error(res.erro)
-              return res.data
-            }}
+            titulo={`Pesquisa Padrão — ${pesquisaCliente.tabela || '...'}`}
+            campos={pesquisaCliente.campos}
+            colunasExibidas={pesquisaCliente.colunasExibidas}
+            campoInicial={pesquisaCliente.campoInicial}
+            mostrarFavorito={pesquisaCliente.mostrarFavorito}
+            onBuscar={pesquisaCliente.onBuscar}
             onSelecionar={r => set('cliente_id', r.id)}
           />
 

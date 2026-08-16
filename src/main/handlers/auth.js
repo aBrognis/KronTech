@@ -13,13 +13,13 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
       if (tabelaExiste) {
         // Descobre qual coluna é o campo login (tipo='login') e qual é a senha
         const colLogin = await queryOne(
-          `SELECT nome_campo FROM kr_tela_campos tc
-           JOIN kr_telas t ON t.id=tc.tela_id
+          `SELECT nome_campo FROM kr_tela_campos_001 tc
+           JOIN kr_telas_001 t ON t.id=tc.tela_id
            WHERE t.nome_tabela='usuario_001' AND tc.tipo='login' AND tc.ativo=TRUE LIMIT 1`
         )
         const colSenha = await queryOne(
-          `SELECT nome_campo FROM kr_tela_campos tc
-           JOIN kr_telas t ON t.id=tc.tela_id
+          `SELECT nome_campo FROM kr_tela_campos_001 tc
+           JOIN kr_telas_001 t ON t.id=tc.tela_id
            WHERE t.nome_tabela='usuario_001' AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`
         )
         if (colLogin && colSenha) {
@@ -40,9 +40,9 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
         }
       }
 
-      // 2) Fallback: tabela kr_usuarios (admin/admin)
+      // 2) Fallback: tabela kr_usuarios_001 (admin/admin)
       const row = await queryOne(
-        `SELECT id, usuario, nome, perfil, senha_hash FROM kr_usuarios WHERE usuario=$1 AND ativo=TRUE`,
+        `SELECT id, usuario, nome, perfil, senha_hash FROM kr_usuarios_001 WHERE usuario=$1 AND ativo=TRUE`,
         [login]
       )
       if (!row) return { ok: false, erro: 'Usuário não encontrado ou inativo.' }
@@ -58,8 +58,8 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
     try {
       const hash = await bcrypt.hash(String(novaSenha), 10)
       const colSenha = await queryOne(
-        `SELECT nome_campo FROM kr_tela_campos tc
-         JOIN kr_telas t ON t.id=tc.tela_id
+        `SELECT nome_campo FROM kr_tela_campos_001 tc
+         JOIN kr_telas_001 t ON t.id=tc.tela_id
          WHERE t.nome_tabela=$1 AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`,
         [tabelaUsuario]
       )

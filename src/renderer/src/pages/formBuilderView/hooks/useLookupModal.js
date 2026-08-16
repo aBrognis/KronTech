@@ -18,9 +18,22 @@ export function useLookupModal({ form, setField }) {
     setLkpModalBusca('')
     setLkpModalSelId(form[campo.nome_campo] ? Number(form[campo.nome_campo]) : null)
     try {
-      const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '', cfg.lookupFiltro)
-      if (!res.ok) throw new Error(res.erro)
-      setLkpModalTodos(res.data)
+      if (cfg.lookupPesquisa) {
+        // Origem "pesquisa customizada" (Monta Pesquisa): junta as colunas
+        // exibidas configuradas para montar o label de cada opção.
+        const res = await window.api.pesquisa.executar(cfg.lookupPesquisa, {})
+        if (!res.ok) throw new Error(res.erro)
+        const cols = (res.data.colunasExibidas || []).map(c => c.nome_campo)
+        const opcoes = (res.data.registros || []).map(r => ({
+          id: r.id,
+          label: cols.length ? cols.map(c => r[c]).filter(Boolean).join(' — ') : `#${r.id}`,
+        }))
+        setLkpModalTodos(opcoes)
+      } else {
+        const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '', cfg.lookupFiltro)
+        if (!res.ok) throw new Error(res.erro)
+        setLkpModalTodos(res.data)
+      }
     } catch { setLkpModalTodos([]) }
     finally { setLkpModalLoading(false) }
   }

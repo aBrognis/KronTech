@@ -35,10 +35,10 @@ async function handleAgendaProtocolo(url) {
       await confirmarStatus({ id, status: 'em_andamento', origem: 'notificacao' })
     } else if (acao === 'adiar') {
       // Só registra que o usuário viu e adiou, sem mudar o status atual.
-      const atual = await queryOne('SELECT status_auto FROM agenda_eventos WHERE id=$1', [id])
+      const atual = await queryOne('SELECT status_auto FROM agenda_eventos_001 WHERE id=$1', [id])
       if (atual) {
         await query(
-          'INSERT INTO agenda_status_log (evento_id, status_de, status_para, origem) VALUES ($1,$2,$2,$3)',
+          'INSERT INTO agenda_status_log_001 (evento_id, status_de, status_para, origem) VALUES ($1,$2,$2,$3)',
           [id, atual.status_auto, 'notificacao']
         )
       }

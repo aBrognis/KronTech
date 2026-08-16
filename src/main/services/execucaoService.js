@@ -22,19 +22,19 @@ function broadcast(channel, data) {
 
 export async function logExecucao(origemTipo, origemId, sucesso, mensagem, duracaoMs) {
   await query(
-    `INSERT INTO kr_execucoes_log (origem_tipo, origem_id, sucesso, mensagem, duracao_ms) VALUES ($1,$2,$3,$4,$5)`,
+    `INSERT INTO kr_execucoes_log_001 (origem_tipo, origem_id, sucesso, mensagem, duracao_ms) VALUES ($1,$2,$3,$4,$5)`,
     [origemTipo, origemId, sucesso, mensagem || '', duracaoMs || null]
   ).catch(e => console.warn('[execucaoService] logExecucao:', e.message))
 }
 
 export async function executarScript(scriptId) {
-  const s = await queryOne('SELECT * FROM kr_scripts WHERE id=$1 AND ativo=TRUE', [scriptId])
+  const s = await queryOne('SELECT * FROM kr_scripts_001 WHERE id=$1 AND ativo=TRUE', [scriptId])
   if (!s) throw new Error('Script não encontrado ou inativo.')
   return query(s.sql_texto)
 }
 
 export async function executarIntegracao(integracaoId, contexto = {}) {
-  const i = await queryOne('SELECT * FROM kr_integracoes WHERE id=$1 AND ativo=TRUE', [integracaoId])
+  const i = await queryOne('SELECT * FROM kr_integracoes_001 WHERE id=$1 AND ativo=TRUE', [integracaoId])
   if (!i) throw new Error('Integração não encontrada ou inativa.')
   return executarIntegracaoAdHoc(i, contexto)
 }
@@ -60,7 +60,7 @@ export async function executarIntegracaoAdHoc(cfg, contexto = {}) {
 }
 
 export async function enviarNotificacao(notificacaoId, contexto = {}) {
-  const n = await queryOne('SELECT * FROM kr_notificacoes WHERE id=$1 AND ativo=TRUE', [notificacaoId])
+  const n = await queryOne('SELECT * FROM kr_notificacoes_001 WHERE id=$1 AND ativo=TRUE', [notificacaoId])
   if (!n) throw new Error('Notificação não encontrada ou inativa.')
   return enviarNotificacaoAdHoc(n, contexto)
 }

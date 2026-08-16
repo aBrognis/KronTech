@@ -43,7 +43,7 @@ export async function executarAgendamento(ag) {
     if (ag.acao.tipo === 'script') await executarScript(ag.acao.id)
     else if (ag.acao.tipo === 'api') await executarIntegracao(ag.acao.id)
     await query(
-      'UPDATE kr_agendamentos SET ultima_execucao=NOW(), proxima_execucao=$1 WHERE id=$2',
+      'UPDATE kr_agendamentos_001 SET ultima_execucao=NOW(), proxima_execucao=$1 WHERE id=$2',
       [calcularProximaExecucao(ag), ag.id]
     )
     await logExecucao('agendamento', ag.id, true, 'Executado com sucesso', Date.now() - inicio)
@@ -55,7 +55,7 @@ export async function executarAgendamento(ag) {
 export async function checkAgendamentos() {
   try {
     const pendentes = await query(
-      `SELECT * FROM kr_agendamentos WHERE ativo=TRUE AND (proxima_execucao IS NULL OR proxima_execucao <= NOW())`
+      `SELECT * FROM kr_agendamentos_001 WHERE ativo=TRUE AND (proxima_execucao IS NULL OR proxima_execucao <= NOW())`
     )
     for (const ag of pendentes) await executarAgendamento(ag)
   } catch (e) {

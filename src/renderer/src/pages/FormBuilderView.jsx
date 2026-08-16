@@ -223,14 +223,25 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       const totalReg = resPrimeiros.data.total
       const ultimaPag = Math.max(1, Math.ceil(totalReg / POR_PAG))
       await carregar(t, ultimaPag, '')
-      // Carrega opções de campos lookup
-      const lookupCampos = (t.campos || []).filter(c => c.tipo === 'lookup' && c.opcoes?.lookupTabela)
+      // Carrega opções de campos lookup (origem tabela ou pesquisa customizada)
+      const lookupCampos = (t.campos || []).filter(c => c.tipo === 'lookup' && (c.opcoes?.lookupTabela || c.opcoes?.lookupPesquisa))
       if (lookupCampos.length) {
         const map = {}
         await Promise.all(lookupCampos.map(async c => {
           const cfg = c.opcoes
-          const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '', cfg.lookupFiltro)
-          map[c.nome_campo] = res.ok ? res.data : []
+          if (cfg.lookupPesquisa) {
+            const res = await window.api.pesquisa.executar(cfg.lookupPesquisa, {})
+            if (res.ok) {
+              const cols = (res.data.colunasExibidas || []).map(cc => cc.nome_campo)
+              map[c.nome_campo] = (res.data.registros || []).map(r => ({
+                id: r.id,
+                label: cols.length ? cols.map(cc => r[cc]).filter(Boolean).join(' — ') : `#${r.id}`,
+              }))
+            } else map[c.nome_campo] = []
+          } else {
+            const res = await window.api.formBuilder.listarOpcoesLookup(cfg.lookupTabela, cfg.lookupExibir, cfg.lookupCodigo || '', cfg.lookupFiltro)
+            map[c.nome_campo] = res.ok ? res.data : []
+          }
         }))
         setLookupOpcoes(map)
       }

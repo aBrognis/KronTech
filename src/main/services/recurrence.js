@@ -36,7 +36,7 @@ export async function extendRecurringSeries() {
     SELECT e.id, e.dt_evento, e.recorrencia, e.titulo, e.categoria_id, e.status_id,
            e.cliente_id, e.hr_inicio, e.hr_fim, e.dia_todo, e.local, e.descricao,
            e.lembrete, e.min_lembrete
-    FROM agenda_eventos e
+    FROM agenda_eventos_001 e
     WHERE e.id = e.recorrencia_grupo_id
       AND e.recorrencia <> 'nenhuma'
       AND e.ativo = TRUE
@@ -44,7 +44,7 @@ export async function extendRecurringSeries() {
 
   for (const parent of parents) {
     const ultima = await query(`
-      SELECT MAX(dt_evento) AS max_dt FROM agenda_eventos WHERE recorrencia_grupo_id=$1
+      SELECT MAX(dt_evento) AS max_dt FROM agenda_eventos_001 WHERE recorrencia_grupo_id=$1
     `, [parent.id])
     const maxDt = ultima[0]?.max_dt ? new Date(ultima[0].max_dt) : new Date(parent.dt_evento)
 
@@ -55,10 +55,10 @@ export async function extendRecurringSeries() {
     const end = addMonths(new Date(), 6)
     let d = step(maxDt)
     while (d <= end) {
-      const seq = await query(`SELECT nextval('agenda_eventos_codigo_seq') AS next`)
+      const seq = await query(`SELECT nextval('agenda_eventos_001_codigo_seq') AS next`)
       const codigo = String(seq[0].next).padStart(5, '0')
       await query(`
-        INSERT INTO agenda_eventos
+        INSERT INTO agenda_eventos_001
           (titulo, categoria_id, status_id, cliente_id, dt_evento, hr_inicio, hr_fim, dia_todo, local, descricao, lembrete, min_lembrete, recorrencia, codigo, recorrencia_grupo_id)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
       `, [parent.titulo, parent.categoria_id, parent.status_id, parent.cliente_id,

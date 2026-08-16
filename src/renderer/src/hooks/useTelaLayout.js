@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 /**
  * Carrega o layout de uma tela de sistema do banco.
  * Retorna { campos, telaId, loading } onde `campos` é o array de
- * kr_tela_campos com x_pos, y_pos, w_px, h_px já resolvidos.
+ * kr_tela_campos_001 com x_pos, y_pos, w_px, h_px já resolvidos.
  *
  * Se a tela não existir no banco ainda, retorna campos = null
  * (o componente usa o layout hardcoded como fallback).

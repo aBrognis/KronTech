@@ -1,4 +1,5 @@
 import { query, queryOne, getPool } from '../db'
+import { tbl, col } from './sqlHelpers'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function normalizarNome(nome) {
@@ -6,15 +7,6 @@ function normalizarNome(nome) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').replace(/^[^a-z]+/, '')
 }
-
-function assertIdent(nome) {
-  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(nome)) {
-    throw new Error(`Identificador inválido: ${nome}`)
-  }
-  return nome
-}
-function tbl(nome)  { return '"' + assertIdent(nome) + '"' }
-function col(nome)  { return '"' + assertIdent(nome) + '"' }
 
 const TIPOS_SISTEMA = ['favorito', 'timestamps']
 
@@ -28,7 +20,7 @@ async function inserirCampos(client, telaId, campos) {
       : c.tipo === 'lookup'                  ? normalizarNome(c.nomeCampo).replace(/_id$/, '') + '_id'
       : normalizarNome(c.nomeCampo)
     await client.query(
-      `INSERT INTO kr_tela_campos
+      `INSERT INTO kr_tela_campos_001
          (tela_id,nome_campo,label,tipo,tamanho,obrigatorio,sequencial,campo_busca,valor_padrao,ordem,largura,x_pos,y_pos,w_px,h_px,opcoes,copiavel,sem_negrito,font_size,input_negrito,input_font_size,label_cor,input_align,input_cor,input_bg,border_radius,border_width,border_color,opcoes_layout)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)`,
       [telaId, nomeCampo, c.label || c.tipo, c.tipo,
@@ -47,13 +39,13 @@ async function inserirCampos(client, telaId, campos) {
 
 // ── Módulos ───────────────────────────────────────────────────────────────────
 export async function listarModulos() {
-  return query('SELECT id,nome,icone,ordem FROM kr_modulos ORDER BY ordem,nome')
+  return query('SELECT id,nome,icone,ordem FROM kr_modulos_001 ORDER BY ordem,nome')
 }
 
 export async function criarModulo({ nome, icone, ordem }) {
   if (!nome?.trim()) throw new Error('Nome do módulo é obrigatório.')
   return queryOne(
-    `INSERT INTO kr_modulos (nome, icone, ordem) VALUES ($1,$2,$3) RETURNING *`,
+    `INSERT INTO kr_modulos_001 (nome, icone, ordem) VALUES ($1,$2,$3) RETURNING *`,
     [nome.trim(), icone||'folder', ordem||99]
   )
 }
@@ -61,15 +53,15 @@ export async function criarModulo({ nome, icone, ordem }) {
 export async function editarModulo(id, { nome, icone, ordem }) {
   if (!nome?.trim()) throw new Error('Nome do módulo é obrigatório.')
   return queryOne(
-    `UPDATE kr_modulos SET nome=$1,icone=$2,ordem=$3 WHERE id=$4 RETURNING *`,
+    `UPDATE kr_modulos_001 SET nome=$1,icone=$2,ordem=$3 WHERE id=$4 RETURNING *`,
     [nome.trim(), icone||'folder', ordem||99, id]
   )
 }
 
 export async function excluirModulo(id) {
-  const emUso = await queryOne('SELECT id FROM kr_telas WHERE modulo_id=$1 LIMIT 1', [id])
+  const emUso = await queryOne('SELECT id FROM kr_telas_001 WHERE modulo_id=$1 LIMIT 1', [id])
   if (emUso) throw new Error('Módulo está em uso por telas cadastradas. Remova as telas primeiro.')
-  await query('DELETE FROM kr_modulos WHERE id=$1', [id])
+  await query('DELETE FROM kr_modulos_001 WHERE id=$1', [id])
 }
 
 // ── Telas ─────────────────────────────────────────────────────────────────────
@@ -83,8 +75,8 @@ export async function listarTelas(apenasAtivas = false) {
            COALESCE(t.col_favorito,TRUE)   AS col_favorito,
            COALESCE(t.col_timestamps,TRUE) AS col_timestamps,
            t.grupo_fixo
-    FROM kr_telas t
-    LEFT JOIN kr_modulos m ON m.id=t.modulo_id
+    FROM kr_telas_001 t
+    LEFT JOIN kr_modulos_001 m ON m.id=t.modulo_id
     ${apenasAtivas ? 'WHERE t.ativo=TRUE' : ''}
     ORDER BY t.sistema DESC, m.ordem NULLS LAST, t.ordem_menu, t.nome_tela
   `)
@@ -96,14 +88,14 @@ export async function getTelaPorSlug(slug) {
             COALESCE(t.sistema,FALSE) AS sistema, t.ativo,
             COALESCE(t.col_favorito,TRUE)   AS col_favorito,
             COALESCE(t.col_timestamps,TRUE) AS col_timestamps
-     FROM kr_telas t WHERE t.slug=$1`, [slug]
+     FROM kr_telas_001 t WHERE t.slug=$1`, [slug]
   )
   if (!tela) return null
   const campos = await query(
     `SELECT id,nome_campo,label,tipo,tamanho,obrigatorio,sequencial,campo_busca,
             valor_padrao,ordem,largura,ativo,x_pos,y_pos,w_px,h_px,opcoes,copiavel,sem_negrito,font_size,input_negrito,input_font_size,
             label_cor,input_align,input_cor,input_bg,border_radius,border_width,border_color,opcoes_layout
-     FROM kr_tela_campos WHERE tela_id=$1 AND ativo=TRUE ORDER BY ordem`, [tela.id]
+     FROM kr_tela_campos_001 WHERE tela_id=$1 AND ativo=TRUE ORDER BY ordem`, [tela.id]
   )
   return { ...tela, campos }
 }
@@ -114,14 +106,14 @@ export async function buscarTela(telaId) {
             COALESCE(t.canvas_w,780) AS canvas_w, COALESCE(t.canvas_h,480) AS canvas_h,
             COALESCE(t.col_favorito,TRUE)   AS col_favorito,
             COALESCE(t.col_timestamps,TRUE) AS col_timestamps
-     FROM kr_telas t WHERE t.id=$1`, [telaId]
+     FROM kr_telas_001 t WHERE t.id=$1`, [telaId]
   )
   if (!tela) throw new Error(`Tela ${telaId} não encontrada.`)
   const campos = await query(
     `SELECT id,nome_campo,label,tipo,tamanho,obrigatorio,sequencial,campo_busca,valor_padrao,ordem,largura,ativo,
             x_pos,y_pos,w_px,h_px,opcoes,copiavel,sem_negrito,font_size,input_negrito,input_font_size,
             label_cor,input_align,input_cor,input_bg,border_radius,border_width,border_color,opcoes_layout
-     FROM kr_tela_campos WHERE tela_id=$1 AND ativo=TRUE ORDER BY ordem`, [telaId]
+     FROM kr_tela_campos_001 WHERE tela_id=$1 AND ativo=TRUE ORDER BY ordem`, [telaId]
   )
   return { ...tela, campos }
 }
@@ -132,20 +124,20 @@ export async function criarTela(payload) {
   try {
     await client.query('BEGIN')
     const nomeTabela = normalizarNome(payload.nomeTabela)
-    const dup = await client.query('SELECT id FROM kr_telas WHERE nome_tabela=$1', [nomeTabela])
+    const dup = await client.query('SELECT id FROM kr_telas_001 WHERE nome_tabela=$1', [nomeTabela])
     if (dup.rows.length) throw new Error(`Já existe uma tela com a tabela "${nomeTabela}".`)
 
     const ordemMenu = payload.ordemMenu || 99
     if (ordemMenu < 99) {
       if (payload.moduloId) {
         await client.query(
-          `UPDATE kr_telas SET ordem_menu = ordem_menu + 1
+          `UPDATE kr_telas_001 SET ordem_menu = ordem_menu + 1
            WHERE modulo_id = $1 AND ordem_menu >= $2`,
           [payload.moduloId, ordemMenu]
         )
       } else {
         await client.query(
-          `UPDATE kr_telas SET ordem_menu = ordem_menu + 1
+          `UPDATE kr_telas_001 SET ordem_menu = ordem_menu + 1
            WHERE modulo_id IS NULL AND ordem_menu >= $1`,
           [ordemMenu]
         )
@@ -159,7 +151,7 @@ export async function criarTela(payload) {
     const colTs  = temTimestamps ? true : (payload.colTimestamps !== false)
 
     const { rows } = await client.query(
-      `INSERT INTO kr_telas (nome_tela,nome_tabela,descricao,icone,modulo_id,grupo_fixo,ordem_menu,canvas_w,canvas_h,col_favorito,col_timestamps)
+      `INSERT INTO kr_telas_001 (nome_tela,nome_tabela,descricao,icone,modulo_id,grupo_fixo,ordem_menu,canvas_w,canvas_h,col_favorito,col_timestamps)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
       [payload.nomeTela, nomeTabela, payload.descricao||null,
        payload.icone||'layout', payload.moduloId||null, payload.grupoFixo||null, ordemMenu,
@@ -187,7 +179,7 @@ export async function editarTela(telaId, payload) {
     const editColTs  = editTemTs  ? true : (payload.colTimestamps !== false)
 
     await client.query(
-      `UPDATE kr_telas SET nome_tela=$1,descricao=$2,icone=$3,modulo_id=$4,grupo_fixo=$5,ordem_menu=$6,ativo=$7,canvas_w=$8,canvas_h=$9,col_favorito=$10,col_timestamps=$11
+      `UPDATE kr_telas_001 SET nome_tela=$1,descricao=$2,icone=$3,modulo_id=$4,grupo_fixo=$5,ordem_menu=$6,ativo=$7,canvas_w=$8,canvas_h=$9,col_favorito=$10,col_timestamps=$11
        WHERE id=$12`,
       [payload.nomeTela, payload.descricao||null, payload.icone||'layout',
        payload.moduloId||null, payload.grupoFixo||null, payload.ordemMenu||99,
@@ -199,17 +191,17 @@ export async function editarTela(telaId, payload) {
     const idsRecebidos = (payload.campos||[]).filter(c=>c.id).map(c=>c.id)
     if (idsRecebidos.length) {
       await client.query(
-        `UPDATE kr_tela_campos SET ativo=FALSE WHERE tela_id=$1 AND id!=ALL($2::int[])`,
+        `UPDATE kr_tela_campos_001 SET ativo=FALSE WHERE tela_id=$1 AND id!=ALL($2::int[])`,
         [telaId, idsRecebidos]
       )
     } else {
-      await client.query('UPDATE kr_tela_campos SET ativo=FALSE WHERE tela_id=$1', [telaId])
+      await client.query('UPDATE kr_tela_campos_001 SET ativo=FALSE WHERE tela_id=$1', [telaId])
     }
     for (const [idx, c] of (payload.campos||[]).entries()) {
       c.ordem = idx + 1
       if (c.id) {
         await client.query(
-          `UPDATE kr_tela_campos SET label=$1,tipo=$2,tamanho=$3,obrigatorio=$4,
+          `UPDATE kr_tela_campos_001 SET label=$1,tipo=$2,tamanho=$3,obrigatorio=$4,
            campo_busca=$5,valor_padrao=$6,ordem=$7,largura=$8,
            x_pos=$9,y_pos=$10,w_px=$11,h_px=$12,opcoes=$13,copiavel=$14,
            sem_negrito=$15,font_size=$16,input_negrito=$17,input_font_size=$18,
@@ -244,20 +236,20 @@ export async function excluirTela(telaId) {
 }
 
 export async function inativarTela(telaId) {
-  await query('UPDATE kr_telas SET ativo=FALSE WHERE id=$1', [telaId])
+  await query('UPDATE kr_telas_001 SET ativo=FALSE WHERE id=$1', [telaId])
 }
 
 export async function reativarTela(telaId) {
-  await query('UPDATE kr_telas SET ativo=TRUE WHERE id=$1', [telaId])
+  await query('UPDATE kr_telas_001 SET ativo=TRUE WHERE id=$1', [telaId])
 }
 
 // ── CRUD genérico das telas geradas ──────────────────────────────────────────
 export async function listarRegistros(nomeTabela, opcoes = {}) {
-  const tela = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
+  const tela = await queryOne('SELECT id FROM kr_telas_001 WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
   if (!tela) throw new Error(`Tela "${nomeTabela}" não encontrada.`)
 
   const camposBusca = await query(
-    'SELECT nome_campo FROM kr_tela_campos WHERE tela_id=$1 AND campo_busca=TRUE AND ativo=TRUE',
+    'SELECT nome_campo FROM kr_tela_campos_001 WHERE tela_id=$1 AND campo_busca=TRUE AND ativo=TRUE',
     [tela.id]
   )
 
@@ -370,15 +362,15 @@ function buildFiltroSQL(f, tipoCampo, params) {
 }
 
 // filtros: [{ campo, op, valor, valor2 }] — tipo do campo é resolvido no servidor
-// via kr_tela_campos, nunca confiado no valor vindo do renderer.
+// via kr_tela_campos_001, nunca confiado no valor vindo do renderer.
 export async function listarRegistrosFiltrado(nomeTabela, {
   filtros = [], busca = '', pagina = 1, porPagina = 50, ordenar = null, direcao = 'ASC',
 } = {}) {
-  const tela = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
+  const tela = await queryOne('SELECT id FROM kr_telas_001 WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
   if (!tela) throw new Error(`Tela "${nomeTabela}" não encontrada.`)
 
   const camposTela = await query(
-    'SELECT nome_campo, tipo, campo_busca FROM kr_tela_campos WHERE tela_id=$1 AND ativo=TRUE',
+    'SELECT nome_campo, tipo, campo_busca FROM kr_tela_campos_001 WHERE tela_id=$1 AND ativo=TRUE',
     [tela.id]
   )
   const tipoPorCampo = Object.fromEntries(camposTela.map(c => [c.nome_campo, c.tipo]))
@@ -428,11 +420,11 @@ const LIMITE_PESQUISA_PADRAO = 1000
 // via SQL — evita trazer tabelas grandes inteiras para o navegador (ex: arq_001
 // com ~15 mil linhas).
 export async function pesquisarRegistros(nomeTabela, { campo, modo = 'contendo', busca = '', ordenar, direcao = 'ASC' } = {}) {
-  const tela = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
+  const tela = await queryOne('SELECT id FROM kr_telas_001 WHERE nome_tabela=$1 AND ativo=TRUE', [nomeTabela])
   if (!tela) throw new Error(`Tela "${nomeTabela}" não encontrada.`)
 
   const camposTela = await query(
-    'SELECT nome_campo FROM kr_tela_campos WHERE tela_id=$1 AND ativo=TRUE',
+    'SELECT nome_campo FROM kr_tela_campos_001 WHERE tela_id=$1 AND ativo=TRUE',
     [tela.id]
   )
   const nomesValidos = new Set(camposTela.map(c => c.nome_campo).concat(['id']))
@@ -483,7 +475,7 @@ export async function reordenarTelas(items) {
   try {
     await client.query('BEGIN')
     for (const { id, ordem_menu } of items) {
-      await client.query('UPDATE kr_telas SET ordem_menu=$1 WHERE id=$2', [ordem_menu, id])
+      await client.query('UPDATE kr_telas_001 SET ordem_menu=$1 WHERE id=$2', [ordem_menu, id])
     }
     await client.query('COMMIT')
   } catch(err) { await client.query('ROLLBACK'); throw err }

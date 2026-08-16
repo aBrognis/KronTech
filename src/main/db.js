@@ -61,11 +61,11 @@ async function syncSequencias() {
 
 // Pré-registra ou atualiza uma tela de sistema no banco (idempotente)
 async function registrarTelaSistema({ slug, nomeTela, nomeTabela, icone, moduloSlug, campos }) {
-  const modulo = await queryOne('SELECT id FROM kr_modulos WHERE nome=$1', [moduloSlug]).catch(e => { console.warn('[migration] buscar módulo:', e.message); return null })
+  const modulo = await queryOne('SELECT id FROM kr_modulos_001 WHERE nome=$1', [moduloSlug]).catch(e => { console.warn('[migration] buscar módulo:', e.message); return null })
   const moduloId = modulo?.id || null
 
   let existing = await queryOne(
-    `SELECT id, slug FROM kr_telas WHERE slug=$1 OR nome_tabela=$2 LIMIT 1`,
+    `SELECT id, slug FROM kr_telas_001 WHERE slug=$1 OR nome_tabela=$2 LIMIT 1`,
     [slug, nomeTabela]
   ).catch(e => { console.warn('[migration] buscar tela existente:', e.message); return null })
 
@@ -73,13 +73,13 @@ async function registrarTelaSistema({ slug, nomeTela, nomeTabela, icone, moduloS
 
   if (!telaId) {
     const row = await queryOne(
-      `INSERT INTO kr_telas (nome_tela, nome_tabela, icone, modulo_id, sistema, slug, ativo)
+      `INSERT INTO kr_telas_001 (nome_tela, nome_tabela, icone, modulo_id, sistema, slug, ativo)
        VALUES ($1,$2,$3,$4,TRUE,$5,TRUE) RETURNING id`,
       [nomeTela, nomeTabela, icone, moduloId, slug]
     ).catch(e => { console.warn('[migration] inserir tela de sistema:', e.message); return null })
     telaId = row?.id
     if (!telaId) {
-      const fallback = await queryOne('SELECT id FROM kr_telas WHERE nome_tabela=$1', [nomeTabela]).catch(e => { console.warn('[migration] fallback buscar tela:', e.message); return null })
+      const fallback = await queryOne('SELECT id FROM kr_telas_001 WHERE nome_tabela=$1', [nomeTabela]).catch(e => { console.warn('[migration] fallback buscar tela:', e.message); return null })
       telaId = fallback?.id
     }
   }
@@ -87,19 +87,19 @@ async function registrarTelaSistema({ slug, nomeTela, nomeTabela, icone, moduloS
   if (!telaId) return
 
   await query(
-    `UPDATE kr_telas SET slug=$1, sistema=TRUE, icone=$2, modulo_id=$3
+    `UPDATE kr_telas_001 SET slug=$1, sistema=TRUE, icone=$2, modulo_id=$3
      WHERE id=$4 AND (slug IS NULL OR slug != $1)`,
     [slug, icone, moduloId, telaId]
   ).catch(e => console.warn('[migration] atualizar tela de sistema:', e.message))
 
   for (const [idx, c] of campos.entries()) {
     const exists = await queryOne(
-      'SELECT id FROM kr_tela_campos WHERE tela_id=$1 AND nome_campo=$2',
+      'SELECT id FROM kr_tela_campos_001 WHERE tela_id=$1 AND nome_campo=$2',
       [telaId, c.nome]
     ).catch(e => { console.warn('[migration] verificar campo existente:', e.message); return null })
     if (!exists) {
       await query(
-        `INSERT INTO kr_tela_campos
+        `INSERT INTO kr_tela_campos_001
            (tela_id,nome_campo,label,tipo,tamanho,obrigatorio,sequencial,campo_busca,valor_padrao,ordem,largura,x_pos,y_pos,w_px,h_px)
          VALUES ($1,$2,$3,$4,100,FALSE,FALSE,FALSE,NULL,$5,50,$6,$7,$8,$9)`,
         [telaId, c.nome, c.label, c.tipo, idx + 1, c.x, c.y, c.w, c.h]
@@ -170,7 +170,7 @@ async function migration1() {
   // ── Criador de Telas ──────────────────────────────────────────────────────
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_modulos (
+    CREATE TABLE IF NOT EXISTS kr_modulos_001 (
       id    SERIAL PRIMARY KEY,
       nome  VARCHAR(100) NOT NULL,
       icone VARCHAR(80)  DEFAULT 'folder',
@@ -179,14 +179,14 @@ async function migration1() {
     )
   `)
   await query(`
-    DELETE FROM kr_modulos
-    WHERE id NOT IN (SELECT MIN(id) FROM kr_modulos GROUP BY nome)
-  `).catch(e => console.warn('[migration] deduplicar kr_modulos:', e.message))
+    DELETE FROM kr_modulos_001
+    WHERE id NOT IN (SELECT MIN(id) FROM kr_modulos_001 GROUP BY nome)
+  `).catch(e => console.warn('[migration] deduplicar kr_modulos_001:', e.message))
   await query(`
-    ALTER TABLE kr_modulos ADD CONSTRAINT kr_modulos_nome_unique UNIQUE (nome)
-  `).catch(e => console.warn('[migration] constraint unique kr_modulos:', e.message))
+    ALTER TABLE kr_modulos_001 ADD CONSTRAINT kr_modulos_nome_unique UNIQUE (nome)
+  `).catch(e => console.warn('[migration] constraint unique kr_modulos_001:', e.message))
   await query(`
-    INSERT INTO kr_modulos (nome, icone, ordem)
+    INSERT INTO kr_modulos_001 (nome, icone, ordem)
     SELECT v.nome, v.icone, v.ordem FROM (VALUES
       ('Ferramentas', 'wrench',      1),
       ('Cadastros',   'database',    2),
@@ -195,17 +195,17 @@ async function migration1() {
       ('Relatórios',  'bar-chart-2', 5),
       ('Gestão',      'layout',      6)
     ) AS v(nome, icone, ordem)
-    WHERE NOT EXISTS (SELECT 1 FROM kr_modulos)
-  `).catch(e => console.warn('[migration] seed kr_modulos:', e.message))
+    WHERE NOT EXISTS (SELECT 1 FROM kr_modulos_001)
+  `).catch(e => console.warn('[migration] seed kr_modulos_001:', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_telas (
+    CREATE TABLE IF NOT EXISTS kr_telas_001 (
       id             SERIAL PRIMARY KEY,
       nome_tela      VARCHAR(100) NOT NULL,
       nome_tabela    VARCHAR(100) NOT NULL UNIQUE,
       descricao      TEXT,
       icone          VARCHAR(80)  DEFAULT 'layout',
-      modulo_id      INTEGER REFERENCES kr_modulos(id) ON DELETE SET NULL,
+      modulo_id      INTEGER REFERENCES kr_modulos_001(id) ON DELETE SET NULL,
       ordem_menu     INTEGER      DEFAULT 99,
       ativo          BOOLEAN      DEFAULT TRUE,
       sistema        BOOLEAN      DEFAULT FALSE,
@@ -219,18 +219,18 @@ async function migration1() {
     )
   `)
   for (const col of [
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS sistema        BOOLEAN  DEFAULT FALSE`,
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS slug           VARCHAR(50)`,
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS canvas_w      INTEGER  DEFAULT 780`,
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS canvas_h      INTEGER  DEFAULT 480`,
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS col_favorito   BOOLEAN DEFAULT TRUE`,
-    `ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS col_timestamps BOOLEAN DEFAULT TRUE`,
-  ]) { await query(col).catch(e => console.warn('[migration] alter kr_telas:', e.message)) }
+    `ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS sistema        BOOLEAN  DEFAULT FALSE`,
+    `ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS slug           VARCHAR(50)`,
+    `ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS canvas_w      INTEGER  DEFAULT 780`,
+    `ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS canvas_h      INTEGER  DEFAULT 480`,
+    `ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS col_favorito   BOOLEAN DEFAULT TRUE`,
+    `ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS col_timestamps BOOLEAN DEFAULT TRUE`,
+  ]) { await query(col).catch(e => console.warn('[migration] alter kr_telas_001:', e.message)) }
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_tela_campos (
+    CREATE TABLE IF NOT EXISTS kr_tela_campos_001 (
       id           SERIAL PRIMARY KEY,
-      tela_id      INTEGER      NOT NULL REFERENCES kr_telas(id) ON DELETE CASCADE,
+      tela_id      INTEGER      NOT NULL REFERENCES kr_telas_001(id) ON DELETE CASCADE,
       nome_campo   VARCHAR(100) NOT NULL,
       label        VARCHAR(150) NOT NULL,
       tipo         VARCHAR(30)  NOT NULL,
@@ -252,35 +252,35 @@ async function migration1() {
     )
   `)
   for (const col of [
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS x_pos    INTEGER DEFAULT 0`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS y_pos    INTEGER DEFAULT 0`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS w_px     INTEGER DEFAULT 280`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS h_px     INTEGER DEFAULT 60`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS opcoes      JSONB`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS copiavel   BOOLEAN DEFAULT FALSE`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS sem_negrito    BOOLEAN  DEFAULT FALSE`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS font_size      SMALLINT DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_negrito  BOOLEAN  DEFAULT FALSE`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_font_size SMALLINT DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS label_cor      VARCHAR(20)  DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_align    VARCHAR(10)  DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_cor      VARCHAR(20)  DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS input_bg       VARCHAR(20)  DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_radius  SMALLINT     DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_width   SMALLINT     DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS border_color   VARCHAR(20)  DEFAULT NULL`,
-    `ALTER TABLE kr_tela_campos ADD COLUMN IF NOT EXISTS opcoes_layout  VARCHAR(10)  DEFAULT NULL`,
-  ]) { await query(col).catch(e => console.warn('[migration] alter kr_tela_campos:', e.message)) }
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS x_pos    INTEGER DEFAULT 0`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS y_pos    INTEGER DEFAULT 0`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS w_px     INTEGER DEFAULT 280`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS h_px     INTEGER DEFAULT 60`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS opcoes      JSONB`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS copiavel   BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS sem_negrito    BOOLEAN  DEFAULT FALSE`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS font_size      SMALLINT DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS input_negrito  BOOLEAN  DEFAULT FALSE`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS input_font_size SMALLINT DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS label_cor      VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS input_align    VARCHAR(10)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS input_cor      VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS input_bg       VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS border_radius  SMALLINT     DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS border_width   SMALLINT     DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS border_color   VARCHAR(20)  DEFAULT NULL`,
+    `ALTER TABLE kr_tela_campos_001 ADD COLUMN IF NOT EXISTS opcoes_layout  VARCHAR(10)  DEFAULT NULL`,
+  ]) { await query(col).catch(e => console.warn('[migration] alter kr_tela_campos_001:', e.message)) }
   await query(`
-    ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_tipo_check
+    ALTER TABLE kr_tela_campos_001 DROP CONSTRAINT IF EXISTS kr_tela_campos_tipo_check
   `).catch(e => console.warn('[migration] drop constraint tipo_check:', e.message))
   await query(`
-    ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check
+    ALTER TABLE kr_tela_campos_001 DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check
   `).catch(e => console.warn('[migration] drop constraint largura_check:', e.message))
 
   // ── Tabela de usuários ────────────────────────────────────────────────────
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_usuarios (
+    CREATE TABLE IF NOT EXISTS kr_usuarios_001 (
       id          SERIAL PRIMARY KEY,
       usuario     VARCHAR(60)  NOT NULL UNIQUE,
       nome        VARCHAR(120) NOT NULL,
@@ -290,16 +290,16 @@ async function migration1() {
       criado_em   TIMESTAMP    DEFAULT NOW(),
       alterado_em TIMESTAMP    DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] criar tabela kr_usuarios:', e.message))
+  `).catch(e => console.warn('[migration] criar tabela kr_usuarios_001:', e.message))
   await query(`
-    INSERT INTO kr_usuarios (usuario, nome, senha_hash, perfil)
+    INSERT INTO kr_usuarios_001 (usuario, nome, senha_hash, perfil)
     VALUES ('admin', 'Administrador', $1, 'admin')
     ON CONFLICT (usuario) DO NOTHING
   `, [bcrypt.hashSync('admin', 10)]).catch(e => console.warn('[migration] insert admin:', e.message))
 
   // Migração: bancos existentes tinham senha_hash='admin' em texto plano — re-grava com hash
   await query(
-    `UPDATE kr_usuarios SET senha_hash = $1 WHERE usuario = 'admin' AND senha_hash = 'admin'`,
+    `UPDATE kr_usuarios_001 SET senha_hash = $1 WHERE usuario = 'admin' AND senha_hash = 'admin'`,
     [bcrypt.hashSync('admin', 10)]
   ).catch(e => console.warn('[migration] rehash admin legado:', e.message))
 
@@ -308,9 +308,15 @@ async function migration1() {
     await query(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) DEFAULT ''`).catch(e => console.warn(`[migration] alter ${tbl} coluna codigo:`, e.message))
     await query(`CREATE SEQUENCE IF NOT EXISTS ${tbl}_codigo_seq START 1`).catch(e => console.warn(`[migration] criar sequência ${tbl}:`, e.message))
   }
+}
 
-  // ── Funções PostgreSQL ────────────────────────────────────────────────────
-
+// ── Funções PostgreSQL (roda sempre, idempotente via CREATE OR REPLACE) ──────
+// Extraída de migration1() porque migration1 só executa uma vez por banco
+// (currentVersion < 1); se essas funções ficassem lá dentro, um rename de
+// tabela posterior nunca as recriaria com os nomes atualizados — o corpo da
+// função ficaria com o SQL antigo compilado, quebrando em runtime mesmo com
+// o código-fonte já corrigido.
+async function criarFuncoesPg() {
   await query(`
     CREATE OR REPLACE FUNCTION fn_tipo_para_pg(p_tipo VARCHAR, p_tamanho INTEGER)
     RETURNS TEXT LANGUAGE plpgsql AS $$
@@ -377,7 +383,7 @@ async function migration1() {
              COALESCE(col_favorito,   TRUE),
              COALESCE(col_timestamps, TRUE)
       INTO   v_nome_tabela, v_col_favorito, v_col_timestamps
-      FROM   kr_telas WHERE id = p_tela_id;
+      FROM   kr_telas_001 WHERE id = p_tela_id;
       IF v_nome_tabela IS NULL THEN RAISE EXCEPTION 'Tela % não encontrada.', p_tela_id; END IF;
 
       SELECT EXISTS (
@@ -396,7 +402,7 @@ async function migration1() {
         END IF;
 
         FOR rec IN
-          SELECT c.* FROM kr_tela_campos c
+          SELECT c.* FROM kr_tela_campos_001 c
           WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.sequencial=FALSE AND c.tipo NOT IN ('divisor','sub_grid')
             AND NOT EXISTS (
               SELECT 1 FROM information_schema.columns ic
@@ -416,7 +422,7 @@ async function migration1() {
       ELSE
         v_sql := 'CREATE TABLE ' || quote_ident(v_nome_tabela) || ' (' || chr(10)
               || '  id SERIAL PRIMARY KEY';
-        FOR rec IN SELECT * FROM kr_tela_campos WHERE tela_id=p_tela_id AND ativo=TRUE AND tipo NOT IN ('divisor','sub_grid') ORDER BY ordem LOOP
+        FOR rec IN SELECT * FROM kr_tela_campos_001 WHERE tela_id=p_tela_id AND ativo=TRUE AND tipo NOT IN ('divisor','sub_grid') ORDER BY ordem LOOP
           IF rec.sequencial THEN
             v_col := '  ' || quote_ident(rec.nome_campo) || ' VARCHAR(50)';
           ELSE
@@ -437,7 +443,7 @@ async function migration1() {
         END IF;
         v_sql := v_sql || chr(10) || ');';
         EXECUTE v_sql;
-        FOR rec IN SELECT nome_campo FROM kr_tela_campos WHERE tela_id=p_tela_id AND campo_busca=TRUE AND ativo=TRUE LOOP
+        FOR rec IN SELECT nome_campo FROM kr_tela_campos_001 WHERE tela_id=p_tela_id AND campo_busca=TRUE AND ativo=TRUE LOOP
           EXECUTE 'CREATE INDEX IF NOT EXISTS idx_' || v_nome_tabela || '_' || rec.nome_campo
                || ' ON ' || quote_ident(v_nome_tabela) || '(' || quote_ident(rec.nome_campo) || ')';
         END LOOP;
@@ -449,7 +455,7 @@ async function migration1() {
       -- outro cadastro. Nome de FK determinístico (fk_<tabela>_<campo>) para
       -- que a EXCEPTION abaixo torne isto idempotente em re-salvamentos.
       FOR rec IN
-        SELECT c.nome_campo, c.opcoes FROM kr_tela_campos c
+        SELECT c.nome_campo, c.opcoes FROM kr_tela_campos_001 c
         WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.tipo='lookup'
       LOOP
         v_lookup_tabela := rec.opcoes->>'lookupTabela';
@@ -475,7 +481,7 @@ async function migration1() {
       -- ON DELETE CASCADE (única exceção deliberada ao RESTRICT universal:
       -- linhas filhas não têm existência própria fora do registro pai).
       FOR rec IN
-        SELECT c.opcoes FROM kr_tela_campos c
+        SELECT c.opcoes FROM kr_tela_campos_001 c
         WHERE c.tela_id=p_tela_id AND c.ativo=TRUE AND c.tipo='sub_grid'
       LOOP
         v_sg_tabela     := rec.opcoes->>'subGridTabela';
@@ -525,25 +531,27 @@ async function migration1() {
     RETURNS TEXT LANGUAGE plpgsql AS $$
     DECLARE v_nome_tabela VARCHAR(100);
     BEGIN
-      SELECT nome_tabela INTO v_nome_tabela FROM kr_telas WHERE id = p_tela_id;
+      SELECT nome_tabela INTO v_nome_tabela FROM kr_telas_001 WHERE id = p_tela_id;
       IF v_nome_tabela IS NULL THEN RAISE EXCEPTION 'Tela % não encontrada.', p_tela_id; END IF;
       EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(v_nome_tabela) || ' CASCADE';
-      DELETE FROM kr_tela_campos WHERE tela_id = p_tela_id;
-      DELETE FROM kr_telas       WHERE id      = p_tela_id;
+      DELETE FROM kr_tela_campos_001 WHERE tela_id = p_tela_id;
+      DELETE FROM kr_telas_001       WHERE id      = p_tela_id;
       RETURN 'EXCLUIDA: ' || v_nome_tabela;
     END; $$
   `).catch(e => console.warn('[migration] criar função fn_excluir_tabela_usuario:', e.message))
+}
 
+async function migration1_limpezas() {
   // ── Limpezas ──────────────────────────────────────────────────────────────
 
   // Remove telas de sistema do FormBuilder (gerenciadas por páginas dedicadas)
   await query(`
-    DELETE FROM kr_tela_campos WHERE tela_id IN (
-      SELECT id FROM kr_telas WHERE slug IN ('scripts','agenda') OR nome_tabela IN ('scr_001','age_001')
+    DELETE FROM kr_tela_campos_001 WHERE tela_id IN (
+      SELECT id FROM kr_telas_001 WHERE slug IN ('scripts','agenda') OR nome_tabela IN ('scr_001','age_001')
     )
   `).catch(e => console.warn('[migration] limpar campos de telas de sistema:', e.message))
   await query(`
-    DELETE FROM kr_telas WHERE slug IN ('scripts','agenda') OR nome_tabela IN ('scr_001','age_001')
+    DELETE FROM kr_telas_001 WHERE slug IN ('scripts','agenda') OR nome_tabela IN ('scr_001','age_001')
   `).catch(e => console.warn('[migration] limpar telas de sistema:', e.message))
 
   // Garante ativo+criado_em+alterado_em+favorito em TODAS as tabelas dinâmicas
@@ -552,11 +560,11 @@ async function migration1() {
     DECLARE rec RECORD;
     BEGIN
       FOR rec IN
-        SELECT nome_tabela FROM kr_telas
+        SELECT nome_tabela FROM kr_telas_001
         WHERE ativo=TRUE
           AND EXISTS (
             SELECT 1 FROM information_schema.tables
-            WHERE table_schema='public' AND table_name=kr_telas.nome_tabela
+            WHERE table_schema='public' AND table_name=kr_telas_001.nome_tabela
           )
       LOOP
         EXECUTE 'ALTER TABLE ' || quote_ident(rec.nome_tabela) || ' ADD COLUMN IF NOT EXISTS ativo       BOOLEAN   DEFAULT TRUE';
@@ -574,8 +582,8 @@ async function migration1() {
     BEGIN
       FOR rec IN
         SELECT t.nome_tabela, c.nome_campo
-        FROM kr_tela_campos c
-        JOIN kr_telas t ON t.id = c.tela_id
+        FROM kr_tela_campos_001 c
+        JOIN kr_telas_001 t ON t.id = c.tela_id
         WHERE c.sequencial = TRUE AND c.ativo = TRUE
           AND EXISTS (
             SELECT 1 FROM information_schema.columns ic
@@ -600,6 +608,90 @@ async function migration2() {
   `).catch(e => console.warn('[migration] remover coluna cliente_id de age_001:', e.message))
 }
 
+// ── Padronização de nomenclatura: tabela → tabela_001 ─────────────────────────
+// Mapa de tabelas de sistema que não seguiam o padrão "_NNN" no final,
+// renomeadas de uma vez (RENAME preserva dados/FKs/sequences/índices).
+// kr_schema_version fica de fora por ser metadado interno de migração.
+const RENAME_TABELAS_NNN = [
+  ['agenda_categorias', 'agenda_categorias_001'],
+  ['agenda_status_log',  'agenda_status_log_001'],   // renomear antes de agenda_status (prefixo)
+  ['agenda_status',      'agenda_status_001'],
+  ['agenda_eventos',     'agenda_eventos_001'],
+  ['agenda_lembretes',   'agenda_lembretes_001'],
+  ['kr_modulos',         'kr_modulos_001'],
+  ['kr_tela_campos',     'kr_tela_campos_001'],       // antes de kr_telas (prefixo)
+  ['kr_telas',           'kr_telas_001'],
+  ['kr_usuarios',        'kr_usuarios_001'],
+  ['kr_scripts',         'kr_scripts_001'],
+  ['kr_integracoes',     'kr_integracoes_001'],
+  ['kr_notificacoes',    'kr_notificacoes_001'],
+  ['kr_automacoes',      'kr_automacoes_001'],
+  ['kr_agendamentos',    'kr_agendamentos_001'],
+  ['kr_fluxos',          'kr_fluxos_001'],
+  ['kr_execucoes_log',   'kr_execucoes_log_001'],
+  ['kr_demo_vendas',     'kr_demo_vendas_001'],
+  ['kr_pesquisas',       'kr_pesquisas_001'],
+]
+
+const RENAME_SEQUENCES_NNN = [
+  ['agenda_eventos_codigo_seq', 'agenda_eventos_001_codigo_seq'],
+]
+
+const RENAME_INDEXES_NNN = [
+  ['idx_agenda_lembretes_evento',   'idx_agenda_lembretes_001_evento'],
+  ['idx_agenda_status_log_evento',  'idx_agenda_status_log_001_evento'],
+  ['idx_agenda_eventos_dt',         'idx_agenda_eventos_001_dt'],
+  ['idx_agenda_eventos_grupo',      'idx_agenda_eventos_001_grupo'],
+  ['idx_execucoes_log_origem',      'idx_execucoes_log_001_origem'],
+]
+
+async function renomearTabelasPadraoNNN() {
+  for (const [de, para] of RENAME_TABELAS_NNN) {
+    await query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${de}')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${para}')
+        THEN
+          ALTER TABLE ${de} RENAME TO ${para};
+        END IF;
+      END $$;
+    `).catch(e => console.warn(`[migration] rename ${de} -> ${para}:`, e.message))
+  }
+  for (const [de, para] of RENAME_SEQUENCES_NNN) {
+    await query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_schema='public' AND sequence_name='${de}')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_schema='public' AND sequence_name='${para}')
+        THEN
+          ALTER SEQUENCE ${de} RENAME TO ${para};
+        END IF;
+      END $$;
+    `).catch(e => console.warn(`[migration] rename sequence ${de} -> ${para}:`, e.message))
+  }
+  for (const [de, para] of RENAME_INDEXES_NNN) {
+    await query(`
+      DO $$ BEGIN
+        IF EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='${de}')
+           AND NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname='public' AND indexname='${para}')
+        THEN
+          ALTER INDEX ${de} RENAME TO ${para};
+        END IF;
+      END $$;
+    `).catch(e => console.warn(`[migration] rename index ${de} -> ${para}:`, e.message))
+  }
+  // Corrige SQL persistido como dado em kr_pesquisas_001 (seed anterior
+  // referenciava os nomes antigos — sem isso, a busca via lupa quebraria
+  // mesmo com o código-fonte já atualizado).
+  await query(`
+    UPDATE kr_pesquisas_001 SET sql_query = 'SELECT * FROM agenda_categorias_001 WHERE ativo = TRUE'
+    WHERE codigo='agenda_categoria' AND sql_query = 'SELECT * FROM agenda_categorias WHERE ativo = TRUE'
+  `).catch(() => {})
+  await query(`
+    UPDATE kr_pesquisas_001 SET sql_query = 'SELECT * FROM agenda_status_001 WHERE ativo = TRUE'
+    WHERE codigo='agenda_status' AND sql_query = 'SELECT * FROM agenda_status WHERE ativo = TRUE'
+  `).catch(() => {})
+}
+
 // ── Inicialização principal ───────────────────────────────────────────────────
 export async function initDb() {
   // Única DDL incondicional: tabela de controle de versão
@@ -616,11 +708,21 @@ export async function initDb() {
     ON CONFLICT (singleton) DO NOTHING
   `)
 
+  // ── Padronização de nomenclatura: toda tabela de sistema termina em _NNN ──
+  // Roda sempre (idempotente), antes de qualquer CREATE TABLE, para que as
+  // migrações/queries abaixo já operem com os nomes novos. RENAME preserva
+  // dados, FKs, sequences e índices — só o relname muda.
+  await renomearTabelasPadraoNNN()
+
+  // Recria as funções PL/pgSQL sempre (idempotente) — necessário para que
+  // renames de tabela subsequentes atualizem o corpo compilado das funções.
+  await criarFuncoesPg()
+
   const row = await queryOne('SELECT v FROM kr_schema_version LIMIT 1')
   const currentVersion = row?.v ?? 0
 
   if (currentVersion < SCHEMA_VERSION) {
-    if (currentVersion < 1) await migration1()
+    if (currentVersion < 1) { await migration1(); await migration1_limpezas() }
     if (currentVersion < 2) await migration2()
     await query(
       `UPDATE kr_schema_version SET v=$1, updated_at=NOW()`,
@@ -631,15 +733,15 @@ export async function initDb() {
 
   // Colunas adicionadas após bancos existentes já terem passado pela migration
   // versionada acima — precisam rodar sempre (idempotente), não só uma vez.
-  await query(`ALTER TABLE kr_telas ADD COLUMN IF NOT EXISTS grupo_fixo VARCHAR(30)`).catch(e => console.warn('[migration] alter kr_telas grupo_fixo (startup):', e.message))
+  await query(`ALTER TABLE kr_telas_001 ADD COLUMN IF NOT EXISTS grupo_fixo VARCHAR(30)`).catch(e => console.warn('[migration] alter kr_telas_001 grupo_fixo (startup):', e.message))
 
-  // age_001 foi substituída por agenda_eventos/agenda_categorias/agenda_status
+  // age_001 foi substituída por agenda_eventos_001/agenda_categorias_001/agenda_status_001
   // (agora tabelas nativas fixas, ver bloco abaixo); só tinha dados de teste.
   await query(`DROP TABLE IF EXISTS age_001 CASCADE`).catch(e => console.warn('[migration] drop age_001 (startup):', e.message))
 
   // Agenda nativa (tabelas fixas, criadas sempre - idempotente)
   await query(`
-    CREATE TABLE IF NOT EXISTS agenda_categorias (
+    CREATE TABLE IF NOT EXISTS agenda_categorias_001 (
       id          SERIAL PRIMARY KEY,
       codigo      VARCHAR(10)  DEFAULT '',
       nome        VARCHAR(150) NOT NULL,
@@ -650,10 +752,10 @@ export async function initDb() {
       criado_em   TIMESTAMP    DEFAULT NOW(),
       alterado_em TIMESTAMP    DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create agenda_categorias (startup):', e.message))
+  `).catch(e => console.warn('[migration] create agenda_categorias_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS agenda_status (
+    CREATE TABLE IF NOT EXISTS agenda_status_001 (
       id          SERIAL PRIMARY KEY,
       codigo      VARCHAR(10)  DEFAULT '',
       nome        VARCHAR(150) NOT NULL,
@@ -664,20 +766,50 @@ export async function initDb() {
       criado_em   TIMESTAMP    DEFAULT NOW(),
       alterado_em TIMESTAMP    DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create agenda_status (startup):', e.message))
+  `).catch(e => console.warn('[migration] create agenda_status_001 (startup):', e.message))
 
-  // Sequencia nativa para o codigo de agenda_eventos (substitui a sequencia
+  // ── Monta Pesquisa: pesquisas de "consultar"/lupa configuráveis por SQL ────
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_pesquisas_001 (
+      id               SERIAL PRIMARY KEY,
+      codigo           VARCHAR(80)  UNIQUE NOT NULL,
+      nome             VARCHAR(150) NOT NULL,
+      sql_query        TEXT         NOT NULL,
+      campo_busca      VARCHAR(80),
+      colunas_exibidas JSONB,
+      mostrar_favorito BOOLEAN      DEFAULT FALSE,
+      ativo            BOOLEAN      DEFAULT TRUE,
+      criado_em        TIMESTAMP    DEFAULT NOW(),
+      atualizado_em    TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create kr_pesquisas_001 (startup):', e.message))
+
+  // Seed das pesquisas já usadas hoje pela Agenda — ON CONFLICT preserva
+  // qualquer edição que o usuário já tenha feito via tela Monta Pesquisa.
+  await query(`
+    INSERT INTO kr_pesquisas_001 (codigo, nome, sql_query, campo_busca, colunas_exibidas, mostrar_favorito)
+    VALUES
+      ('agenda_categoria', 'Categorias da Agenda', 'SELECT * FROM agenda_categorias_001 WHERE ativo = TRUE', 'nome',
+        '[{"nome_campo":"nome","label":"Nome"},{"nome_campo":"codigo","label":"Código"}]'::jsonb, FALSE),
+      ('agenda_status', 'Status da Agenda', 'SELECT * FROM agenda_status_001 WHERE ativo = TRUE', 'nome',
+        '[{"nome_campo":"nome","label":"Nome"},{"nome_campo":"codigo","label":"Código"}]'::jsonb, FALSE),
+      ('agenda_cliente', 'Cadastro de Entidade', 'SELECT * FROM entidade_001', 'nome',
+        '[{"nome_campo":"nome","label":"Nome / Razão Social"},{"nome_campo":"nome_fantasia","label":"Apelido / Nome Fantasia"},{"nome_campo":"cpf_cnpj","label":"CPF / CNPJ"}]'::jsonb, TRUE)
+    ON CONFLICT (codigo) DO NOTHING
+  `).catch(e => console.warn('[migration] seed kr_pesquisas_001 (startup):', e.message))
+
+  // Sequencia nativa para o codigo de agenda_eventos_001 (substitui a sequencia
   // que hoje so existe porque o Designer a criava para o template FormBuilder).
-  await query(`CREATE SEQUENCE IF NOT EXISTS agenda_eventos_codigo_seq`)
-    .catch(e => console.warn('[migration] create agenda_eventos_codigo_seq (startup):', e.message))
+  await query(`CREATE SEQUENCE IF NOT EXISTS agenda_eventos_001_codigo_seq`)
+    .catch(e => console.warn('[migration] create agenda_eventos_001_codigo_seq (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS agenda_eventos (
+    CREATE TABLE IF NOT EXISTS agenda_eventos_001 (
       id                    SERIAL PRIMARY KEY,
       codigo                VARCHAR(10)  DEFAULT '',
       titulo                VARCHAR(300) NOT NULL,
-      categoria_id          INTEGER      REFERENCES agenda_categorias(id) ON DELETE SET NULL,
-      status_id             INTEGER      REFERENCES agenda_status(id)     ON DELETE SET NULL,
+      categoria_id          INTEGER      REFERENCES agenda_categorias_001(id) ON DELETE SET NULL,
+      status_id             INTEGER      REFERENCES agenda_status_001(id)     ON DELETE SET NULL,
       cliente_id            INTEGER,
       dt_evento             DATE         NOT NULL,
       hr_inicio             TIME,
@@ -694,112 +826,112 @@ export async function initDb() {
       criado_em             TIMESTAMP    DEFAULT NOW(),
       alterado_em           TIMESTAMP    DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create agenda_eventos (startup):', e.message))
+  `).catch(e => console.warn('[migration] create agenda_eventos_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS agenda_lembretes (
+    CREATE TABLE IF NOT EXISTS agenda_lembretes_001 (
       id          SERIAL PRIMARY KEY,
-      evento_id   INTEGER NOT NULL REFERENCES agenda_eventos(id) ON DELETE CASCADE,
+      evento_id   INTEGER NOT NULL REFERENCES agenda_eventos_001(id) ON DELETE CASCADE,
       min_antes   INTEGER NOT NULL,
       criado_em   TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create agenda_lembretes (startup):', e.message))
-  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_lembretes_evento ON agenda_lembretes(evento_id)`).catch(() => {})
+  `).catch(e => console.warn('[migration] create agenda_lembretes_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_lembretes_001_evento ON agenda_lembretes_001(evento_id)`).catch(() => {})
 
   // Status automático de ciclo de vida do compromisso (controlado pelo sistema,
-  // separado do status_id livre/customizável pelo usuário em agenda_status).
-  await query(`ALTER TABLE agenda_eventos ADD COLUMN IF NOT EXISTS status_auto VARCHAR(20) DEFAULT 'agendado'`)
-    .catch(e => console.warn('[migration] alter agenda_eventos status_auto (startup):', e.message))
+  // separado do status_id livre/customizável pelo usuário em agenda_status_001).
+  await query(`ALTER TABLE agenda_eventos_001 ADD COLUMN IF NOT EXISTS status_auto VARCHAR(20) DEFAULT 'agendado'`)
+    .catch(e => console.warn('[migration] alter agenda_eventos_001 status_auto (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS agenda_status_log (
+    CREATE TABLE IF NOT EXISTS agenda_status_log_001 (
       id          SERIAL PRIMARY KEY,
-      evento_id   INTEGER NOT NULL REFERENCES agenda_eventos(id) ON DELETE CASCADE,
+      evento_id   INTEGER NOT NULL REFERENCES agenda_eventos_001(id) ON DELETE CASCADE,
       status_de   VARCHAR(20),
       status_para VARCHAR(20) NOT NULL,
       origem      VARCHAR(20) NOT NULL,
       criado_em   TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create agenda_status_log (startup):', e.message))
-  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_status_log_evento ON agenda_status_log(evento_id)`).catch(() => {})
+  `).catch(e => console.warn('[migration] create agenda_status_log_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_status_log_001_evento ON agenda_status_log_001(evento_id)`).catch(() => {})
 
-  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_dt ON agenda_eventos(dt_evento)`).catch(() => {})
-  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_grupo ON agenda_eventos(recorrencia_grupo_id)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_001_dt ON agenda_eventos_001(dt_evento)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_001_grupo ON agenda_eventos_001(recorrencia_grupo_id)`).catch(() => {})
 
   // Motor de execução da aba Funções (Scripts/Integrações/Notificações/
   // Automações/Agendamentos/Fluxos) — substitui a persistência antiga em
   // .ini (saveSectionConfig só suporta pares chave=valor simples, corrompia
   // silenciosamente ao receber arrays de objetos).
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_scripts (
+    CREATE TABLE IF NOT EXISTS kr_scripts_001 (
       id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL, sql_texto TEXT NOT NULL,
       ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_scripts (startup):', e.message))
+  `).catch(e => console.warn('[migration] create kr_scripts_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_integracoes (
+    CREATE TABLE IF NOT EXISTS kr_integracoes_001 (
       id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL,
       url TEXT NOT NULL, metodo VARCHAR(10) DEFAULT 'GET',
       headers JSONB DEFAULT '{}', body TEXT DEFAULT '',
       auth_tipo VARCHAR(20) DEFAULT 'none', auth_token TEXT DEFAULT '', auth_key_header VARCHAR(100) DEFAULT '',
       ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_integracoes (startup):', e.message))
+  `).catch(e => console.warn('[migration] create kr_integracoes_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_notificacoes (
+    CREATE TABLE IF NOT EXISTS kr_notificacoes_001 (
       id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL, tipo VARCHAR(20) NOT NULL,
       titulo VARCHAR(200) DEFAULT '', mensagem TEXT DEFAULT '', tipo_toast VARCHAR(20) DEFAULT 'info', url TEXT DEFAULT '',
       ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_notificacoes (startup):', e.message))
+  `).catch(e => console.warn('[migration] create kr_notificacoes_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_automacoes (
+    CREATE TABLE IF NOT EXISTS kr_automacoes_001 (
       id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL,
       trigger_tipo VARCHAR(30) NOT NULL, trigger_campo VARCHAR(100) DEFAULT '', trigger_tabela VARCHAR(100) DEFAULT '',
       condicoes JSONB DEFAULT '[]', acoes JSONB DEFAULT '[]',
       ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_automacoes (startup):', e.message))
+  `).catch(e => console.warn('[migration] create kr_automacoes_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_agendamentos (
+    CREATE TABLE IF NOT EXISTS kr_agendamentos_001 (
       id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL,
       intervalo VARCHAR(10) NOT NULL, cron VARCHAR(100) DEFAULT '',
       acao JSONB NOT NULL,
       ultima_execucao TIMESTAMP, proxima_execucao TIMESTAMP,
       ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_agendamentos (startup):', e.message))
+  `).catch(e => console.warn('[migration] create kr_agendamentos_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_fluxos (
+    CREATE TABLE IF NOT EXISTS kr_fluxos_001 (
       id SERIAL PRIMARY KEY, nome VARCHAR(200) NOT NULL, descricao TEXT DEFAULT '',
       gatilho VARCHAR(30) NOT NULL, trigger_tabela VARCHAR(100) DEFAULT '',
       etapas JSONB DEFAULT '[]',
       ativo BOOLEAN DEFAULT TRUE, criado_em TIMESTAMP DEFAULT NOW(), alterado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_fluxos (startup):', e.message))
+  `).catch(e => console.warn('[migration] create kr_fluxos_001 (startup):', e.message))
 
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_execucoes_log (
+    CREATE TABLE IF NOT EXISTS kr_execucoes_log_001 (
       id SERIAL PRIMARY KEY,
       origem_tipo VARCHAR(20) NOT NULL,
       origem_id INTEGER NOT NULL,
       sucesso BOOLEAN NOT NULL, mensagem TEXT DEFAULT '', duracao_ms INTEGER,
       criado_em TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_execucoes_log (startup):', e.message))
-  await query(`CREATE INDEX IF NOT EXISTS idx_execucoes_log_origem ON kr_execucoes_log(origem_tipo, origem_id)`).catch(() => {})
+  `).catch(e => console.warn('[migration] create kr_execucoes_log_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_execucoes_log_001_origem ON kr_execucoes_log_001(origem_tipo, origem_id)`).catch(() => {})
 
   // Remove constraints problemáticos a cada startup (idempotente)
-  await query(`ALTER TABLE kr_tela_campos DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
+  await query(`ALTER TABLE kr_tela_campos_001 DROP CONSTRAINT IF EXISTS kr_tela_campos_largura_check`).catch(e => console.warn('[migration] drop constraint largura_check (startup):', e.message))
 
   // Tabela de dados demo do Dashboard BI (idempotente, roda sempre)
   await query(`
-    CREATE TABLE IF NOT EXISTS kr_demo_vendas (
+    CREATE TABLE IF NOT EXISTS kr_demo_vendas_001 (
       id          SERIAL PRIMARY KEY,
       vendedor    VARCHAR(80)   NOT NULL,
       regiao      VARCHAR(40)   NOT NULL,
@@ -814,8 +946,8 @@ export async function initDb() {
       data_venda  DATE          NOT NULL,
       criado_em   TIMESTAMP     DEFAULT NOW()
     )
-  `).catch(e => console.warn('[migration] create kr_demo_vendas (startup):', e.message))
-  await query(`CREATE INDEX IF NOT EXISTS idx_demo_vendas_data ON kr_demo_vendas(data_venda)`).catch(() => {})
+  `).catch(e => console.warn('[migration] create kr_demo_vendas_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_demo_vendas_data ON kr_demo_vendas_001(data_venda)`).catch(() => {})
 
   // Comparação com período anterior nos widgets do Dashboard (idempotente)
   await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS comparar_anterior BOOLEAN DEFAULT FALSE`).catch(e => console.warn('[migration] alter dash_001 comparar_anterior (startup):', e.message))

@@ -73,8 +73,8 @@ export async function hashCamposSenha(nomeTabela, dados) {
   if (!dados || typeof dados !== 'object') return dados
   try {
     const camposSenha = await query(
-      `SELECT tc.nome_campo FROM kr_tela_campos tc
-       JOIN kr_telas t ON t.id = tc.tela_id
+      `SELECT tc.nome_campo FROM kr_tela_campos_001 tc
+       JOIN kr_telas_001 t ON t.id = tc.tela_id
        WHERE t.nome_tabela = $1 AND tc.tipo = 'senha' AND tc.ativo = TRUE`,
       [nomeTabela]
     )

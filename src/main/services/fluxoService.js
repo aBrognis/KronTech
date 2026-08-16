@@ -5,7 +5,7 @@ import { interpolarSQL, executarIntegracaoAdHoc, enviarNotificacaoAdHoc, logExec
 // Execução estritamente sequencial e linear — etapa 'condicao' funciona como
 // guard clause (encerra o fluxo se falsa), não há ramificação real ("senão").
 export async function executarFluxo(fluxoId, dadosIniciais = {}) {
-  const f = await queryOne('SELECT * FROM kr_fluxos WHERE id=$1 AND ativo=TRUE', [fluxoId])
+  const f = await queryOne('SELECT * FROM kr_fluxos_001 WHERE id=$1 AND ativo=TRUE', [fluxoId])
   if (!f) throw new Error('Fluxo não encontrado ou inativo.')
   const inicio = Date.now()
   let contexto = { ...dadosIniciais }

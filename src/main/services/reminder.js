@@ -12,8 +12,8 @@ async function check() {
   try {
     const rows = await query(`
       SELECT e.id AS evento_id, e.titulo, e.hr_inicio, l.id AS lembrete_id, l.min_antes
-      FROM agenda_eventos e
-      JOIN agenda_lembretes l ON l.evento_id = e.id
+      FROM agenda_eventos_001 e
+      JOIN agenda_lembretes_001 l ON l.evento_id = e.id
       WHERE e.ativo = true
         AND e.dt_evento = CURRENT_DATE
         AND e.hr_inicio IS NOT NULL

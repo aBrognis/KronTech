@@ -22,7 +22,7 @@ export function avaliarCondicoes(condicoes, dados) {
 // devolvidas para o renderer aplicar — só ele tem o estado de formulário.
 export async function dispararAutomacoes({ triggerTipo, triggerTabela, triggerCampo, dados }) {
   const candidatas = await query(
-    `SELECT * FROM kr_automacoes WHERE ativo=TRUE AND trigger_tipo=$1 AND (trigger_tabela='' OR trigger_tabela=$2)`,
+    `SELECT * FROM kr_automacoes_001 WHERE ativo=TRUE AND trigger_tipo=$1 AND (trigger_tabela='' OR trigger_tabela=$2)`,
     [triggerTipo, triggerTabela || '']
   )
   const efeitosUI = []
