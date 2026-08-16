@@ -36,7 +36,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   const [showAddMenu,   setShowAddMenu]   = useState(false)
   const [addMenuHover,  setAddMenuHover]  = useState(null)
   const [telasList,     setTelasList]     = useState([])
-  const [pesquisasList, setPesquisasList] = useState([])
   const [lookupColMap,  setLookupColMap]  = useState({}) // { nomeTabela: [col1, col2, ...] }
 
   // Estado do designer — persiste ao trocar de aba
@@ -49,9 +48,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   useEffect(() => {
     window.api.formBuilder.listarTelas(true)
       .then(res => { if (res.ok) setTelasList(res.data.filter(t => !t.sistema)) })
-      .catch(() => {})
-    window.api.pesquisa.listar()
-      .then(res => { if (res.ok) setPesquisasList(res.data) })
       .catch(() => {})
   }, [])
 
@@ -457,7 +453,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     if (campo.tipo === 'lookup') return (
       <CampoCardLookup campo={campo} idx={idx} setCampos={setCampos} atualizarCampo={atualizarCampo}
         isExp={isExp} toggleExpand={toggleExpand} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando}
-        lookupColMap={lookupColMap} carregarColunasLookup={carregarColunasLookup} telasList={telasList} pesquisasList={pesquisasList} />
+        lookupColMap={lookupColMap} carregarColunasLookup={carregarColunasLookup} telasList={telasList} />
     )
 
     // ── SUB_GRID (accordion) ──────────────────────────────────────────────

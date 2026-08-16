@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Sun, Moon, X, Plus, ChevronLeft, ChevronRight, LayoutGrid, Package, Zap, Search,
+  Sun, Moon, X, Plus, ChevronLeft, ChevronRight, LayoutGrid, Package, Zap,
 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
 import FuncoesTab from './pages/FuncoesTab'
 import TelasPage from './pages/designer/TelasPage'
 import ModulosPage from './pages/designer/ModulosPage'
-import MontaPesquisaTab from './pages/MontaPesquisaTab'
 import { aplicarCorSistema } from './pages/Configuracoes'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
@@ -18,14 +17,12 @@ const DESIGNER_PAGES = [
   { pageId: 'telas',     label: 'Telas',     Icon: LayoutGrid, fbTab: 'telas'   },
   { pageId: 'modulos',   label: 'Módulos',   Icon: Package,    fbTab: 'modulos' },
   { pageId: 'funcoes',   label: 'Funções',   Icon: Zap,        fbTab: null      },
-  { pageId: 'pesquisas', label: 'Pesquisas', Icon: Search,     fbTab: null      },
 ]
 
 const PAGE_META = {
   telas:        { title: 'Telas',        sub: 'CRIADOR DE TELAS'          },
   modulos:      { title: 'Módulos',      sub: 'ORGANIZAÇÃO · MÓDULOS'     },
   funcoes:      { title: 'Funções',      sub: 'AUTOMAÇÃO · FUNÇÕES'       },
-  pesquisas:    { title: 'Pesquisas',    sub: 'MONTA PESQUISA'            },
   // páginas do KronTech principal que o Sidebar também pode navegar
   dashboard:           { title: 'Dashboard',         sub: 'VISÃO GERAL'          },
   agenda:              { title: 'Agenda',             sub: 'GESTÃO · COMPROMISSOS'},
@@ -228,7 +225,6 @@ function DesignerTabContent({ pageId }) {
     case 'telas':     return <TelasPage />
     case 'modulos':   return <ModulosPage />
     case 'funcoes':   return <FuncoesTab />
-    case 'pesquisas': return <MontaPesquisaTab />
     default:          return <TelasPage />
   }
 }

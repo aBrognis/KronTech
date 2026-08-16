@@ -2,17 +2,16 @@ import { ChevronDown } from 'lucide-react'
 import { TIPO_META } from '../constants.js'
 import { DelBtn } from './CampoCardSimples.jsx'
 
-export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, toggleExpand, tipInfoIdx, setTipInfoIdx, salvando, lookupColMap, carregarColunasLookup, telasList, pesquisasList = [] }) {
+export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, toggleExpand, tipInfoIdx, setTipInfoIdx, salvando, lookupColMap, carregarColunasLookup, telasList }) {
   const meta = TIPO_META.lookup
-  const cfg = (campo.opcoes && !Array.isArray(campo.opcoes)) ? campo.opcoes : { lookupTabela: '', lookupExibir: '', lookupCodigo: '', lookupModo: 'select', lookupPesquisa: '' }
-  const origem = cfg.lookupPesquisa ? 'pesquisa' : 'tabela'
+  const cfg = (campo.opcoes && !Array.isArray(campo.opcoes)) ? campo.opcoes : { lookupTabela: '', lookupExibir: '', lookupCodigo: '', lookupModo: 'select' }
   const cols = lookupColMap[cfg.lookupTabela] || []
   const dbName = campo.nomeCampo ? campo.nomeCampo.replace(/_id$/, '') + '_id' : '—'
   const lbl = { fontSize: 9, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }
   function setLkp(updates) {
     setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, opcoes: { ...cfg, ...updates } }))
   }
-  const aviso = (cfg.lookupTabela && !cfg.lookupExibir) || (origem === 'pesquisa' && !cfg.lookupPesquisa)
+  const aviso = cfg.lookupTabela && !cfg.lookupExibir
   return (
     <div key={campo._key}
       style={{ background: isExp ? 'var(--s2)' : 'var(--s1)', border: `1px solid ${aviso ? '#fb923c' : isExp ? meta.color : 'var(--bd)'}`, borderLeft: `3px solid ${aviso ? '#fb923c' : meta.color}`, borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--sh-xs)' }}>
@@ -23,8 +22,8 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
           {campo.label || 'Lookup'}
         </span>
         <code style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--t3)', background: 'var(--s3)', padding: '2px 6px', borderRadius: 3, flexShrink: 0 }}>{dbName}</code>
-        {cfg.lookupTabela || cfg.lookupPesquisa
-          ? <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>→ {cfg.lookupTabela || cfg.lookupPesquisa}</span>
+        {cfg.lookupTabela
+          ? <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>→ {cfg.lookupTabela}</span>
           : <span style={{ fontSize: 9, color: '#fb923c', flexShrink: 0 }}>não configurado</span>}
         <ChevronDown size={12} color="var(--t3)" style={{ transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }} />
         <DelBtn campo={campo} idx={idx} setCampos={setCampos} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
@@ -47,67 +46,35 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={lbl}>Origem dos dados</span>
-            {[{ val: 'tabela', label: 'Tabela (coluna única)' }, { val: 'pesquisa', label: 'Pesquisa customizada (Monta Pesquisa)' }].map(o => (
-              <label key={o.val} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none' }}>
-                <input type="radio" name={`lkp_origem_${campo._key}`} value={o.val} checked={origem === o.val}
-                  onChange={() => setLkp(o.val === 'pesquisa'
-                    ? { lookupPesquisa: pesquisasList[0]?.codigo || '', lookupTabela: '', lookupExibir: '', lookupCodigo: '' }
-                    : { lookupPesquisa: '', lookupTabela: '', lookupExibir: '', lookupCodigo: '' })}
-                  disabled={salvando}
-                  style={{ accentColor: meta.color, cursor: 'pointer' }} />
-                {o.label}
-              </label>
-            ))}
-          </div>
-          {origem === 'pesquisa' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             <div className="form-group">
-              <label className="form-label">Pesquisa (Monta Pesquisa) *</label>
-              <select className="form-select" style={{ height: 32 }} value={cfg.lookupPesquisa || ''} disabled={salvando}
-                onChange={e => setLkp({ lookupPesquisa: e.target.value })}>
+              <label className="form-label">Tabela de origem *</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupTabela} disabled={salvando}
+                onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
                 <option value="">— selecione —</option>
-                {pesquisasList.map(p => <option key={p.codigo} value={p.codigo}>{p.nome} ({p.codigo})</option>)}
+                {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
               </select>
-              {pesquisasList.length === 0 && (
-                <div style={{ fontSize: 10.5, color: 'var(--t3)', marginTop: 4 }}>
-                  Nenhuma pesquisa cadastrada ainda — crie uma em Designer → Pesquisas.
-                </div>
-              )}
             </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              <div className="form-group">
-                <label className="form-label">Tabela de origem *</label>
-                <select className="form-select" style={{ height: 32 }} value={cfg.lookupTabela} disabled={salvando}
-                  onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
-                  <option value="">— selecione —</option>
-                  {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Campo a exibir *</label>
-                <select className="form-select" style={{ height: 32 }} value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela}
-                  onChange={e => setLkp({ lookupExibir: e.target.value })}>
-                  <option value="">— selecione a tabela primeiro —</option>
-                  {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Campo de código (prefixo)</label>
-                <select className="form-select" style={{ height: 32 }} value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela}
-                  onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
-                  <option value="">— nenhum —</option>
-                  {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+            <div className="form-group">
+              <label className="form-label">Campo a exibir *</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela}
+                onChange={e => setLkp({ lookupExibir: e.target.value })}>
+                <option value="">— selecione a tabela primeiro —</option>
+                {cols.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-          )}
+            <div className="form-group">
+              <label className="form-label">Campo de código (prefixo)</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela}
+                onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
+                <option value="">— nenhum —</option>
+                {cols.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={lbl}>Modo de exibição</span>
-            {origem === 'pesquisa' ? (
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>Modal de pesquisa (fixo — pesquisas customizadas sempre abrem no modal)</span>
-            ) : [{ val: 'select', label: 'Select simples' }, { val: 'modal', label: 'Modal de pesquisa' }].map(m => (
+            {[{ val: 'select', label: 'Select simples' }, { val: 'modal', label: 'Modal de pesquisa' }].map(m => (
               <label key={m.val} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, cursor: 'pointer', userSelect: 'none' }}>
                 <input type="radio" name={`lkp_modo_${campo._key}`} value={m.val} checked={cfg.lookupModo === m.val}
                   onChange={() => setLkp({ lookupModo: m.val })} disabled={salvando}
@@ -120,32 +87,30 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               Obrigatório
             </label>
           </div>
-          {origem === 'tabela' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', gap: 8 }}>
-              <div className="form-group">
-                <label className="form-label">Filtrar por (opcional)</label>
-                <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.campo || ''} disabled={salvando || !cfg.lookupTabela}
-                  onChange={e => setLkp({ lookupFiltro: e.target.value ? { campo: e.target.value, op: cfg.lookupFiltro?.op || 'ilike', valor: cfg.lookupFiltro?.valor || '' } : null })}>
-                  <option value="">— sem filtro —</option>
-                  {cols.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Op.</label>
-                <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.op || 'ilike'} disabled={salvando || !cfg.lookupFiltro?.campo}
-                  onChange={e => setLkp({ lookupFiltro: { ...cfg.lookupFiltro, op: e.target.value } })}>
-                  <option value="ilike">contém</option>
-                  <option value="eq">igual a</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Valor</label>
-                <input className="form-input" style={{ height: 32 }} value={cfg.lookupFiltro?.valor || ''} disabled={salvando || !cfg.lookupFiltro?.campo}
-                  onChange={e => setLkp({ lookupFiltro: { ...cfg.lookupFiltro, valor: e.target.value } })}
-                  placeholder="Ex: F (Fornecedor)" />
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 1fr', gap: 8 }}>
+            <div className="form-group">
+              <label className="form-label">Filtrar por (opcional)</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.campo || ''} disabled={salvando || !cfg.lookupTabela}
+                onChange={e => setLkp({ lookupFiltro: e.target.value ? { campo: e.target.value, op: cfg.lookupFiltro?.op || 'ilike', valor: cfg.lookupFiltro?.valor || '' } : null })}>
+                <option value="">— sem filtro —</option>
+                {cols.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-          )}
+            <div className="form-group">
+              <label className="form-label">Op.</label>
+              <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.op || 'ilike'} disabled={salvando || !cfg.lookupFiltro?.campo}
+                onChange={e => setLkp({ lookupFiltro: { ...cfg.lookupFiltro, op: e.target.value } })}>
+                <option value="ilike">contém</option>
+                <option value="eq">igual a</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Valor</label>
+              <input className="form-input" style={{ height: 32 }} value={cfg.lookupFiltro?.valor || ''} disabled={salvando || !cfg.lookupFiltro?.campo}
+                onChange={e => setLkp({ lookupFiltro: { ...cfg.lookupFiltro, valor: e.target.value } })}
+                placeholder="Ex: F (Fornecedor)" />
+            </div>
+          </div>
           {aviso && <div style={{ fontSize: 11, color: '#fb923c', padding: '6px 10px', background: 'rgba(251,146,60,.08)', borderRadius: 6, border: '1px solid rgba(251,146,60,.25)' }}>
             ⚠ Configure a tabela e o campo a exibir antes de salvar.
           </div>}

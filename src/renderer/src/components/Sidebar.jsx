@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap,
-  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, LogOut, Search
+  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, LogOut
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -45,7 +45,6 @@ const MENU_DESIGNER = [
       { id: 'telas',     label: 'Telas',     Icon: LayoutGrid },
       { id: 'modulos',   label: 'Módulos',   Icon: Package    },
       { id: 'funcoes',   label: 'Funções',   Icon: Zap        },
-      { id: 'pesquisas', label: 'Pesquisas', Icon: Search     },
     ]
   }
 ]
