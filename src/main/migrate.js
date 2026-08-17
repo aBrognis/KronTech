@@ -1,6 +1,5 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { runner } from 'node-pg-migrate'
 import { getDecryptedBancoConfig } from './config'
 
 // Segunda trilha de schema, paralela ao mecanismo legado de db.js (que
@@ -18,6 +17,13 @@ function migrationsDir() {
 }
 
 export async function runMigrations() {
+  // node-pg-migrate publica só como ESM puro — o main process do Electron
+  // é bundleado para CommonJS (externalizeDepsPlugin mantém node_modules
+  // como require() externo), então um import estático quebra em runtime
+  // com ERR_REQUIRE_ESM. import() dinâmico funciona nativamente dentro de
+  // código CJS e resolve isso sem mexer na config do Vite.
+  const { runner } = await import('node-pg-migrate')
+
   const banco = getDecryptedBancoConfig()
   const dir = migrationsDir()
 
