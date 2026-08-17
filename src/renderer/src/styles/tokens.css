@@ -4,6 +4,9 @@
    ============================================================ */
 
 :root {
+  color-scheme: dark;
+  --date-icon-filter: invert(1);
+
   /* ── Brand ── */
   --or:    #D95218;
   --or2:   #C04812;
@@ -89,6 +92,9 @@
 
 /* ── LIGHT MODE ─────────────────────────────────────────────── */
 html.light {
+  color-scheme: light;
+  --date-icon-filter: none;
+
   /* ── Superfícies LIGHT ── */
   --bg:    #F7F8FC;   /* fundo da janela — off-white frio leve  */
   --s1:    #FFFFFF;   /* sidebar, topbar, cards primários       */

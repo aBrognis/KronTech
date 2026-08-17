@@ -206,6 +206,16 @@ const api = {
     testarSql: (sql)          => ipcRenderer.invoke('pesquisa:testarSql', sql),
     executar:  (codigo, opts) => ipcRenderer.invoke('pesquisa:executar', codigo, opts),
   },
+  viagens: {
+    listar:            (filtros) => ipcRenderer.invoke('viagens:listar', filtros),
+    obter:             (id)      => ipcRenderer.invoke('viagens:obter', id),
+    criar:             (dados)   => ipcRenderer.invoke('viagens:criar', dados),
+    atualizar:         (dados)   => ipcRenderer.invoke('viagens:atualizar', dados),
+    excluir:           (id)      => ipcRenderer.invoke('viagens:excluir', id),
+    mudarStatus:       (payload) => ipcRenderer.invoke('viagens:mudarStatus', payload),
+    listarConsultores: ()        => ipcRenderer.invoke('viagens:listarConsultores'),
+    exportarExcel:     (id)      => ipcRenderer.invoke('viagens:exportarExcel', id),
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

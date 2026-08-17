@@ -17,6 +17,7 @@ import { registerArquivosHandlers } from './handlers/arquivos'
 import { registerFormBuilderHandlers } from './handlers/formBuilder'
 import { registerFuncoesHandlers } from './handlers/funcoes'
 import { registerPesquisaHandlers } from './handlers/pesquisa'
+import { registerViagensHandlers } from './handlers/viagens'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -33,4 +34,5 @@ export function registerHandlers() {
   registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSenha, importLog, importCancelFlags, categoriaByExt, scanDir })
   registerFuncoesHandlers({ ipcMain, wrap, query, queryOne })
   registerPesquisaHandlers({ ipcMain, wrap, query, queryOne })
+  registerViagensHandlers({ ipcMain, wrap, query, queryOne })
 }

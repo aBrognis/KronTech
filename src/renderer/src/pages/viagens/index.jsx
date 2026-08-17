@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, FileDown, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search } from 'lucide-react'
+import { Plus, Trash2, FileDown, FileX, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search } from 'lucide-react'
 import '../../App.css'
 import FormToolbar from '../../components/FormToolbar'
 import SeletorBusca from '../../components/SeletorBusca'
@@ -184,6 +184,9 @@ export default function Viagens({ sessao, newTrigger }) {
   function abrirComprovante(path) {
     if (path) window.api.arquivos.abrir(path)
   }
+  function removerComprovante(key) {
+    setItem(key, { arquivo_path: null, arquivo_nome: null, arquivo_ext: null })
+  }
 
   const totalItens = (form.itens || []).reduce((s, it) => s + (Number(it.qtde) || 0) * (Number(it.valor_unitario) || 0), 0)
   const isRO = mode === 'view'
@@ -361,7 +364,7 @@ export default function Viagens({ sessao, newTrigger }) {
                 {isRO && form.id && STATUS_ORDEM.map(s => s !== form.status && (
                   <button key={s} className="btn btn-ghost" style={{ height: 26, fontSize: 10.5 }}
                     onClick={() => handleMudarStatus(s)}>
-                    Marcar como {STATUS_META[s].label}
+                    {STATUS_META[s].label}
                   </button>
                 ))}
               </div>
@@ -434,20 +437,20 @@ export default function Viagens({ sessao, newTrigger }) {
             {/* Grid de despesas: sem equivalente pronto no padrão (sub_grid nativo não suporta anexo por linha) */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--t2)', textTransform: 'uppercase', letterSpacing: .5, flex: 1 }}>Despesas</span>
+                <span className="form-label" style={{ flex: 1, marginBottom: 0 }}>Despesas</span>
                 {!isRO && (
                   <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }} onClick={addItem}>
                     <Plus size={13} /> Adicionar linha
                   </button>
                 )}
               </div>
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden', background: 'var(--s1)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
-                    <tr style={{ background: 'var(--s2)' }}>
+                    <tr style={{ background: 'var(--s1)' }}>
                       <Th>Data</Th><Th>Dia</Th><Th>Descrição</Th><Th>Fornecedor</Th>
                       <Th style={{ width: 70 }}>Qtde</Th><Th style={{ width: 100 }}>Vl. Unit.</Th>
-                      <Th style={{ width: 90 }}>Valor</Th><Th style={{ width: 70 }}></Th>
+                      <Th style={{ width: 90 }}>Valor</Th><Th style={{ width: 96 }}></Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -473,9 +476,16 @@ export default function Viagens({ sessao, newTrigger }) {
                           <Td>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                               {it.arquivo_path ? (
-                                <button title={it.arquivo_nome} style={ICON_BTN_SM} onClick={() => abrirComprovante(it.arquivo_path)}>
-                                  <FileDown size={13} color="var(--or)" />
-                                </button>
+                                <>
+                                  <button title={it.arquivo_nome} style={ICON_BTN_SM} onClick={() => abrirComprovante(it.arquivo_path)}>
+                                    <FileDown size={13} color="var(--or)" />
+                                  </button>
+                                  {!isRO && (
+                                    <button title="Remover comprovante" style={ICON_BTN_SM} onClick={() => removerComprovante(it._key)}>
+                                      <FileX size={13} color="var(--red)" />
+                                    </button>
+                                  )}
+                                </>
                               ) : !isRO && (
                                 <button title="Anexar comprovante" style={ICON_BTN_SM} onClick={() => anexarComprovante(it._key)}>
                                   <FileDown size={13} />
@@ -496,7 +506,7 @@ export default function Viagens({ sessao, newTrigger }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '10px 14px', background: 'var(--s2)', borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '10px 14px', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8 }}>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5 }}>Total das Despesas</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--t1)' }}>{fmtMoeda(totalItens)}</div>

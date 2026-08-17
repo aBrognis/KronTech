@@ -1,6 +1,13 @@
-import { Pool } from 'pg'
+import { Pool, types } from 'pg'
 import bcrypt from 'bcrypt'
 import { getDecryptedBancoConfig } from './config'
+
+// Sem isso, o driver 'pg' devolve colunas DATE como objeto Date do JS (não
+// string), o que quebra qualquer formatação de data no frontend que espere
+// 'YYYY-MM-DD' (ex: fmtDataBR fazendo String(date).slice(0,10) vira
+// "Sat Aug 01" em vez de "2026-08-01"). Fixa em toda conexão do pool, de
+// uma vez, em vez de cada tela se defender individualmente.
+types.setTypeParser(types.builtins.DATE, val => val)
 
 let pool = null
 
@@ -857,6 +864,47 @@ export async function initDb() {
 
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_001_dt ON agenda_eventos_001(dt_evento)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_agenda_eventos_001_grupo ON agenda_eventos_001(recorrencia_grupo_id)`).catch(() => {})
+
+  // Relatório de Despesas de Viagem (cabeçalho + itens, controle de reembolso)
+  await query(`
+    CREATE TABLE IF NOT EXISTS despesa_001 (
+      id                SERIAL PRIMARY KEY,
+      consultor_id      INTEGER      NOT NULL,
+      consultor_nome    VARCHAR(200) NOT NULL DEFAULT '',
+      cliente_id        INTEGER,
+      cliente_nome      VARCHAR(200) DEFAULT '',
+      data_inicio       DATE         NOT NULL,
+      data_fim          DATE         NOT NULL,
+      local_partida     VARCHAR(200) DEFAULT '',
+      local_destino     VARCHAR(200) DEFAULT '',
+      meio_transporte   VARCHAR(100) DEFAULT '',
+      status            VARCHAR(20)  NOT NULL DEFAULT 'rascunho',
+      observacoes       TEXT         DEFAULT '',
+      criado_em         TIMESTAMP    DEFAULT NOW(),
+      alterado_em       TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create despesa_001 (startup):', e.message))
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS despesa_item_001 (
+      id              SERIAL PRIMARY KEY,
+      despesa_id      INTEGER NOT NULL REFERENCES despesa_001(id) ON DELETE CASCADE,
+      data            DATE         NOT NULL,
+      descricao       VARCHAR(300) DEFAULT '',
+      fornecedor      VARCHAR(200) DEFAULT '',
+      qtde            NUMERIC(10,2) NOT NULL DEFAULT 1,
+      valor_unitario  NUMERIC(12,2) NOT NULL DEFAULT 0,
+      valor           NUMERIC(12,2) NOT NULL DEFAULT 0,
+      arquivo_path    VARCHAR(500),
+      arquivo_nome    VARCHAR(300),
+      arquivo_ext     VARCHAR(20),
+      criado_em       TIMESTAMP DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create despesa_item_001 (startup):', e.message))
+
+  await query(`CREATE INDEX IF NOT EXISTS idx_despesa_item_001_despesa ON despesa_item_001(despesa_id)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_despesa_001_status ON despesa_001(status)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_despesa_001_consultor ON despesa_001(consultor_id)`).catch(() => {})
 
   // Motor de execução da aba Funções (Scripts/Integrações/Notificações/
   // Automações/Agendamentos/Fluxos) — substitui a persistência antiga em

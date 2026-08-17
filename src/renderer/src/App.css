@@ -574,6 +574,47 @@ html.light .form-textarea:focus {
 .form-select   { cursor: pointer; appearance: none; }
 .form-select option { background: var(--s2); color: var(--t1); }
 
+/* Remove as setas nativas de incremento/decremento de input[type=number]
+   em todo o sistema — usadas hoje em grades como Despesas de Viagem. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* input[type=date]: o widget nativo do Chromium pinta partes internas do
+   campo (wrapper, texto, cada segmento dia/mês/ano) com fundo branco fixo
+   do UA stylesheet, ignorando o background do elemento — precisa forçar
+   cada parte individualmente para o mesmo fundo dos demais campos do
+   sistema (var(--s1), igual .form-input/.form-select). O ícone do
+   calendário é mantido, só invertido no tema escuro (senão fica preto
+   sobre fundo escuro, invisível). */
+input[type="date"],
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-year-field,
+input[type="date"]::-webkit-date-and-time-value {
+  background-color: var(--s1) !important;
+  color: inherit;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background-color: transparent !important;
+  filter: var(--date-icon-filter, none);
+}
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background-color: var(--or3) !important;
+  color: var(--t1);
+  outline: none;
+}
+
 .fav-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--t2); }
 .fav-check input { accent-color: var(--or); cursor: pointer; }
 
