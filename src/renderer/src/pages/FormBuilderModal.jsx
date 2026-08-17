@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { X, Plus, Trash2, Eye, Settings, Save, AlertCircle, Info, Layout, CircleDot, ExternalLink, Minus, ChevronLeft, ChevronDown, Star, Clock, Copy, Search } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import FormDesigner, { autoPos, CANVAS_W } from '../components/FormDesigner'
+import FormToolbar from '../components/FormToolbar'
 import { TIPOS, TIPOS_COM_OPCOES, FUNCOES_BOTAO, COR_PALETTE, LARGURAS, TIPO_META } from './formBuilderModal/constants.js'
 import { CampoCardDivisor, CampoCardCopiar, CampoCardFavoritoTimestamps } from './formBuilderModal/cards/CampoCardSimples.jsx'
 import { CampoCardBotao } from './formBuilderModal/cards/CampoCardBotao.jsx'
@@ -370,34 +371,38 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
 
   async function handleSalvar() {
     setErro(null)
-    if (!nomeTela.trim())   return setErro('Informe o nome da tela.')
-    if (!nomeTabela.trim()) return setErro('Informe o nome da tabela.')
-    const TIPOS_AUTO = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar']
-    const camposReais = campos.filter(c => !TIPOS_AUTO.includes(c.tipo))
-    if (!camposReais.length) return setErro('Adicione pelo menos um campo de dados.')
-    for (const c of camposReais) {
-      if (!c.label.trim())     return setErro('Há campos sem label definido.')
-      if (!c.nomeCampo.trim()) return setErro(`Campo "${c.label}" sem nome de coluna.`)
-    }
-    const payload = {
-      nomeTela, nomeTabela, descricao, icone,
-      moduloId:  (moduloId && !moduloId.startsWith('__')) ? moduloId : null,
-      grupoFixo: moduloId?.startsWith('__') ? moduloId.slice(2) : null,
-      ordemMenu: ordemMenu || 99,
-      canvasW: canvasW || 780, canvasH: canvasH || 480,
-      colFavorito:   campos.some(c => c.tipo === 'favorito')   || (tela?.col_favorito   === true),
-      colTimestamps: campos.some(c => c.tipo === 'timestamps') || (tela?.col_timestamps === true),
-      campos: campos.map((c, i) => ({ ...c, ordem: i + 1, largura: Math.max(10, c.largura || 50) })),
-    }
-    setSalvando(true)
     try {
+      if (!nomeTela.trim())   return setErro('Informe o nome da tela.')
+      if (!nomeTabela.trim()) return setErro('Informe o nome da tabela.')
+      const TIPOS_AUTO = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar']
+      const camposReais = campos.filter(c => !TIPOS_AUTO.includes(c.tipo))
+      if (!camposReais.length) return setErro('Adicione pelo menos um campo de dados.')
+      for (const c of camposReais) {
+        if (!(c.label || '').trim())     return setErro('Há campos sem label definido.')
+        if (!(c.nomeCampo || '').trim()) return setErro(`Campo "${c.label || '?'}" sem nome de coluna.`)
+      }
+      const payload = {
+        nomeTela, nomeTabela, descricao, icone,
+        moduloId:  (moduloId && !moduloId.startsWith('__')) ? moduloId : null,
+        grupoFixo: moduloId?.startsWith('__') ? moduloId.slice(2) : null,
+        ordemMenu: ordemMenu || 99,
+        canvasW: canvasW || 780, canvasH: canvasH || 480,
+        colFavorito:   campos.some(c => c.tipo === 'favorito')   || (tela?.col_favorito   === true),
+        colTimestamps: campos.some(c => c.tipo === 'timestamps') || (tela?.col_timestamps === true),
+        campos: campos.map((c, i) => ({ ...c, ordem: i + 1, largura: Math.max(10, c.largura || 50) })),
+      }
+      setSalvando(true)
       const res = editando
         ? await window.api.formBuilder.editarTela(tela.id, payload)
         : await window.api.formBuilder.criarTela(payload)
       if (!res.ok) throw new Error(res.erro)
       onSalvar()
-    } catch(e) { setErro(e.message) }
-    finally    { setSalvando(false) }
+    } catch(e) {
+      console.error('[FormBuilderModal] Falha ao salvar tela:', e)
+      setErro(e.message || String(e))
+    } finally {
+      setSalvando(false)
+    }
   }
 
   function aplicarTemplate(tmpl) {
@@ -697,17 +702,14 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
               <Layout size={13} /> Templates
             </button>
           )}
-          {erro && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--red)' }}>
-              <AlertCircle size={13} /> {erro}
-            </div>
-          )}
-          <button className="btn btn-ghost" onClick={onFechar} disabled={salvando} style={{ height: 32 }}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleSalvar} disabled={salvando} style={{ height: 32 }}>
-            <Save size={13} /> {salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Criar Tela'}
-          </button>
         </div>
       </div>
+
+      {erro && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 20px', background: 'rgba(248,113,113,.1)', borderBottom: '1px solid rgba(248,113,113,.25)', color: 'var(--red)', fontSize: 12.5, flexShrink: 0 }}>
+          <AlertCircle size={14} style={{ flexShrink: 0 }} /> {erro}
+        </div>
+      )}
 
       {/* Abas */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', padding: '0 22px', flexShrink: 0 }}>
@@ -923,6 +925,14 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         {aba === 'preview' && renderPreview(false)}
 
       </div>
+
+      <FormToolbar
+        mode="edit"
+        saving={salvando}
+        onGravar={handleSalvar}
+        onDesistir={onFechar}
+      />
+
       {showTemplates && <TemplateModal onSelecionar={aplicarTemplate} onFechar={() => setShowTemplates(false)} />}
     </div>
   )
