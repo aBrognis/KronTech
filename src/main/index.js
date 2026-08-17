@@ -3,6 +3,7 @@ import { join } from 'path'
 import { loadConfig, encryptSensitiveConfig } from './config'
 import { registerHandlers } from './ipcHandlers'
 import { initDb } from './db'
+import { runMigrations } from './migrate'
 import { startReminderCheck } from './services/reminder'
 import { setupAutoUpdater } from './services/updater'
 import { confirmarStatus } from './handlers/agenda'
@@ -150,6 +151,7 @@ if (!gotLock) {
     loadConfig()              // lê/cria C:\KronTech\krontech.ini
     encryptSensitiveConfig() // criptografa senhas em texto puro (Windows DPAPI)
     registerHandlers()
+    await runMigrations().catch(err => console.error('[migrate] runMigrations error:', err.message))
     await initDb().catch(err => console.error('initDb error:', err.message))
     startReminderCheck()
     setupAutoUpdater()

@@ -17,6 +17,7 @@
     "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.17.0",
+    "node-pg-migrate": "^9.0.0",
     "pg": "^8.11.0",
     "react-grid-layout": "^2.2.3"
   },
@@ -44,8 +45,6 @@
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico",
-      "sign": null,
-      "certificateFile": null,
       "artifactName": "KronTech-Setup-${version}.exe"
     },
     "nsis": {
@@ -54,6 +53,9 @@
       "installerIcon": "resources/icon.ico",
       "uninstallerIcon": "resources/icon.ico"
     },
+    "extraResources": [
+      { "from": "migrations", "to": "migrations" }
+    ],
     "publish": [
       {
         "provider": "github",
