@@ -274,7 +274,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     ],
     tarde: [
       'A tarde é sua. Execute sem limites.',
-      'Metade do dia feito — não desperdice a outra.',
+      'Metade do dia feito, não desperdice a outra.',
       'Consistência bate talento todos os dias.',
       'Não espere a motivação. Aja primeiro.',
       'O progresso acontece um passo de cada vez.',
@@ -485,7 +485,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
               <span className="sb-wel-cursor" />
             </div>
 
-            {/* barra — tempo decorrido do dia */}
+            {/* barra: tempo decorrido do dia */}
             <div className="sb-wel-bar-track">
               <div className="sb-wel-bar-fill" style={{
                 width: `${barPct}%`,
@@ -506,7 +506,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
 
     </aside>
 
-      {/* Modal confirmação KronTech Designer — fora do aside para cobrir tela toda */}
+      {/* Modal confirmação KronTech Designer, fora do aside para cobrir tela toda */}
       {designerConfirm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,

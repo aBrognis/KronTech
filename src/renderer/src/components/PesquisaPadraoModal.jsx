@@ -13,7 +13,7 @@ const tdS = { padding: '7px 12px', fontSize: 11.5, color: 'var(--t2)', borderBot
 
 // Modal genérico "Pesquisa Padrão" (botão Consultar), compartilhado entre
 // telas do FormBuilder e Arquivos. A busca real fica por conta de cada
-// chamador via `onBuscar` — este componente só cuida de UI/estado de busca.
+// chamador via `onBuscar`; este componente só cuida de UI/estado de busca.
 export default function PesquisaPadraoModal({
   titulo, campos, colunasExibidas, campoInicial, mostrarFavorito,
   onBuscar, onSelecionar, onFechar, renderCelula,
@@ -45,7 +45,7 @@ export default function PesquisaPadraoModal({
     }
   }, [onBuscar])
 
-  // Carrega ao abrir e sempre que campo/ordem/modo mudam (sem debounce —
+  // Carrega ao abrir e sempre que campo/ordem/modo mudam (sem debounce,
   // são trocas discretas de select/rádio, não digitação).
   useEffect(() => {
     executarBusca(campo, ordem, modo, busca)
@@ -108,7 +108,7 @@ export default function PesquisaPadraoModal({
             </div>
             {limitado && (
               <div style={{ fontSize: 10.5, color: 'var(--t3)' }}>
-                Mostrando os primeiros {resultados.length} de {total} registros — refine a busca para ver mais resultados.
+                Mostrando os primeiros {resultados.length} de {total} registros. Refine a busca para ver mais resultados.
               </div>
             )}
           </div>
@@ -156,12 +156,12 @@ export default function PesquisaPadraoModal({
                       <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 11, fontFamily: 'monospace' }}>{r.id}</td>
                       {colunas.map((c, ci) => (
                         <td key={c.nome_campo} style={{ ...tdS, color: ci === 0 ? 'var(--t1)' : 'var(--t2)', fontWeight: ci === 0 ? 500 : 400 }}>
-                          {renderCelula ? renderCelula(r, c) : String(r[c.nome_campo] ?? '—')}
+                          {renderCelula ? renderCelula(r, c) : String(r[c.nome_campo] ?? '')}
                         </td>
                       ))}
                       {mostrarFavorito && (
                         <td style={{ ...tdS, textAlign: 'center' }}>
-                          {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
+                          {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}></span>}
                         </td>
                       )}
                     </tr>
@@ -185,7 +185,7 @@ export default function PesquisaPadraoModal({
           </button>
           <span style={{ fontSize: 11, color: 'var(--t3)', marginLeft: 4 }}>
             {resultados.length} registro{resultados.length !== 1 ? 's' : ''}
-            {selId ? ' — Enter ou duplo clique para abrir' : ' — selecione uma linha'}
+            {selId ? '. Enter ou duplo clique para abrir' : '. Selecione uma linha'}
           </span>
         </div>
       </div>

@@ -53,7 +53,7 @@ export default function UpdateBanner() {
         {status === 'available' && (
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', marginBottom: 2 }}>
-              Nova versão disponível — {info?.version}
+              Nova versão disponível: {info?.version}
             </div>
             <div style={{ fontSize: 10, color: 'var(--t3)' }}>Clique em Atualizar para baixar</div>
           </>
@@ -71,7 +71,7 @@ export default function UpdateBanner() {
         {status === 'ready' && (
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', marginBottom: 2 }}>
-              Atualização pronta — v{info?.version}
+              Atualização pronta: v{info?.version}
             </div>
             <div style={{ fontSize: 10, color: 'var(--t3)' }}>Reinicie para aplicar</div>
           </>

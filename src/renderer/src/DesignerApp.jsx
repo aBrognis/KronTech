@@ -264,7 +264,7 @@ export default function DesignerApp() {
     }).catch(() => {})
     window.api.update?.version().then(res => res.ok && setVersion(res.data)).catch(() => {})
 
-    // Designer roda em BrowserWindow separada da janela principal — a cor só
+    // Designer roda em BrowserWindow separada da janela principal, a cor só
     // muda ao vivo aqui via IPC (window.dispatchEvent da tela de Personalização
     // não atravessa processos de renderização diferentes).
     const unsub = window.api.config.onPersonalizacaoAlterada?.((kvs) => {
@@ -283,7 +283,7 @@ export default function DesignerApp() {
       setActiveTabId(tab.id)
       return
     }
-    // Qualquer outra página (dashboard, agenda, etc.) — ignora no Designer
+    // Qualquer outra página (dashboard, agenda, etc.): ignora no Designer
     // O Sidebar vai tentar navegar mas essas páginas não existem aqui
   }, [])
 
@@ -312,7 +312,7 @@ export default function DesignerApp() {
   return (
     <div className="app">
 
-      {/* Sidebar real do KronTech — idêntico ao App principal */}
+      {/* Sidebar real do KronTech, idêntico ao App principal */}
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
