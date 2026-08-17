@@ -4,6 +4,7 @@ import {
   ChevronUp, ChevronDown, Menu, Save, Check, X, ExternalLink,
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
+import { MENU_BASE, MENU_DESIGNER } from '../../components/Sidebar'
 
 function TilaIcon({ nome, size = 15, cor = 'var(--or)' }) {
   const key  = (nome || 'layout').split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
@@ -46,6 +47,10 @@ export default function ModulosPage() {
   const [salvandoMenu, setSalvandoMenu] = useState(false)
   const [menuSalvo,    setMenuSalvo]    = useState(false)
 
+  // Nomes de exibição das telas nativas (sidebar principal + Designer)
+  const NATIVAS_BASE = [...MENU_BASE, ...MENU_DESIGNER].flatMap(g => g.items.map(it => ({ id: it.id, label: it.label })))
+  const [labelsItens, setLabelsItens] = useState({})
+
   const carregar = useCallback(async () => {
     setCarregando(true)
     try {
@@ -81,6 +86,9 @@ export default function ModulosPage() {
         setOrdemGlobal(ordered)
       } else {
         setOrdemGlobal(allItems)
+      }
+      if (p.labels_itens) {
+        try { setLabelsItens(JSON.parse(p.labels_itens)) } catch { /* ignora ini corrompido */ }
       }
     }).catch(() => {
       setOrdemGlobal([
@@ -121,6 +129,10 @@ export default function ModulosPage() {
     setOrdemGlobal(prev => prev.map((x, i) => i === idx ? { ...x, label } : x))
   }
 
+  function setItemNativoLabel(id, label) {
+    setLabelsItens(prev => ({ ...prev, [id]: label }))
+  }
+
   function moverTela(moduloKey, idx, dir) {
     setOrdemGrupos(prev => {
       const grupo = [...prev[moduloKey].telas]
@@ -136,12 +148,14 @@ export default function ModulosPage() {
     try {
       const fixos = ordemGlobal.filter(x => x.tipo === 'fixo')
       const byId  = Object.fromEntries(fixos.map(x => [x.id, x.label]))
+      const labelsItensJson = JSON.stringify(labelsItens)
       await window.api.config.setSection('Personalizacao', {
         label_inicio:      byId.inicio      || 'Início',
         label_gestao:      byId.gestao      || 'Gestão',
         label_ferramentas: byId.ferramentas || 'Ferramentas',
         secoes_ordem:      fixos.map(x => x.id).join(','),
         menu_global_ordem: ordemGlobal.map(x => x.id).join(','),
+        labels_itens:      labelsItensJson,
       })
       window.dispatchEvent(new CustomEvent('krontech:config-changed', {
         detail: {
@@ -150,6 +164,7 @@ export default function ModulosPage() {
           labelFerramentas: byId.ferramentas || 'Ferramentas',
           secoesOrdem:      fixos.map(x => x.id).join(','),
           menuGlobalOrdem:  ordemGlobal.map(x => x.id).join(','),
+          labelsItens:      labelsItensJson,
         },
       }))
       const items = []
@@ -438,6 +453,26 @@ export default function ModulosPage() {
                         <button onClick={() => moverItem(idx, -1)} disabled={idx === 0} style={modArrowBtn(idx === 0)}><ChevronUp size={12} /></button>
                         <button onClick={() => moverItem(idx, 1)} disabled={idx === ordemGlobal.length - 1} style={modArrowBtn(idx === ordemGlobal.length - 1)}><ChevronDown size={12} /></button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ ...modSubHead, marginTop: 18 }}>Nomes das telas nativas</div>
+                <div style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 8 }}>Renomeie telas do sistema (Dashboard, Agenda, etc.)</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {NATIVAS_BASE.map(item => (
+                    <div key={item.id} style={{
+                      display: 'flex', gap: 6, alignItems: 'center',
+                      height: 36, background: 'var(--s2)',
+                      border: '1.5px solid var(--bd)', borderRadius: 7, padding: '0 8px',
+                    }}>
+                      <input
+                        className="form-input"
+                        value={labelsItens[item.id] ?? item.label}
+                        onChange={e => setItemNativoLabel(item.id, e.target.value)}
+                        placeholder={item.label}
+                        style={{ flex: 1, height: 26, fontSize: 12 }}
+                      />
                     </div>
                   ))}
                 </div>

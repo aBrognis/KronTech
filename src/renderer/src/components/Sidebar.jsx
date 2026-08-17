@@ -11,7 +11,7 @@ function telaIcon(nome) {
   return LucideIcons[key] || LayoutGrid
 }
 
-const MENU_BASE = [
+export const MENU_BASE = [
   {
     id: 'inicio',
     baseLabel: 'Início',
@@ -38,7 +38,7 @@ const MENU_BASE = [
   }
 ]
 
-const MENU_DESIGNER = [
+export const MENU_DESIGNER = [
   {
     id: 'designer',
     baseLabel: 'Designer',
@@ -72,6 +72,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
   const [nomeUsuario,      setNomeUsuario]      = useState('Anderson')
   const [cargoUsuario,     setCargoUsuario]     = useState('Administrador')
   const [labelsMenu,       setLabelsMenu]       = useState({ inicio: 'Início', gestao: 'Gestão', ferramentas: 'Ferramentas' })
+  const [labelsItens,      setLabelsItens]      = useState({})
   const [ordemSecoes,      setOrdemSecoes]      = useState(['inicio', 'gestao', 'ferramentas'])
   const [ordemGlobal,      setOrdemGlobal]      = useState([])
 
@@ -97,6 +98,9 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       }
       if (d.menuGlobalOrdem) {
         setOrdemGlobal(d.menuGlobalOrdem.split(',').filter(Boolean))
+      }
+      if (d.labelsItens != null) {
+        try { setLabelsItens(JSON.parse(d.labelsItens || '{}')) } catch { /* ignora ini corrompido */ }
       }
     }
     function onTelasUpdated() { setAutoReload(v => v + 1) }
@@ -133,6 +137,9 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       }
       if (p.menu_global_ordem) {
         setOrdemGlobal(p.menu_global_ordem.split(',').filter(Boolean))
+      }
+      if (p.labels_itens) {
+        try { setLabelsItens(JSON.parse(p.labels_itens)) } catch { /* ignora ini corrompido */ }
       }
     } catch { /* banco/config pode não estar pronto */ }
   }
@@ -171,7 +178,8 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
 
   function buildFixoGroup(base, labelOverride) {
     const extras = (telasPorGrupoFixo[base.id] || []).map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) }))
-    return { ...base, items: [...filterItems(base.items), ...extras], label: labelOverride || base.baseLabel }
+    const itensComOverride = filterItems(base.items).map(it => ({ ...it, label: labelsItens[it.id] || it.label }))
+    return { ...base, items: [...itensComOverride, ...extras], label: labelOverride || base.baseLabel }
   }
 
   const buildDynGroup = (nome, telas) => ({
@@ -186,7 +194,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
   // Modo Designer: menu fixo com Telas/Módulos/Funções, sem telas dinâmicas
   let menu
   if (designerMode) {
-    menu = MENU_DESIGNER
+    menu = MENU_DESIGNER.map(g => ({ ...g, items: g.items.map(it => ({ ...it, label: labelsItens[it.id] || it.label })) }))
   } else if (ordemGlobal.length) {
     const result = []
     const usedDin = new Set()

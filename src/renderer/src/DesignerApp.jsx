@@ -231,9 +231,9 @@ function DesignerTabContent({ pageId }) {
 
 // ── Contador de abas ─────────────────────────────────────────────────────────
 let tabCounter = 0
-function makeTab(pageId) {
+function makeTab(pageId, labelsItens = {}) {
   const page = DESIGNER_PAGES.find(p => p.pageId === pageId)
-  return { id: ++tabCounter, pageId, label: page?.label ?? pageId }
+  return { id: ++tabCounter, pageId, label: labelsItens[pageId] || page?.label || pageId }
 }
 
 // ── Designer App ─────────────────────────────────────────────────────────────
@@ -244,12 +244,14 @@ export default function DesignerApp() {
   const [tabs,        setTabs]        = useState(() => [makeTab('telas')])
   const [activeTabId, setActiveTabId] = useState(() => tabs[0].id)
   const [showPanel,   setShowPanel]   = useState(false)
+  const [labelsItens, setLabelsItens] = useState({})
   const tabsRef = useRef(tabs)
   useEffect(() => { tabsRef.current = tabs }, [tabs])
 
   const activeTab  = tabs.find(t => t.id === activeTabId) ?? tabs[0]
   const activePage = activeTab?.pageId ?? 'telas'
-  const topMeta    = PAGE_META[activePage] ?? PAGE_META['telas']
+  const metaBase   = PAGE_META[activePage] ?? PAGE_META['telas']
+  const topMeta    = { ...metaBase, title: labelsItens[activePage] || metaBase.title }
 
   useEffect(() => {
     if (!document.getElementById('kt-anim-css')) {
@@ -258,9 +260,13 @@ export default function DesignerApp() {
       document.head.appendChild(s)
     }
     window.api.config.get().then(res => {
-      let hex = res.ok ? res.data?.Personalizacao?.cor_primaria : null
+      const p = res.ok ? res.data?.Personalizacao : null
+      let hex = p?.cor_primaria
       if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) aplicarCorSistema(hex)
+      if (p?.labels_itens) {
+        try { setLabelsItens(JSON.parse(p.labels_itens)) } catch { /* ignora ini corrompido */ }
+      }
     }).catch(() => {})
     window.api.update?.version().then(res => res.ok && setVersion(res.data)).catch(() => {})
 
@@ -269,23 +275,32 @@ export default function DesignerApp() {
     // não atravessa processos de renderização diferentes).
     const unsub = window.api.config.onPersonalizacaoAlterada?.((kvs) => {
       if (kvs?.cor_primaria) aplicarCorSistema(kvs.cor_primaria)
+      if (kvs?.labels_itens != null) {
+        try { setLabelsItens(JSON.parse(kvs.labels_itens || '{}')) } catch { /* ignora ini corrompido */ }
+      }
     })
     return () => unsub?.()
   }, [])
+
+  // Reaplica os nomes personalizados nas abas já abertas
+  useEffect(() => {
+    if (!Object.keys(labelsItens).length) return
+    setTabs(prev => prev.map(t => labelsItens[t.pageId] ? { ...t, label: labelsItens[t.pageId] } : t))
+  }, [labelsItens])
 
   const handleNavigate = useCallback((pageId) => {
     // Páginas do Designer (telas/modulos/funcoes) → abrem em aba no Designer
     if (DESIGNER_PAGES.some(p => p.pageId === pageId)) {
       const existing = tabsRef.current.find(t => t.pageId === pageId)
       if (existing) { setActiveTabId(existing.id); return }
-      const tab = makeTab(pageId)
+      const tab = makeTab(pageId, labelsItens)
       setTabs(prev => [...prev, tab])
       setActiveTabId(tab.id)
       return
     }
     // Qualquer outra página (dashboard, agenda, etc.): ignora no Designer
     // O Sidebar vai tentar navegar mas essas páginas não existem aqui
-  }, [])
+  }, [labelsItens])
 
   function closeTab(tabId) {
     setTabs(prev => {

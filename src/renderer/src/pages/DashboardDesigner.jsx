@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
+import { ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
          Check, X, Search, AlertCircle, Copy, RefreshCw, Database,
-         LayoutGrid, Sliders, Palette, Ruler, Clock3, Table2 } from 'lucide-react'
+         LayoutGrid, Sliders, Palette, Ruler, Clock3, Table2, ListOrdered } from 'lucide-react'
 import { getAllIcons, LucideIcon, WidgetBody,
          TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
 
@@ -169,6 +169,20 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         setWidgets(prev => prev.map(w => w.id === selected ? { ...w, ...form } : w))
       }
       window.dispatchEvent(new Event('dash:widgets-changed'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleReorder(direcao) {
+    if (selected === 'new' || saving) return
+    setSaving(true)
+    try {
+      const res = await window.api.dash.reorder(selected, direcao)
+      if (res.ok) {
+        setWidgets(res.data)
+        window.dispatchEvent(new Event('dash:widgets-changed'))
+      }
     } finally {
       setSaving(false)
     }
@@ -565,6 +579,52 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                       )}
                     </div>
                   </SecCard>
+
+                  {selected !== 'new' && (
+                    <SecCard icon={<ListOrdered size={14} />} title="Ordem no Dashboard">
+                      {(() => {
+                        const ordenados = [...widgets].sort((a, b) => (a.posicao ?? 0) - (b.posicao ?? 0))
+                        const idx = ordenados.findIndex(w => w.id === selected)
+                        const total = ordenados.length
+                        return (
+                          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                            <div style={{ display:'flex', gap:6 }}>
+                              <button
+                                onClick={() => handleReorder('up')}
+                                disabled={saving || idx <= 0}
+                                title="Subir posição"
+                                style={{
+                                  display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
+                                  borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
+                                  color: idx <= 0 ? 'var(--t3)' : 'var(--t1)',
+                                  cursor: (saving || idx <= 0) ? 'not-allowed' : 'pointer', opacity: idx <= 0 ? .45 : 1,
+                                }}
+                              >
+                                <ArrowUp size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleReorder('down')}
+                                disabled={saving || idx < 0 || idx >= total - 1}
+                                title="Descer posição"
+                                style={{
+                                  display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
+                                  borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
+                                  color: (idx < 0 || idx >= total - 1) ? 'var(--t3)' : 'var(--t1)',
+                                  cursor: (saving || idx < 0 || idx >= total - 1) ? 'not-allowed' : 'pointer',
+                                  opacity: (idx < 0 || idx >= total - 1) ? .45 : 1,
+                                }}
+                              >
+                                <ArrowDown size={15} />
+                              </button>
+                            </div>
+                            <div style={{ fontSize:12, color:'var(--t3)' }}>
+                              Posição <b style={{ color:'var(--t1)' }}>{idx + 1}</b> de {total} — controla se este dashboard aparece acima ou abaixo dos demais.
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </SecCard>
+                  )}
 
                   <SecCard icon={<Clock3 size={14} />} title="Identidade e atualização">
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:18 }}>

@@ -31,6 +31,7 @@ export default function Viagens({ sessao, newTrigger }) {
   const [buscaGeral, setBuscaGeral]   = useState('')
   const [pagina, setPagina]     = useState(1)
   const [porPagina, setPorPagina] = useState(25)
+  const [jaConsultou, setJaConsultou] = useState(false)
 
   const carregar = useCallback(async (f = filtros, b = buscaGeral) => {
     setLoading(true)
@@ -47,11 +48,10 @@ export default function Viagens({ sessao, newTrigger }) {
       setRegistros(lista)
       setTotal(lista.length)
       setPagina(1)
-    } catch { setRegistros([]); setTotal(0) }
+      setJaConsultou(true)
+    } catch { setRegistros([]); setTotal(0); setJaConsultou(true) }
     finally { setLoading(false) }
   }, [filtros, buscaGeral])
-
-  useEffect(() => { carregar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (newTrigger) openNew()
@@ -331,7 +331,7 @@ export default function Viagens({ sessao, newTrigger }) {
                       const idxAbsoluto = (pagina - 1) * porPagina + ri
                       const meta = STATUS_META[r.status] || STATUS_META.rascunho
                       return (
-                        <tr key={r.id} onClick={() => selecionarLinha(idxAbsoluto)}
+                        <tr key={r.id} onDoubleClick={() => selecionarLinha(idxAbsoluto)}
                           style={{ cursor: 'pointer' }}
                           onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -345,7 +345,9 @@ export default function Viagens({ sessao, newTrigger }) {
                       )
                     })}
                     {!loading && registros.length === 0 && (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
+                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
+                        {jaConsultou ? 'Nenhum registro encontrado' : 'Clique em "Buscar" para consultar'}
+                      </td></tr>
                     )}
                   </tbody>
                 </table>

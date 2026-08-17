@@ -33,16 +33,16 @@ const PAGE_META = {
   configuracoes:       { title: 'Personalização',        sub: 'SISTEMA · CONFIGURAÇÕES'           },
 }
 
-function pageLabel(pageId, dynamicTitles) {
+function pageLabel(pageId, dynamicTitles, labelsItens = {}) {
   if (pageId.startsWith('fb__')) {
     return dynamicTitles[pageId]?.nome ?? pageId.slice(4).replace(/_/g, ' ')
   }
-  return PAGE_META[pageId]?.title ?? pageId
+  return labelsItens[pageId] || PAGE_META[pageId]?.title || pageId
 }
 
 let tabCounter = 0
-function makeTab(pageId, dynamicTitles = {}) {
-  return { id: ++tabCounter, pageId, label: pageLabel(pageId, dynamicTitles) }
+function makeTab(pageId, dynamicTitles = {}, labelsItens = {}) {
+  return { id: ++tabCounter, pageId, label: pageLabel(pageId, dynamicTitles, labelsItens) }
 }
 
 function WinControls() {
@@ -330,6 +330,7 @@ export default function App() {
 
   const [newTrigger,   setNewTrigger]   = useState(0)
   const [telasVersion, setTelasVersion] = useState(0)
+  const [labelsItens,  setLabelsItens]  = useState({})
   const { isDark, toggle } = useTheme()
 
   useEffect(() => {
@@ -340,12 +341,36 @@ export default function App() {
       document.head.appendChild(s)
     }
     window.api.config.get().then(res => {
-      let hex = res.ok ? res.data?.Personalizacao?.cor_primaria : null
+      const p = res.ok ? res.data?.Personalizacao : null
+      let hex = p?.cor_primaria
       if (hex === '#FF6B2B') hex = '#D95218'
       if (hex) { aplicarCorSistema(hex); setAccentColor(hex) }
+      if (p?.labels_itens) {
+        try { setLabelsItens(JSON.parse(p.labels_itens)) } catch { /* ignora ini corrompido */ }
+      }
     }).catch(() => {})
     window.api.formBuilder.listarTelas(true).then(res => res.ok && setTelasDin(res.data)).catch(() => {})
+
+    function onConfigChanged(e) {
+      const d = e.detail || {}
+      if (d.labelsItens != null) {
+        try { setLabelsItens(JSON.parse(d.labelsItens || '{}')) } catch { /* ignora ini corrompido */ }
+      }
+    }
+    window.addEventListener('krontech:config-changed', onConfigChanged)
+    return () => window.removeEventListener('krontech:config-changed', onConfigChanged)
   }, [])
+
+  // Reaplica os nomes personalizados nas abas já abertas (a inicial já existia
+  // antes de labelsItens carregar, e novos overrides podem chegar em runtime)
+  useEffect(() => {
+    if (!Object.keys(labelsItens).length) return
+    setTabs(prev => prev.map(t =>
+      !t.pageId.startsWith('fb__') && labelsItens[t.pageId]
+        ? { ...t, label: labelsItens[t.pageId] }
+        : t
+    ))
+  }, [labelsItens])
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0]
   const activePage = noTabPage ?? activeTab?.pageId ?? 'dashboard'
@@ -378,10 +403,10 @@ export default function App() {
       return
     }
 
-    const tab = makeTab(pageId)
+    const tab = makeTab(pageId, dynamicTitles, labelsItens)
     setTabs(prev => [...prev, tab])
     setActiveTabId(tab.id)
-  }, [])
+  }, [dynamicTitles, labelsItens])
 
   _initNavegacao(handleNavigate)
 
@@ -408,7 +433,7 @@ export default function App() {
     setShowPanel(false)
     const existing = tabs.find(t => t.pageId === pageId)
     if (existing) { setActiveTabId(existing.id); return }
-    const tab = makeTab(pageId, dynamicTitles)
+    const tab = makeTab(pageId, dynamicTitles, labelsItens)
     setTabs(prev => [...prev, tab])
     setActiveTabId(tab.id)
   }
@@ -428,6 +453,7 @@ export default function App() {
   // Topbar meta da página ativa
   const currentPageId = noTabPage ?? activePage
   const isDynamic = currentPageId.startsWith('fb__')
+  const metaBase = PAGE_META[currentPageId] ?? PAGE_META['dashboard']
   const topMeta = isDynamic
     ? {
         title: dynamicTitles[currentPageId]?.nome ?? currentPageId.slice(4).replace(/_/g, ' '),
@@ -435,7 +461,7 @@ export default function App() {
           ? `${dynamicTitles[currentPageId].tabela.toUpperCase()} · CRIADOR DE TELAS`
           : 'CADASTRO · CRIADOR DE TELAS',
       }
-    : (PAGE_META[currentPageId] ?? PAGE_META['dashboard'])
+    : { ...metaBase, title: labelsItens[currentPageId] || metaBase.title }
 
   function renderTabContent(pageId) {
     if (pageId.startsWith('fb__')) {

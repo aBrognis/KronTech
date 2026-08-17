@@ -1004,6 +1004,16 @@ export async function initDb() {
   // Formato de exibição dos valores numéricos do widget: numero | moeda | percentual
   await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS formato VARCHAR(20) DEFAULT 'numero'`).catch(e => console.warn('[migration] alter dash_001 formato (startup):', e.message))
 
+  // "posicao" vira a ordem explícita dos dashboards (campo Ordem + setinhas).
+  // Preenche uma vez a partir da ordem visual atual (grid_y/grid_x/id), só
+  // quando todos os widgets ainda estão com o valor padrão (nunca reordenados).
+  await query(`
+    UPDATE dash_001 SET posicao = sub.rn
+    FROM (SELECT id, ROW_NUMBER() OVER (ORDER BY grid_y, grid_x, id) - 1 AS rn FROM dash_001) sub
+    WHERE dash_001.id = sub.id
+      AND NOT EXISTS (SELECT 1 FROM dash_001 d2 WHERE d2.posicao <> 0)
+  `).catch(e => console.warn('[migration] backfill dash_001 posicao (startup):', e.message))
+
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()
 }
