@@ -17,7 +17,11 @@ if (build.status !== 0) process.exit(build.status)
 
 console.log('\n📦 Gerando instalador...')
 const builderBin = path.resolve(root, 'node_modules/electron-builder/cli.js')
-const pkg = spawnSync(process.execPath, [builderBin, '--win'], {
+// npmRebuild=false: bcrypt já publica prebuilds N-API (ABI estável entre
+// Node/Electron) para win32-x64 — deixar o @electron/rebuild forçar uma
+// recompilação via node-gyp é redundante e exige Visual Studio Build Tools
+// instalado à toa.
+const pkg = spawnSync(process.execPath, [builderBin, '--win', '--config.npmRebuild=false'], {
   stdio: 'inherit',
   env: (() => {
     const e = { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
