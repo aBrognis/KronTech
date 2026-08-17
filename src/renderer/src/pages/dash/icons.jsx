@@ -1,4 +1,4 @@
-// Ícones Lucide — conversão de nomes e componente genérico
+// Ícones Lucide: conversão de nomes e componente genérico
 import * as LucideIcons from 'lucide-react'
 
 export function toPascal(s) {

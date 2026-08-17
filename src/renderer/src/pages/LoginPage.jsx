@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { derivarCor } from '../lib/corPersonalizada'
 
-/* ── CSS injetado — cor de destaque parametrizada por accentColor ────────── */
+/* CSS injetado: cor de destaque parametrizada por accentColor */
 function buildCss(cDark, cLight) {
   return `
 .lp-left canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}

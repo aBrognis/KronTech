@@ -1,6 +1,6 @@
 // Deriva variações de uma cor de destaque (hex) para uso em telas que não
 // dependem do CSS global (Splash/Login rodam antes do <style id="kron-color-override">
-// ser aplicável de forma útil — usam tokens locais, não var(--or)).
+// ser aplicável de forma útil (usam tokens locais, não var(--or)).
 export function derivarCor(hex) {
   const h = /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : '#D95218'
   const r = parseInt(h.slice(1, 3), 16)

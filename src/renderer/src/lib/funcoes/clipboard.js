@@ -8,7 +8,7 @@ async function _escreverClipboard(texto) {
     if (!res.ok) throw new Error(res.erro)
     return res.data
   }
-  // fallback DOM — funciona na maioria dos contextos web
+// fallback DOM: funciona na maioria dos contextos web
   const el = document.createElement('textarea')
   el.value = String(texto)
   el.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none'

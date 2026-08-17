@@ -17,7 +17,7 @@ function paraApi(f) {
   return { id: f.id, nome: f.nome, descricao: f.descricao || '', gatilho: f.gatilho, trigger_tabela: f.trigger_tabela || '', etapas: f.etapas || [], ativo: f.ativo ?? true }
 }
 
-// Formulário de configuração por etapa — cada tipo salva em etapa.config.
+// Formulário de configuração por etapa: cada tipo salva em etapa.config.
 function EtapaConfigForm({ etapa, onChange }) {
   const cfg = etapa.config || {}
   const setCfg = (patch) => onChange({ ...etapa, config: { ...cfg, ...patch } })

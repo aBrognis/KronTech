@@ -931,7 +931,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                                 <tr key={i}>
                                   {previewFields.map(fld => (
                                     <td key={fld} style={{ padding:'10px 14px', borderBottom:'1px solid var(--bd)', color:'var(--t1)', fontVariantNumeric:'tabular-nums' }}>
-                                      {row[fld] == null ? <span style={{ color:'var(--t3)' }}>—</span> : String(row[fld])}
+                                      {row[fld] == null ? <span style={{ color:'var(--t3)' }}></span> : String(row[fld])}
                                     </td>
                                   ))}
                                 </tr>

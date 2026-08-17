@@ -1,7 +1,7 @@
 // Formatação de números e intervalos
 
 export function fmtNum(val) {
-  if (val == null || val === '') return '—'
+  if (val == null || val === '') return ''
   const n = Number(String(val).trim())
   if (!isNaN(n)) {
     if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M'

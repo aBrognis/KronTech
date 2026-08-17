@@ -6,7 +6,7 @@ import { opcoesVazias, slugify } from './camposDefaults.js'
 // Encapsula o array `campos` do FormBuilderModal e suas mutações diretas:
 // adicionar campo (via factory), atualizar propriedade, e reordenar por
 // drag&drop na lista de campos. Não inclui handleSalvar/aplicarTemplate
-// nem renderPreviewCampo — essas funções dependem de vários outros states
+// nem renderPreviewCampo; essas funções dependem de vários outros states
 // do componente (nomeTela, tela, onSalvar, etc.) e não têm fronteira clara
 // com o estado de campos isoladamente.
 export function useFormBuilderCampos(telaInicial, editando) {

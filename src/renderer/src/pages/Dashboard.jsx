@@ -75,7 +75,7 @@ export default function Dashboard({ onNavigate }) {
       if (w) setContainerW(w)
     })
     ro.observe(containerRef.current)
-    // Login/maximização da janela terminam depois deste mount — o container pode
+  // Login/maximização da janela terminam depois deste mount, o container pode
     // reportar uma largura desatualizada na primeira medição do ResizeObserver.
     // Reafirma a largura real em seguida (raf + timeout) para não depender só
     // de um evento de resize físico que talvez nunca chegue a disparar de novo.

@@ -47,7 +47,7 @@ export default function SplashScreen({ onDone, accentColor }) {
   const pctRef    = useRef(null)
   const dotRef    = useRef(null)
 
-  // lê tema salvo imediatamente — sem flash
+// lê tema salvo imediatamente, sem flash
   const savedTheme = localStorage.getItem('kt-theme') || 'dark'
   const [isDark] = useState(savedTheme === 'dark')
 

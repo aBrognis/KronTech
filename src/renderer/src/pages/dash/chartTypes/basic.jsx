@@ -238,7 +238,7 @@ export function grid({ rows, fields, fillHeight }) {
                   </td>
                 )
               }
-              return <td key={c} className={numCols.has(c)?'num':''}>{val!=null?(numCols.has(c)?fmtNum(val):String(val)):'—'}</td>
+              return <td key={c} className={numCols.has(c)?'num':''}>{val!=null?(numCols.has(c)?fmtNum(val):String(val)):''}</td>
             })}
           </tr>
         ))}

@@ -1,4 +1,4 @@
-// Barrel — reexporta tudo que dashShared.jsx expunha antes da divisão
+// Barrel: reexporta tudo que dashShared.jsx expunha antes da divisão
 export { toPascal, toKebab, LucideIcon, getAllIcons } from './icons'
 export { fmtNum, isNumCol, fmtInterval } from './format'
 export { TIPOS, PALETA, INTERVALOS } from './constants'

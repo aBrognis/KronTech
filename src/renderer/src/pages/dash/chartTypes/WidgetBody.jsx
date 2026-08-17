@@ -7,7 +7,7 @@ import { ComparisonBadge, computeAggregateDelta } from '../echartsHelpers'
 
 const RENDERERS = { ...basic, ...flow, ...matrix, ...statistical }
 
-// Tipos onde uma segunda série/overlay não faz sentido visualmente — recebem
+// Tipos onde uma segunda série/overlay não faz sentido visualmente, recebem
 // em vez disso um badge no canto com o delta agregado da 1ª coluna numérica.
 const NO_OVERLAY_TYPES = new Set([
   'pie','funnel','treemap','sunburst','heatmap','calendar_heatmap',
