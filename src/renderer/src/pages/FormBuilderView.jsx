@@ -746,7 +746,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       <div className="page-content" ref={contentRef}>
         {erro && <div style={{ background: 'rgba(248,113,113,.1)', border: '1px solid rgba(239,68,68,.4)', borderRadius: 8, padding: '10px 14px', fontSize: 11, color: 'var(--red)', marginBottom: 4 }}>{erro}</div>}
 
-        {/* ── Aba Acesso ── */}
+        {/* Aba Acesso */}
         {activeTab === 'acesso' && (
           <AbaAcesso
             tela={tela} camposData={camposData} nomeTabela={nomeTabela} total={total} registros={registros}
@@ -761,7 +761,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
           />
         )}
 
-        {/* ── Aba Cadastro ── */}
+        {/* Aba Cadastro */}
         {activeTab === 'cadastro' && (
           <>
             {temLayout ? (
@@ -914,7 +914,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         )}
       </div>
 
-      {/* ── Modal Pesquisa Padrão ── */}
+      {/* Modal Pesquisa Padrão */}
       {showConsulta && (
         <PesquisaPadraoModal
           titulo={`Pesquisa Padrão — ${tela?.nome_tela}`}
@@ -940,8 +940,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         />
       )}
 
-      {/* ── Modal Lookup ── */}
-      {/* ── Modal Redefinir Senha ── */}
+      {/* Modal Lookup */}
+      {/* Modal Redefinir Senha */}
       {redefinirOpen && (() => {
         const match = redefinirNova.length > 0 && redefinirConf.length > 0 && redefinirNova === redefinirConf
         const mismatch = redefinirConf.length > 0 && redefinirNova !== redefinirConf
@@ -1064,7 +1064,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         </div>
       )}
 
-      {/* ── Modal Importação em Massa ── */}
+      {/* Modal Importação em Massa */}
       {importando && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)' }}>
           <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 520, maxWidth: '94vw', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1135,7 +1135,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         </div>
       )}
 
-      {/* ── Popover "ver registro relacionado" ── */}
+      {/* Popover "ver registro relacionado" */}
       {lkpPopover && (
         <div style={{ position: 'fixed', left: lkpPopover.x, top: lkpPopover.y, zIndex: 1200, background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, boxShadow: 'var(--sh-lg)', padding: '10px 14px', minWidth: 200, maxWidth: 320 }}
           onClick={e => e.stopPropagation()}>

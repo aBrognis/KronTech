@@ -380,7 +380,7 @@ export default function FormDesigner({
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:8, height:'100%' }}>
 
-      {/* ── Toolbar ────────────────────────────────────────────────────────── */}
+      {/* Toolbar ──────────────────────────────────────────────────────── */}
       <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0, flexWrap:'wrap' }}>
 
         {/* Grupo 1: Histórico */}
@@ -436,10 +436,10 @@ export default function FormDesigner({
         </div>
       </div>
 
-      {/* ── Canvas + Panel ─────────────────────────────────────────────────── */}
+      {/* Canvas + Panel ───────────────────────────────────────────────── */}
       <div style={{ display:'flex', gap:14, flex:1, minHeight:0 }}>
 
-        {/* ── Canvas scroll container ─────────────────────────────────────── */}
+        {/* Canvas scroll container ───────────────────────────────────── */}
         <div ref={scrollRef} style={{ flex:1, overflow:'auto', border:'1px solid var(--bd)', borderRadius:12, background:'var(--bg)', boxShadow:'var(--sh-xs) inset' }}>
           {/* Wrapper sets the physical scroll area proportional to zoom */}
           <div style={{ width: canvasW*zoom, height: canvasH*zoom, position:'relative', flexShrink:0 }}>
@@ -640,7 +640,7 @@ export default function FormDesigner({
           </div>
         </div>
 
-        {/* ── Side panel ─────────────────────────────────────────────────── */}
+        {/* Side panel ───────────────────────────────────────────────── */}
         <div style={{ width: panelCollapsed ? 28 : 264, flexShrink:0, display:'flex', flexDirection:'column', transition:'width .18s ease', overflow:'hidden', position:'relative', background:'var(--s1)', border:'1px solid var(--bd)', borderRadius:12, boxShadow:'var(--sh-xs)' }}>
 
           {/* Expand button — shown only when collapsed */}
@@ -724,7 +724,7 @@ export default function FormDesigner({
           {/* ── Scrollable panel body */}
           <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', padding:'10px 10px 12px', display:'flex', flexDirection:'column', gap:8 }}>
 
-          {/* ── Canvas panel ──────────────────────────────────────────────── */}
+          {/* Canvas panel ────────────────────────────────────────────── */}
           {!selSingle && !selMulti && panelTab === 'campos' && (<>
             {/* Quick add — full-width prominent buttons in 2 cols */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
@@ -755,7 +755,7 @@ export default function FormDesigner({
 
           {!selSingle && !selMulti && panelTab === 'canvas' && (<>
 
-            {/* ── Dimensões ── */}
+            {/* Dimensões */}
             <div style={panelBox}>
               <div style={panelTitle}>Dimensões do canvas</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
@@ -777,7 +777,7 @@ export default function FormDesigner({
               </div>
             </div>
 
-            {/* ── Visualização ── */}
+            {/* Visualização */}
             <div style={panelBox}>
               <div style={panelTitle}>Visualização</div>
               <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
@@ -807,7 +807,7 @@ export default function FormDesigner({
               </div>
             </div>
 
-            {/* ── Margens ── */}
+            {/* Margens */}
             <div style={panelBox}>
               <div style={panelTitle}>Margens do canvas (mm)</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
@@ -862,7 +862,7 @@ export default function FormDesigner({
             </div>
           )}
 
-          {/* ── Multi-select panel ────────────────────────────────────────── */}
+          {/* Multi-select panel ──────────────────────────────────────── */}
           {selMulti && (<>
             <CollapseBox title="Alinhar">
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:4 }}>
@@ -891,7 +891,7 @@ export default function FormDesigner({
             </CollapseBox>
           </>)}
 
-          {/* ── Single field panel ────────────────────────────────────────── */}
+          {/* Single field panel ──────────────────────────────────────── */}
           {selSingle && (<>
             <CollapseBox title="Propriedades">
               <FieldPropPanel campo={selSingle} updateProp={updateProp} campos={campos} />
@@ -936,7 +936,7 @@ export default function FormDesigner({
         </div>
       </div>
 
-      {/* ── Context menu ───────────────────────────────────────────────────── */}
+      {/* Context menu ─────────────────────────────────────────────────── */}
       {ctxMenu && (
         <div onClick={e=>e.stopPropagation()} style={{ position:'fixed', left:ctxMenu.x, top:ctxMenu.y, zIndex:9999, background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:10, boxShadow:'var(--sh-lg)', padding:'6px 0', minWidth:168 }}>
           <CtxItem icon={Copy}   label="Copiar"   shortcut="Ctrl+C" onClick={()=>{ clipboard.current=campos.filter(c=>selected.has(c._key)).map(c=>({...c})); setCtxMenu(null) }}/>

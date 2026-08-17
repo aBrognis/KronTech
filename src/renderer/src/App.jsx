@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Sun, Moon, Play, X, Plus, ChevronLeft, ChevronRight, LayoutDashboard, CalendarDays, FolderOpen, Database, Settings, LayoutGrid } from 'lucide-react'
+import { Sun, Moon, Play, X, Plus, ChevronLeft, ChevronRight, LayoutDashboard, CalendarDays, FolderOpen, Database, Settings, LayoutGrid, Receipt } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { _initNavegacao } from './lib/funcoes/navegacao.js'
 import SplashScreen    from './pages/SplashScreen'
@@ -12,6 +12,7 @@ import DashboardDesigner  from './pages/DashboardDesigner'
 import Arquivos        from './pages/Arquivos'
 import EditorSQL       from './pages/EditorSQL'
 import Agenda          from './pages/Agenda'
+import Viagens         from './pages/Viagens'
 import FormBuilder     from './pages/FormBuilder'
 import FormBuilderView from './pages/FormBuilderView'
 import Configuracoes, { aplicarCorSistema } from './pages/Configuracoes'
@@ -25,6 +26,7 @@ const PAGE_META = {
   dashboard:           { title: 'Dashboard',            sub: 'VISÃO GERAL'                       },
   'dashboard-designer':{ title: 'Configurar Dashboard', sub: 'DASHBOARD · WIDGETS'               },
   agenda:              { title: 'Agenda',                sub: 'GESTÃO · COMPROMISSOS'             },
+  viagens:             { title: 'Despesas de Viagem',     sub: 'GESTÃO · REEMBOLSOS'               },
   arquivos:            { title: 'Arquivos',              sub: 'FERRAMENTAS · GESTÃO DE ARQUIVOS'  },
   sql:                 { title: 'Editor SQL',            sub: 'FERRAMENTAS · POSTGRESQL'          },
   formbuilder:         { title: 'Criador de Telas',      sub: 'FERRAMENTAS · CADASTROS DINÂMICOS' },
@@ -64,6 +66,7 @@ function WinControls() {
 const FIXED_PAGES = [
   { pageId: 'dashboard',           label: 'Dashboard',         Icon: LayoutDashboard },
   { pageId: 'agenda',              label: 'Agenda',            Icon: CalendarDays    },
+  { pageId: 'viagens',             label: 'Despesas de Viagem',Icon: Receipt         },
   { pageId: 'arquivos',            label: 'Arquivos',          Icon: FolderOpen      },
   { pageId: 'sql',                 label: 'Editor SQL',        Icon: Database        },
   { pageId: 'configuracoes',       label: 'Personalização',    Icon: Settings        },
@@ -76,7 +79,7 @@ function telaIcon(nome) {
 
 // ── Ícone de página ──────────────────────────────────────────────────────────
 const PAGE_ICON_MAP = {
-  dashboard: LayoutDashboard, agenda: CalendarDays,
+  dashboard: LayoutDashboard, agenda: CalendarDays, viagens: Receipt,
   arquivos: FolderOpen, sql: Database, configuracoes: Settings,
   'dashboard-designer': LayoutGrid,
 }
@@ -448,6 +451,7 @@ export default function App() {
       case 'dashboard':          return <Dashboard onNavigate={handleNavigate} />
       case 'dashboard-designer': return <DashboardDesigner newTrigger={newTrigger} onNavigate={handleNavigate} />
       case 'agenda':             return <Agenda newTrigger={newTrigger} />
+      case 'viagens':            return <Viagens newTrigger={newTrigger} sessao={sessao} />
       case 'arquivos':           return <Arquivos newTrigger={newTrigger} />
       case 'sql':                return <EditorSQL />
       case 'configuracoes':      return <Configuracoes />
@@ -463,7 +467,7 @@ export default function App() {
       <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} onLogout={() => { setSessao(null); setAppPhase('login') }} />
       <div className="main">
 
-        {/* ── Topbar ── */}
+        {/* Topbar */}
         <header className="topbar drag-region">
           <div className="tb-left no-drag">
             <h1 className="tb-title">{topMeta.title}</h1>
@@ -482,7 +486,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* ── Barra de abas (oculta se estiver em página sem aba) ── */}
+        {/* Barra de abas (oculta se estiver em página sem aba) */}
         {!noTabPage && (
           <TabBar
             tabs={tabs}
@@ -514,7 +518,7 @@ export default function App() {
           </>
         )}
 
-        {/* ── Conteúdo ── */}
+        {/* Conteúdo */}
         {noTabPage ? (
           <main className="content" key={noTabPage}>
             <ErrorBoundary key={noTabPage}>

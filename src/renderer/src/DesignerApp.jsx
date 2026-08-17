@@ -312,7 +312,7 @@ export default function DesignerApp() {
   return (
     <div className="app">
 
-      {/* ── Sidebar real do KronTech — idêntico ao App principal ── */}
+      {/* Sidebar real do KronTech — idêntico ao App principal */}
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
@@ -321,7 +321,7 @@ export default function DesignerApp() {
 
       <div className="main">
 
-        {/* ── Topbar ── */}
+        {/* Topbar */}
         <header className="topbar drag-region">
           <div className="tb-left no-drag">
             <h1 className="tb-title">{topMeta.title}</h1>
@@ -354,7 +354,7 @@ export default function DesignerApp() {
           </div>
         </header>
 
-        {/* ── Tab bar ── */}
+        {/* Tab bar */}
         <TabBar
           tabs={tabs}
           activeTabId={activeTabId}
@@ -365,7 +365,7 @@ export default function DesignerApp() {
           onTogglePanel={() => setShowPanel(v => !v)}
         />
 
-        {/* ── Painel Alt+Tab ── */}
+        {/* Painel Alt+Tab */}
         {showPanel && (
           <>
             <div
@@ -383,7 +383,7 @@ export default function DesignerApp() {
           </>
         )}
 
-        {/* ── Conteúdo das abas ── */}
+        {/* Conteúdo das abas */}
         <div className="tab-content-area">
           {tabs.map(tab => (
             <main

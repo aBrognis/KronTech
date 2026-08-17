@@ -341,14 +341,14 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
         : { display: 'flex', flexDirection: 'column', gap: 16 }
       }>
 
-      {/* ── ABA MÓDULOS ── */}
+      {/* ABA MÓDULOS */}
       {abaAtiva === 'modulos' && (
         <div style={hideHeader
           ? { flex: 1, overflow: 'hidden', display: 'flex', gap: 14, padding: '14px 16px' }
           : { display: 'flex', gap: 16 }
         }>
 
-          {/* ─── COLUNA ESQUERDA: gerenciamento de módulos ─── */}
+          {/* ─ COLUNA ESQUERDA: gerenciamento de módulos ─ */}
           <div style={{ flex: '0 0 360px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', minWidth: 0 }}>
 
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -461,7 +461,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
             )}
           </div>
 
-          {/* ─── COLUNA DIREITA: menu lateral ─── */}
+          {/* ─ COLUNA DIREITA: menu lateral ─ */}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: hideHeader ? 'hidden' : 'visible' }}>
             <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', ...(hideHeader ? { height: '100%' } : { minHeight: 440 }) }}>
 
@@ -544,7 +544,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
         </div>
       )}
 
-      {/* ── ABA TELAS ── */}
+      {/* ABA TELAS */}
       {abaAtiva === 'telas' && (hideHeader ? (
         <>
           {/* Busca — fixa acima do scroll */}
@@ -794,7 +794,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
         </>
       ))}
 
-      {/* ── ABA FUNÇÕES ── */}
+      {/* ABA FUNÇÕES */}
       {abaAtiva === 'funcoes' && (
         hideHeader ? (
           <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>

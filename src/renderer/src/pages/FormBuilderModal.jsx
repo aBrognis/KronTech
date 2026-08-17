@@ -799,7 +799,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
               {renderIdentificacao(false)}
               <div style={{ display: 'flex', gap: 0, flex: 1, minHeight: 0, border: '1px solid var(--bd)', borderRadius: 12, overflow: 'hidden', background: 'var(--s1)' }}>
 
-                {/* ── Coluna esquerda: lista de campos ── */}
+                {/* Coluna esquerda: lista de campos */}
                 <div style={{ width: 230, flexShrink: 0, borderRight: '1px solid var(--bd)', display: 'flex', flexDirection: 'column' }}>
 
                   {/* Header */}
@@ -894,7 +894,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
                   </div>
                 </div>
 
-                {/* ── Painel direito: edição ── */}
+                {/* Painel direito: edição */}
                 <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', background: 'var(--s1)' }}>
                   {renderPainel()}
                 </div>
@@ -979,7 +979,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         {/* Body */}
         <div style={{ overflowY: aba === 'designer' ? 'hidden' : 'auto', flex: 1, padding: aba === 'designer' ? 14 : '18px 22px', display: 'flex', flexDirection: 'column', gap: aba === 'designer' ? 0 : 20, minHeight: 0 }}>
 
-          {/* ── ABA: CAMPOS ── */}
+          {/* ABA: CAMPOS */}
           {aba === 'campos' && (
             <>
               {renderIdentificacao(false)}
@@ -1051,7 +1051,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
             </>
           )}
 
-          {/* ── ABA: DESIGNER ── */}
+          {/* ABA: DESIGNER */}
           {aba === 'designer' && (
             <FormDesigner
               campos={campos}
@@ -1063,7 +1063,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
             />
           )}
 
-          {/* ── ABA: PREVIEW ── */}
+          {/* ABA: PREVIEW */}
           {aba === 'preview' && renderPreview(false)}
 
         </div>

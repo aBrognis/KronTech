@@ -244,7 +244,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   return (
     <div className="dash-wrapper" style={{ display:'flex', flexDirection:'row' }}>
 
-      {/* ── LEFT RAIL ──────────────────────────────────────────────────────── */}
+      {/* LEFT RAIL ────────────────────────────────────────────────────── */}
       <div style={{ width:280, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid var(--bd)', overflow:'hidden', background:'var(--s1)' }}>
 
         <div style={{ padding:16, display:'flex', flexDirection:'column', gap:10, borderBottom:'1px solid var(--bd)' }}>
@@ -406,7 +406,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         </div>
       </div>
 
-      {/* ── RIGHT PANEL (editor) ───────────────────────────────────────────── */}
+      {/* RIGHT PANEL (editor) ─────────────────────────────────────────── */}
       <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         {!selected ? (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:14, color:'var(--t3)' }}>
@@ -417,7 +417,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
           </div>
         ) : (
           <>
-            {/* ── Header ── */}
+            {/* Header */}
             <div style={{ padding:'18px 30px 0', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20, flexShrink:0 }}>
               <div style={{ minWidth:0, flex:1 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10.5, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase', color:'var(--t3)', marginBottom:6 }}>
@@ -472,7 +472,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
               </div>
             </div>
 
-            {/* ── Tab bar ── */}
+            {/* Tab bar */}
             <div style={{ display:'flex', padding:'0 30px', borderBottom:'1px solid var(--bd)', flexShrink:0, marginTop:16 }}>
               {[
                 { id:'geral',     label:'Geral',      Icon: Sliders },
@@ -504,10 +504,10 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
               ))}
             </div>
 
-            {/* ── Tab panels ── */}
+            {/* Tab panels */}
             <div style={{ flex:1, minHeight:0, overflowY:'auto' }}>
 
-              {/* ── GERAL ── */}
+              {/* GERAL */}
               {tab === 'geral' && (
                 <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:22, maxWidth:1000 }}>
 
@@ -739,7 +739,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                 </div>
               )}
 
-              {/* ── QUERY SQL ── */}
+              {/* QUERY SQL */}
               {tab === 'query' && (
                 <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:22, maxWidth:1000 }}>
                   <div>
@@ -823,7 +823,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                     </div>
                   </div>
 
-                  {/* ── Comparação com período anterior ── */}
+                  {/* Comparação com período anterior */}
                   <div style={{ padding:'12px 14px', border:'1px solid var(--bd)', borderRadius:10, background:'var(--s2)' }}>
                     <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--t1)' }}>
                       <input
@@ -879,7 +879,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                 </div>
               )}
 
-              {/* ── RESULTADO ── */}
+              {/* RESULTADO */}
               {tab === 'resultado' && (
                 <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:22, maxWidth:1000 }}>
                   {!previewRows ? (

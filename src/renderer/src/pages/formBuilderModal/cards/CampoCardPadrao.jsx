@@ -122,7 +122,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
               />
             </div>
           )}
-          {/* ── Valor padrão + opções do campo ── */}
+          {/* Valor padrão + opções do campo */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
             {/* Valor padrão */}

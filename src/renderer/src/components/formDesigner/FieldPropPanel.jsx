@@ -136,7 +136,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
 
-      {/* ── Identificação ── */}
+      {/* Identificação */}
       <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
         <div>{lbl('Label')}{inp('label', campo.label, { placeholder:'Label do campo' })}</div>
         <div>{lbl('Nome no banco')}{inp('nomeCampo', campo.nomeCampo, { placeholder:'nome_campo', style:{ fontFamily:'monospace', fontSize:10 } })}</div>
@@ -165,7 +165,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
         )}
       </div>
 
-      {/* ── Configuração do tipo ── */}
+      {/* Configuração do tipo */}
       {(campo.tipo === 'codigo_auto' || campo.tipo === 'documento' || campo.tipo === 'calculo' || campo.tipo === 'avaliacao' || campo.tipo === 'radio' || campo.tipo === 'flags' || tiposComOpcoes.includes(campo.tipo)) && (
         <div style={{ display:'flex', flexDirection:'column', gap:6, borderTop:'1px solid var(--bd)', paddingTop:8 }}>
           {lbl('Config. do tipo')}
@@ -268,7 +268,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
         </div>
       )}
 
-      {/* ── Tamanho BD / Largura lista ── */}
+      {/* Tamanho BD / Largura lista */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, borderTop:'1px solid var(--bd)', paddingTop:8 }}>
         <div>
           {lbl('Largura % lista')}
@@ -286,7 +286,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
         </div>
       </div>
 
-      {/* ── Estilo ── */}
+      {/* Estilo */}
       <div style={{ borderTop:'1px solid var(--bd)', paddingTop:8, display:'flex', flexDirection:'column', gap:8 }}>
         {lbl('Estilo')}
 

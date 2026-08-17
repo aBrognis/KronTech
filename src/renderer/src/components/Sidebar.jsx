@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  LayoutDashboard, CalendarDays, Package, Zap,
+  LayoutDashboard, CalendarDays, Package, Zap, Receipt,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, LogOut
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
@@ -23,7 +23,8 @@ const MENU_BASE = [
     id: 'gestao',
     baseLabel: 'Gestão',
     items: [
-      { id: 'agenda', label: 'Agenda', Icon: CalendarDays },
+      { id: 'agenda',  label: 'Agenda',              Icon: CalendarDays },
+      { id: 'viagens', label: 'Despesas de Viagem',  Icon: Receipt      },
     ]
   },
   {

@@ -1,15 +1,15 @@
-import { Plus, Edit2, Trash2, Search, Save, X, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react'
+import { Plus, Edit2, Trash2, Search, Save, X, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, FileDown } from 'lucide-react'
 
 // Barra de ações padrão de formulários CRUD: alterna entre modo consulta
 // (Incluir/Alterar/Excluir/Consultar) e modo edição (Gravar/Desistir).
 // Extraído de FormBuilderView.jsx/Arquivos.jsx, que tinham o mesmo bloco
-// duplicado — este componente é a fonte única para esse padrão.
+// duplicado; este componente é a fonte única para esse padrão.
 export default function FormToolbar({
   mode,                    // 'view' | 'new' | 'edit'
   nav,                     // opcional: { currentIdx, total, onNav(idx) }
   temRegistros = true,     // desabilita Alterar/Excluir quando não há registros
   saving = false,
-  onIncluir, onAlterar, onExcluir, onConsultar,
+  onIncluir, onAlterar, onExcluir, onConsultar, onExportar,
   onGravar, onDesistir,
 }) {
   const isRO = mode === 'view'
@@ -36,6 +36,7 @@ export default function FormToolbar({
             {onAlterar && <button className="btn btn-ghost" onClick={onAlterar} disabled={!temRegistros}><Edit2 size={13} /> Alterar</button>}
             {onExcluir && <button className="btn btn-danger" onClick={onExcluir} disabled={!temRegistros}><Trash2 size={13} /> Excluir</button>}
             {onConsultar && <button className="btn btn-ghost" onClick={onConsultar}><Search size={13} /> Consultar</button>}
+            {onExportar && <button className="btn btn-ghost" onClick={onExportar}><FileDown size={13} /> Exportar</button>}
           </>
         ) : (
           <>

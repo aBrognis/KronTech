@@ -307,7 +307,7 @@ export default function EditorSQL() {
   return (
     <div className="sql-layout">
 
-      {/* ── Modal confirmação destrutiva ─────────────────── */}
+      {/* Modal confirmação destrutiva ───────────────── */}
       {confirm && (
         <div className="sql-confirm-overlay" onClick={() => setConfirm(null)}>
           <div className="sql-confirm" onClick={e => e.stopPropagation()}>
@@ -331,7 +331,7 @@ export default function EditorSQL() {
         </div>
       )}
 
-      {/* ── Sidebar: Tabelas ──────────────────────────────── */}
+      {/* Sidebar: Tabelas ────────────────────────────── */}
       <aside className="sql-schema">
         <div className="sql-schema-top">
           <div className="sql-schema-head">
@@ -401,7 +401,7 @@ export default function EditorSQL() {
         </div>
       </aside>
 
-      {/* ── Editor Principal ─────────────────────────────── */}
+      {/* Editor Principal ───────────────────────────── */}
       <div className="sql-main">
 
         {/* Toolbar */}
@@ -527,7 +527,7 @@ export default function EditorSQL() {
           />
         </div>
 
-        {/* ── Área de Resultados com abas ── */}
+        {/* Área de Resultados com abas */}
         <div className="sql-results-area">
 
           {/* Abas Resultado / Histórico */}
@@ -555,7 +555,7 @@ export default function EditorSQL() {
             )}
           </div>
 
-          {/* ── Aba Resultado ── */}
+          {/* Aba Resultado */}
           {resultTab === 'resultado' && (
             <div className="sql-results">
               {!result && !running && (
@@ -611,7 +611,7 @@ export default function EditorSQL() {
             </div>
           )}
 
-          {/* ── Aba Histórico ── */}
+          {/* Aba Histórico */}
           {resultTab === 'historico' && (
             <div className="sql-results sql-hist-panel">
               <div className="sql-hist-header">

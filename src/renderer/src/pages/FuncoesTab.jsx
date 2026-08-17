@@ -35,7 +35,7 @@ export default function FuncoesTab({ telas = [] }) {
   return (
     <div style={{ display: 'flex', height: '100%', minHeight: 0, gap: 0 }}>
 
-      {/* ── Nav lateral ────────────────────────────────────────────────────── */}
+      {/* Nav lateral ──────────────────────────────────────────────────── */}
       <div style={{ width: 196, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 8px', borderRight: '1px solid var(--bd)', overflowY: 'auto' }}>
         {SECOES.map((s, i) => {
           const ativo = secao === s.id
@@ -61,7 +61,7 @@ export default function FuncoesTab({ telas = [] }) {
         })}
       </div>
 
-      {/* ── Conteúdo da seção ──────────────────────────────────────────────── */}
+      {/* Conteúdo da seção ────────────────────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
         {/* Header da seção */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>

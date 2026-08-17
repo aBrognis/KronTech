@@ -371,7 +371,7 @@ export default function Arquivos({ newTrigger }) {
   return (
     <div className="page-with-footer">
 
-      {/* ── Tab bar ── */}
+      {/* Tab bar */}
       <div className="page-tabs">
         <button className={`page-tab${activeTab === 'acesso'   ? ' active' : ''}`} onClick={() => setActiveTab('acesso')}>Acesso</button>
         <button className={`page-tab${activeTab === 'cadastro' ? ' active' : ''}`} onClick={() => setActiveTab('cadastro')}>Cadastro</button>
@@ -542,7 +542,7 @@ export default function Arquivos({ newTrigger }) {
             {!loading && (items.length > 0 || !isRO) && (
               <div className="script-form-layout">
 
-                {/* ── Coluna esquerda ── */}
+                {/* Coluna esquerda */}
                 <div className="script-form-left">
 
                   {/* Linha 1: Código + Categoria */}
@@ -625,7 +625,7 @@ export default function Arquivos({ newTrigger }) {
                   </div>
                 </div>
 
-                {/* ── Coluna direita ── */}
+                {/* Coluna direita */}
                 <div className="script-form-right">
                   <div className="form-group" style={{ marginBottom: 14 }}>
                     <label className="form-label">Descrição / Observações</label>
@@ -673,7 +673,7 @@ export default function Arquivos({ newTrigger }) {
         )}
       </div>
 
-      {/* ── Modal Importação em Massa ── */}
+      {/* Modal Importação em Massa */}
       {importando && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)' }}>
           <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 520, maxWidth: '94vw', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -760,7 +760,7 @@ export default function Arquivos({ newTrigger }) {
         </div>
       )}
 
-      {/* ── Modal Pesquisa Padrão ── */}
+      {/* Modal Pesquisa Padrão */}
       {showConsulta && (
         <PesquisaPadraoModal
           titulo="Pesquisa Padrão — ARQ_001"
@@ -784,7 +784,7 @@ export default function Arquivos({ newTrigger }) {
         />
       )}
 
-      {/* ── Modal Preview ── */}
+      {/* Modal Preview */}
       {preview && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(8px)' }}
           onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
@@ -808,7 +808,7 @@ export default function Arquivos({ newTrigger }) {
         </div>
       )}
 
-      {/* ── Rodapé (só na aba Cadastro) ── */}
+      {/* Rodapé (só na aba Cadastro) */}
       {activeTab === 'cadastro' && (
         <FormToolbar
           mode={mode}

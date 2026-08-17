@@ -205,10 +205,10 @@ export default function Configuracoes() {
 
       <div style={{ display: 'flex', gap: 20, flex: 1, minHeight: 0, alignItems: 'flex-start' }}>
 
-        {/* ─── COLUNA ESQUERDA: controles ─── */}
+        {/* ─ COLUNA ESQUERDA: controles ─ */}
         <div style={{ flex: '1 1 460px', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* ── Aparência ── */}
+          {/* Aparência */}
           <SecCard icon={<Palette size={14} />} title="Aparência" subtitle="Cor de destaque usada em botões, ícones e realces">
             {!editando ? (
               <div className="form-input" style={{
@@ -297,12 +297,12 @@ export default function Configuracoes() {
             )}
           </SecCard>
 
-          {/* ── Identidade ── */}
+          {/* Identidade */}
           <SecCard icon={<User size={14} />} title="Identidade" subtitle="Nome exibido no app">
             <Campo label="Nome do sistema" value={form.nomeSistema} onChange={v => set('nomeSistema', v)} placeholder="KronTech" disabled={!editando} />
           </SecCard>
 
-          {/* ── Ações ── */}
+          {/* Ações */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             {!editando ? (
               <button
@@ -348,7 +348,7 @@ export default function Configuracoes() {
           </div>
         </div>
 
-        {/* ─── COLUNA DIREITA: preview ao vivo ─── */}
+        {/* ─ COLUNA DIREITA: preview ao vivo ─ */}
         <div style={{ flex: '1 1 420px', minWidth: 340, alignSelf: 'stretch', display: 'flex', flexDirection: 'column' }}>
           <div style={{
             background: 'var(--s1)', border: '1px solid var(--bd)',

@@ -305,7 +305,7 @@ export default function Agenda({ newTrigger }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', minHeight:0 }}>
 
-      {/* ── Toolbar ── */}
+      {/* Toolbar */}
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, flexShrink:0, flexWrap:'wrap' }}>
         {/* Nav */}
         <button onClick={navPrev} style={NAV_BTN}><ChevronLeft size={15} strokeWidth={2}/></button>
@@ -349,7 +349,7 @@ export default function Agenda({ newTrigger }) {
         </div>
       )}
 
-      {/* ── Conteúdo ── */}
+      {/* Conteúdo */}
       <div style={{ flex:1, display:'flex', minHeight:0, border:'1px solid var(--bd)', borderRadius:10, overflow:'hidden', background:'var(--s1)' }}>
 
         {view==='mensal' && (
@@ -396,7 +396,7 @@ export default function Agenda({ newTrigger }) {
         )}
       </div>
 
-      {/* ── Modal ── */}
+      {/* Modal */}
       {modal && (
         <EventoModal
           modal={modal} modo={modoEvento} form={form} setForm={setForm}

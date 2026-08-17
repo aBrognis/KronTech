@@ -209,7 +209,7 @@ export default function ModulosPage() {
       {/* Layout de duas colunas */}
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
 
-        {/* ─── COLUNA ESQUERDA: gerenciamento de módulos ─── */}
+        {/* ─ COLUNA ESQUERDA: gerenciamento de módulos ─ */}
         <div style={{ flex: '0 0 360px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{
             background: 'var(--s1)', border: '1px solid var(--bd)',
@@ -372,7 +372,7 @@ export default function ModulosPage() {
           </div>
         </div>
 
-        {/* ─── COLUNA DIREITA: menu lateral ─── */}
+        {/* ─ COLUNA DIREITA: menu lateral ─ */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{
             background: 'var(--s1)', border: '1px solid var(--bd)',
