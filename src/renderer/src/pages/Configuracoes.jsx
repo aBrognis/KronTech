@@ -156,7 +156,7 @@ export default function Configuracoes() {
   }, [])
 
   // A cor só é aplicada ao sistema inteiro (sidebar, abas, badges) ao salvar
-  // ou cancelar — enquanto em edição, só a pré-visualização à direita reflete
+  // ou cancelar; enquanto em edição, só a pré-visualização à direita reflete
   // a escolha, para não mudar o app inteiro no meio de uma alteração ainda
   // não confirmada.
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
@@ -362,7 +362,7 @@ export default function Configuracoes() {
             }}>
               <LayoutDashboard size={13} color="var(--or)" />
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Pré-visualização</span>
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>— como o app fica com essas cores</span>
+              <span style={{ fontSize: 11, color: 'var(--t3)' }}>como o app fica com essas cores</span>
             </div>
 
             <div style={{ flex: 1, padding: 16, display: 'flex', gap: 12, minHeight: 0 }}>
@@ -489,7 +489,7 @@ function SecCard({ icon, title, subtitle, children }) {
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)' }}>
           {title}
         </span>
-        {subtitle && <span style={{ fontSize: 11, color: 'var(--t3)' }}>— {subtitle}</span>}
+        {subtitle && <span style={{ fontSize: 11, color: 'var(--t3)' }}>{subtitle}</span>}
       </div>
       <div style={{ padding: '14px 16px' }}>
         {children}

@@ -225,7 +225,7 @@ export default function ModulosPage() {
             }}>
               <LayoutGrid size={13} color="var(--or)" />
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Módulos</span>
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>— agrupe telas no sidebar</span>
+              <span style={{ fontSize: 11, color: 'var(--t3)' }}>agrupe telas no sidebar</span>
             </div>
 
           <div style={{ padding: '12px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -357,7 +357,7 @@ export default function ModulosPage() {
                           style={{ height: 26, padding: '0 7px' }}
                           onClick={() => handleExcluirModulo(mod)}
                           disabled={qtd > 0}
-                          title={qtd > 0 ? `${qtd} tela(s) vinculada(s) — remova antes` : 'Excluir módulo'}
+                          title={qtd > 0 ? `${qtd} tela(s) vinculada(s), remova antes` : 'Excluir módulo'}
                         >
                           <Trash2 size={11} />
                         </button>
@@ -389,7 +389,7 @@ export default function ModulosPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Menu size={13} color="var(--or)" />
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Menu Lateral</span>
-                <span style={{ fontSize: 11, color: 'var(--t3)' }}>— ordem das seções e telas</span>
+                <span style={{ fontSize: 11, color: 'var(--t3)' }}>ordem das seções e telas</span>
               </div>
               <button
                 className="btn btn-primary"

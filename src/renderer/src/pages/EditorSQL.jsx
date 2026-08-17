@@ -172,7 +172,7 @@ export default function EditorSQL() {
   // Histórico
   const [history, setHistory]     = useState(loadHistory)
 
-  // SQL fixado — exibe o comando que gerou o resultado atual
+  // SQL fixado: exibe o comando que gerou o resultado atual
   const [lastRunSql, setLastRunSql] = useState('')
   const [pinSql,    setPinSql]     = useState(false)
   const [copied,    setCopied]     = useState(false)
@@ -271,7 +271,7 @@ export default function EditorSQL() {
       return
     }
 
-    // F6 — executa qualquer DML/DDL, pede confirmação se destrutivo
+    // F6: executa qualquer DML/DDL, pede confirmação se destrutivo
     if (isDestructive(q)) { setConfirm(q); return }
     runQuery(q)
   }
@@ -407,11 +407,11 @@ export default function EditorSQL() {
         {/* Toolbar */}
         <div className="sql-toolbar">
 
-          {/* F2 — Arquivo (abre / salva) */}
+          {/* F2: Arquivo (abre / salva) */}
           <button
             className="sql-flat-btn"
             onClick={handleFileAction}
-            title={currentFile ? `Salvar — ${currentFile}` : 'Abrir arquivo SQL (F2)'}
+            title={currentFile ? `Salvar: ${currentFile}` : 'Abrir arquivo SQL (F2)'}
           >
             {currentFile
               ? <Save size={13} strokeWidth={2} />
@@ -422,24 +422,24 @@ export default function EditorSQL() {
 
           <div className="sql-sep" />
 
-          {/* F9 — Consultar (SELECT) */}
+          {/* F9: Consultar (SELECT) */}
           <button
             className={`sql-flat-btn primary${running ? ' running' : ''}${f9Warn ? ' f9-warn' : ''}`}
             onClick={() => triggerExecute('select')}
             disabled={running || !sql.trim()}
-            title="Consultar — somente SELECT (F9)"
+            title="Consultar: somente SELECT (F9)"
           >
             <Play size={13} strokeWidth={2} fill="currentColor" />
             {running ? 'Consultando...' : f9Warn ? 'Só SELECT!' : 'Consultar'}
             {!running && !f9Warn && <span className="sql-flat-kbd">F9</span>}
           </button>
 
-          {/* F6 — Executar DML/DDL (DROP, CREATE, INSERT, DELETE...) */}
+          {/* F6: Executar DML/DDL (DROP, CREATE, INSERT, DELETE...) */}
           <button
             className="sql-flat-btn execute"
             onClick={() => triggerExecute('execute')}
             disabled={running || !sql.trim()}
-            title="Executar — DROP, CREATE, INSERT, UPDATE, DELETE, ALTER... (F6)"
+            title="Executar: DROP, CREATE, INSERT, UPDATE, DELETE, ALTER... (F6)"
           >
             <Zap size={13} strokeWidth={2} />
             Executar
@@ -459,7 +459,7 @@ export default function EditorSQL() {
             Formatar
           </button>
 
-          {/* AA — tudo maiúsculo */}
+          {/* AA: tudo maiúsculo */}
           <button
             className="sql-flat-btn"
             onClick={() => setSql(toAllUppercase(sql))}
@@ -502,7 +502,7 @@ export default function EditorSQL() {
                 ? <><CheckCircle2 size={12} strokeWidth={2} />
                     {isSelect
                       ? `${rows.length} linha${rows.length !== 1 ? 's' : ''}`
-                      : `${result.data?.command} — ${result.data?.rowCount ?? 0} afetada${(result.data?.rowCount ?? 0) !== 1 ? 's' : ''}`}
+                      : `${result.data?.command}: ${result.data?.rowCount ?? 0} afetada${(result.data?.rowCount ?? 0) !== 1 ? 's' : ''}`}
                   </>
                 : <><AlertCircle size={12} strokeWidth={2} />Erro</>
               }
@@ -540,7 +540,7 @@ export default function EditorSQL() {
               <History size={11} strokeWidth={1.75} /> Histórico
               {history.length > 0 && <span className="sql-result-tab-badge neutral">{history.length}</span>}
             </button>
-            {/* SQL mantido — aparece quando pinSql está ativo e há SQL executado */}
+            {/* SQL mantido: aparece quando pinSql está ativo e há SQL executado */}
             {pinSql && lastRunSql && (
               <div className="sql-pinned-bar">
                 <span className="sql-pinned-label">SQL:</span>
@@ -573,7 +573,7 @@ export default function EditorSQL() {
               {result?.ok && !isSelect && (
                 <div className="sql-success">
                   <CheckCircle2 size={14} strokeWidth={2} />
-                  <span><strong>{result.data?.command}</strong> — {result.data?.rowCount ?? 0} linha{(result.data?.rowCount ?? 0) !== 1 ? 's' : ''} afetada{(result.data?.rowCount ?? 0) !== 1 ? 's' : ''} em {result.ms}ms</span>
+                  <span><strong>{result.data?.command}</strong>: {result.data?.rowCount ?? 0} linha{(result.data?.rowCount ?? 0) !== 1 ? 's' : ''} afetada{(result.data?.rowCount ?? 0) !== 1 ? 's' : ''} em {result.ms}ms</span>
                 </div>
               )}
               {result?.ok && isSelect && rows.length === 0 && (
@@ -583,7 +583,7 @@ export default function EditorSQL() {
                 <div className="sql-table-wrap">
                   {rows.length > RESULT_CAP && (
                     <div className="sql-cap-warn">
-                      Exibindo {RESULT_CAP} de {rows.length} linhas — use LIMIT para reduzir
+                      Exibindo {RESULT_CAP} de {rows.length} linhas. Use LIMIT para reduzir
                     </div>
                   )}
                   <table className="sql-table">

@@ -57,12 +57,12 @@ function filtrarStr(val = '', busca, modo) {
 }
 
 function fmtDate(ts) {
-  if (!ts) return '—'
+  if (!ts) return ''
   return new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function fmtSize(bytes) {
-  if (!bytes) return '—'
+  if (!bytes) return ''
   if (bytes < 1024)       return `${bytes} B`
   if (bytes < 1024 ** 2)  return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 ** 3)  return `${(bytes / 1024 ** 2).toFixed(1)} MB`
@@ -95,7 +95,7 @@ export default function Arquivos({ newTrigger }) {
   // Modal Pesquisa Padrão
   const [showConsulta, setShowConsulta] = useState(false)
 
-  // Filtros aba Acesso (server-side, paginado — só roda ao clicar Buscar)
+  // Filtros aba Acesso (server-side, paginado, só roda ao clicar Buscar)
   const [fCategoria,  setFCategoria]  = useState('')
   const [fPasta,      setFPasta]      = useState('')
   const [fNome,       setFNome]       = useState('')
@@ -286,7 +286,7 @@ export default function Arquivos({ newTrigger }) {
     executarConsultaAcesso({ fPagina: 1 })
   }
 
-  // Só limpa os campos — mantém os registros já exibidos, sem reconsultar.
+  // Só limpa os campos, mantém os registros já exibidos, sem reconsultar.
   function limparFiltros() {
     setFCategoria(''); setFPasta(''); setFNome(''); setFTags('')
   }
@@ -349,7 +349,7 @@ export default function Arquivos({ newTrigger }) {
     if (!r.ok) { setErro(r.erro || 'Não foi possível copiar o arquivo.'); return }
     setCopiado('local')
     setTimeout(() => setCopiado(null), 3000)
-    // mostra onde foi copiado — abre a pasta temp
+    // mostra onde foi copiado, abre a pasta temp
     if (confirm(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`)) {
       const pasta = r.destino.substring(0, r.destino.lastIndexOf('\\'))
       await window.api.arquivos.abrirPasta(pasta)
@@ -462,7 +462,7 @@ export default function Arquivos({ newTrigger }) {
               )}
             </div>
 
-            {/* Estado inicial — aguardando consulta */}
+            {/* Estado inicial, aguardando consulta */}
             {fResultados === null ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
                 <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
@@ -494,18 +494,18 @@ export default function Arquivos({ newTrigger }) {
                             onMouseLeave={e => { e.currentTarget.style.background = 'var(--s1)' }}
                           >
                             <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
-                            <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || '—'}</td>
+                            <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || ''}</td>
                             <td style={{ ...tdS, color: 'var(--t1)' }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                 <ExtIcon ext={r.arquivo_ext} size={13} />{r.nome}
                               </span>
                             </td>
-                            <td style={tdS}>{r.categoria || '—'}</td>
-                            <td style={tdS}>{r.pasta || '—'}</td>
-                            <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontSize: 11, textTransform: 'uppercase' }}>{r.arquivo_ext || '—'}</td>
+                            <td style={tdS}>{r.categoria || ''}</td>
+                            <td style={tdS}>{r.pasta || ''}</td>
+                            <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontSize: 11, textTransform: 'uppercase' }}>{r.arquivo_ext || ''}</td>
                             <td style={tdS}>{fmtSize(r.arquivo_tamanho)}</td>
                             <td style={{ ...tdS, textAlign: 'center' }}>
-                              {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
+                              {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}></span>}
                             </td>
                           </tr>
                         )
@@ -550,7 +550,7 @@ export default function Arquivos({ newTrigger }) {
                     <div className="form-group">
                       <label className="form-label">Código</label>
                       <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
-                        {form.codigo || '—'}
+                        {form.codigo || ''}
                       </div>
                     </div>
                     <div className="form-group">
@@ -562,7 +562,7 @@ export default function Arquivos({ newTrigger }) {
                     <div className="form-group">
                       <label className="form-label">Pasta Virtual</label>
                       {isRO
-                        ? <input className="form-input" value={form.pasta || '—'} disabled />
+                        ? <input className="form-input" value={form.pasta || ''} disabled />
                         : <input className="form-input" placeholder="ex: Contratos, Manuais..." value={form.pasta} onChange={e => setField('pasta', e.target.value)} list="pastas-list" />
                       }
                       <datalist id="pastas-list">{pastas.map(p => <option key={p} value={p} />)}</datalist>
@@ -639,7 +639,7 @@ export default function Arquivos({ newTrigger }) {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {[
                           ['Nome original', form.arquivo_nome],
-                          ['Extensão',      form.arquivo_ext?.toUpperCase() || '—'],
+                          ['Extensão',      form.arquivo_ext?.toUpperCase() || ''],
                           ['Tamanho',       fmtSize(form.arquivo_tamanho)],
                         ].map(([k, v]) => (
                           <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
@@ -763,7 +763,7 @@ export default function Arquivos({ newTrigger }) {
       {/* Modal Pesquisa Padrão */}
       {showConsulta && (
         <PesquisaPadraoModal
-          titulo="Pesquisa Padrão — ARQ_001"
+          titulo="Pesquisa Padrão · ARQ_001"
           campos={CAMPOS_BUSCA.map(c => ({ nome_campo: c.val, label: c.label }))}
           colunasExibidas={COLUNAS_MODAL_ARQUIVOS}
           campoInicial="nome"
@@ -777,9 +777,9 @@ export default function Arquivos({ newTrigger }) {
           onFechar={() => setShowConsulta(false)}
           renderCelula={(r, c) => {
             if (c.nome_campo === 'nome') return <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ExtIcon ext={r.arquivo_ext} size={12} />{r.nome}</span>
-            if (c.nome_campo === 'arquivo_ext') return <span style={{ textTransform: 'uppercase' }}>{r.arquivo_ext || '—'}</span>
+            if (c.nome_campo === 'arquivo_ext') return <span style={{ textTransform: 'uppercase' }}>{r.arquivo_ext || ''}</span>
             if (c.nome_campo === 'arquivo_tamanho') return fmtSize(r.arquivo_tamanho)
-            return String(r[c.nome_campo] ?? '—')
+            return String(r[c.nome_campo] ?? '')
           }}
         />
       )}

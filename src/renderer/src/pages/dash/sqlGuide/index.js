@@ -1,6 +1,6 @@
 // SQL_HINTS (placeholder do textarea) e SQL_GUIDE (regra + exemplos) por tipo de widget.
 // Todos os exemplos consultam a tabela demo kr_demo_vendas (populada via botão
-// "Popular demo" no Designer) — colunas: vendedor, regiao, produto, categoria, canal,
+// "Popular demo" no Designer), colunas: vendedor, regiao, produto, categoria, canal,
 // status, quantidade, valor, custo, avaliacao, data_venda.
 
 export const SQL_HINTS = {
@@ -164,7 +164,7 @@ export const SQL_GUIDE = {
     ],
   },
   boxplot: {
-    regra: 'Col 1 = categoria. Col 2 = valor numérico (uma linha por observação — o widget calcula mín/Q1/mediana/Q3/máx automaticamente).',
+    regra: 'Col 1 = categoria. Col 2 = valor numérico (uma linha por observação; o widget calcula mín/Q1/mediana/Q3/máx automaticamente).',
     exemplos: [
       { label: 'Distribuição de valor por categoria', sql: `SELECT categoria, valor\nFROM kr_demo_vendas` },
     ],
@@ -176,7 +176,7 @@ export const SQL_GUIDE = {
     ],
   },
   pictorial_bar: {
-    regra: 'Col 1 = categoria. Col 2 = valor. Renderiza como blocos repetidos em vez de barra sólida — ideal para poucas categorias com valores redondos.',
+    regra: 'Col 1 = categoria. Col 2 = valor. Renderiza como blocos repetidos em vez de barra sólida, ideal para poucas categorias com valores redondos.',
     exemplos: [
       { label: 'Vendas por região', sql: `SELECT regiao, COUNT(*) AS total\nFROM kr_demo_vendas\nGROUP BY regiao\nORDER BY total DESC` },
     ],

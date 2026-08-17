@@ -3,7 +3,7 @@ export const TEMPLATES = [
   {
     id: 'gestor_arquivos',
     label: 'Gestor de Arquivos', categoria: 'Documentos',
-    descricao: 'Espelho exato da tela nativa de Arquivos (arq_001) — layout idêntico com painel lateral de informações.',
+    descricao: 'Espelho exato da tela nativa de Arquivos (arq_001), layout idêntico com painel lateral de informações.',
     nomeTela: 'Gestor de Arquivos', nomeTabela: 'arquivo_001', icone: 'paperclip', canvasW: 1200, canvasH: 426,
     campos: [
       // Coluna principal (esquerda): x_pos 14..986, largura útil 972px
@@ -404,7 +404,7 @@ export const TEMPLATES = [
       { _key:'ch13', nomeCampo:'descricao',      label:'Descrição do Problema',tipo:'texto_longo',tamanho:0,obrigatorio:true,sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:234, w_px:579, h_px:100 },
       { _key:'ch14', nomeCampo:'resolucao',      label:'Resolução',       tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:607, y_pos:234, w_px:579, h_px:100 },
       { _key:'ch15', nomeCampo:'anexo',          label:'Anexo',           tipo:'arquivo',     tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:342, w_px:1172, h_px:90 },
-      // Avaliação full width — não precisa partir com outra coisa
+      // Avaliação full width, não precisa partir com outra coisa
       { _key:'ch16', nomeCampo:'avaliacao',      label:'Avaliação do Atendimento',tipo:'avaliacao',tamanho:0,obrigatorio:false,sequencial:false,campoBusca:false, valorPadrao:'0',   largura:50,  opcoes:{max:5},        x_pos:14,  y_pos:440, w_px:1172, h_px:56 },
       { _key:'ch17', nomeCampo:'_fav',           label:'Favorito',        tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:504, w_px:220, h_px:44 },
       { _key:'ch18', nomeCampo:'_ts',            label:'Datas',           tipo:'timestamps',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:248, y_pos:504, w_px:938, h_px:56 },
@@ -425,7 +425,7 @@ export const TEMPLATES = [
       // Linha 2: Cargo(430)+14+Setor(430)=874→+14=888≠ → Cargo(579)+14+Setor(367)=960: last=607+367=974≠ → Cargo(579)+Setor(379)=958+14: last=607+379=986≠1186 → just 2 fields: Cargo(579)+gap+Setor(579)=1172: last=607+579=1186✓
       { _key:'co4',  nomeCampo:'cargo',          label:'Cargo',           tipo:'texto',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:49,  opcoes:null,           x_pos:14,  y_pos:78,  w_px:579, h_px:56 },
       { _key:'co5',  nomeCampo:'setor',          label:'Setor',           tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:49,  opcoes:null,           x_pos:607, y_pos:78,  w_px:579, h_px:56 },
-      // Status full width (respeitando foto à direita — foto ocupa y14 a y164, status y164+)
+      // Status full width (respeitando foto à direita: foto ocupa y14 a y164, status y164+)
       { _key:'co6',  nomeCampo:'status',         label:'Status',          tipo:'radio',       tamanho:20,  obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'ativo',largura:100, opcoes:[
         {label:'Ativo',valor:'ativo',cor:'#4ADE80'},{label:'Férias',valor:'ferias',cor:'#60A5FA'},{label:'Afastado',valor:'afastado',cor:'#FBD24C'},{label:'Desligado',valor:'desligado',cor:'#F87171'},
       ], x_pos:14,  y_pos:172, w_px:1172, h_px:56 },
@@ -529,7 +529,7 @@ export const TEMPLATES = [
     descricao: 'Agenda leve de contatos com telefone, e-mail, empresa, grupo e link para redes sociais.',
     nomeTela: 'Agenda de Contatos', nomeTabela: 'contato_001', icone: 'contact', canvasW: 1200, canvasH: 580,
     campos: [
-      // Linha 1: Nome(920)+14+Foto(238): last=948+238=1186✓ — foto ocupa y14 a y144
+      // Linha 1: Nome(920)+14+Foto(238): last=948+238=1186✓, foto ocupa y14 a y144
       { _key:'ag1',  nomeCampo:'nome',           label:'Nome',            tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:79,  opcoes:null,           x_pos:14,  y_pos:14,  w_px:920, h_px:56 },
       { _key:'ag2',  nomeCampo:'foto',           label:'Foto',            tipo:'imagem',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:20,  opcoes:null,           x_pos:948, y_pos:14,  w_px:238, h_px:140 },
       // Linha 2: Empresa(579)+14+Cargo(579)=1172→last=607+579=1186✓
