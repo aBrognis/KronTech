@@ -5,7 +5,7 @@ import PaginacaoBar from './PaginacaoBar.jsx'
 import PainelFiltros from './PainelFiltros.jsx'
 
 // Aba "Acesso": filtro por coluna (server-side) + tabela paginada de
-// registros da tela. Só lê tela/registros/dados de acesso via props — não
+// registros da tela. Só lê tela/registros/dados de acesso via props, não
 // toca no form de edição.
 export default function AbaAcesso({
   tela, camposData, nomeTabela, total, registros, currentIdx, setCurrentIdx, carregarForm,
@@ -22,30 +22,30 @@ export default function AbaAcesso({
   const renderCell = (c, reg) => {
     const v   = reg[c.nome_campo]
     const ops = Array.isArray(c.opcoes) ? c.opcoes : []
-    if (c.tipo === 'booleano') return v ? '✓' : '—'
+    if (c.tipo === 'booleano') return v ? '✓' : ''
     if (c.tipo === 'radio' || c.tipo === 'select') {
       const op = ops.find(o => o.valor === v)
-      return op ? <span style={{ color: op.cor||'var(--t2)', fontWeight: 600 }}>{op.label}</span> : String(v ?? '—')
+      return op ? <span style={{ color: op.cor||'var(--t2)', fontWeight: 600 }}>{op.label}</span> : String(v ?? '')
     }
     if (c.tipo === 'lookup') {
       const lbl = (lookupOpcoes[c.nome_campo] || []).find(o => o.id === Number(v))?.label
-      return lbl || (v ? `#${v}` : '—')
+      return lbl || (v ? `#${v}` : '')
     }
     if (c.tipo === 'arquivo') {
       let meta = null; try { meta = v ? JSON.parse(v) : null } catch {}
-      if (!meta) return '—'
+      if (!meta) return ''
       return <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><ExtIcon ext={meta.ext} size={12} /><span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{meta.nome}</span><span style={{ fontSize:9.5, color:'var(--t3)', flexShrink:0 }}>{fmtSize(meta.tamanho)}</span></span>
     }
     if (c.tipo === 'avaliacao') {
       const nota = Number(v)||0, max = Number(c.opcoes?.max)||5
-      return nota ? <span style={{ color:'#FBBF24' }}>{'★'.repeat(nota)}{'☆'.repeat(Math.max(0,max-nota))}</span> : '—'
+      return nota ? <span style={{ color:'#FBBF24' }}>{'★'.repeat(nota)}{'☆'.repeat(Math.max(0,max-nota))}</span> : ''
     }
-    if (c.tipo === 'cor') return v ? <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><span style={{ width:11, height:11, borderRadius:3, background:v, border:'1px solid var(--bd)', display:'inline-block' }}/>{v}</span> : '—'
+    if (c.tipo === 'cor') return v ? <span style={{ display:'inline-flex', alignItems:'center', gap:4 }}><span style={{ width:11, height:11, borderRadius:3, background:v, border:'1px solid var(--bd)', display:'inline-block' }}/>{v}</span> : ''
     if (c.tipo === 'progresso') {
       const pct = Math.max(0,Math.min(100,Number(v)||0))
       return <span style={{ display:'flex', alignItems:'center', gap:4 }}><span style={{ width:50, height:5, background:'var(--s3)', borderRadius:3, overflow:'hidden', display:'inline-block' }}><span style={{ display:'block', height:'100%', width:`${pct}%`, background: pct<40?'#22c55e':pct<70?'#eab308':'#ef4444', borderRadius:3 }}/></span>{pct}%</span>
     }
-    return String(v ?? '—')
+    return String(v ?? '')
   }
 
   function handleExportCSV() {
@@ -124,7 +124,7 @@ export default function AbaAcesso({
                     ))}
                     {tela.col_favorito !== false && (
                       <td style={{ ...tdS, textAlign: 'center' }}>
-                        {reg.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}>—</span>}
+                        {reg.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}></span>}
                       </td>
                     )}
                   </tr>

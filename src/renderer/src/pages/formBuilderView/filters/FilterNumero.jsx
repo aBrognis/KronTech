@@ -1,4 +1,4 @@
-// Range numérico "de" / "até" — atualiza estado local apenas; a busca roda
+// Range numérico "de" / "até": atualiza estado local apenas; a busca roda
 // ao clicar "Buscar".
 export default function FilterNumero({ value, onChange }) {
   function emit(nDe, nAte) {

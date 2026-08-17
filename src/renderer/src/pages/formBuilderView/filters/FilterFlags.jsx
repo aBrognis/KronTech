@@ -1,4 +1,4 @@
-// Dropdown com os códigos de flag definidos no campo — filtra registros que
+// Dropdown com os códigos de flag definidos no campo, filtra registros que
 // contêm o código selecionado. Dispara imediato.
 export default function FilterFlags({ campo, value, onChange }) {
   const opcoes = Array.isArray(campo.opcoes) ? campo.opcoes.filter(o => o.valor) : []

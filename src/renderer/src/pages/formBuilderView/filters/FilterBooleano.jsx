@@ -1,4 +1,4 @@
-// Tri-state Todos/Sim/Não — dispara imediato (sem debounce).
+// Tri-state Todos/Sim/Não, dispara imediato (sem debounce).
 export default function FilterBooleano({ value, onChange }) {
   const atual = value?.valor === true ? 'sim' : value?.valor === false ? 'nao' : 'todos'
   return (

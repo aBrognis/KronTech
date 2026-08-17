@@ -7,7 +7,7 @@ import FilterFlags from './FilterFlags.jsx'
 import FilterHasFile from './FilterHasFile.jsx'
 
 // Mesma tabela de grupos usada no backend (opGroupForTipo em
-// formBuilderService.js) — manter as duas em sincronia ao adicionar um tipo.
+// formBuilderService.js): manter as duas em sincronia ao adicionar um tipo.
 const FAMILIA = {
   texto: 'texto', texto_longo: 'texto', email: 'texto', telefone: 'texto', url: 'texto',
   cpf: 'texto', cnpj: 'texto', cep: 'texto', documento: 'texto', login: 'texto',

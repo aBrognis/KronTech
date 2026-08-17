@@ -2,7 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 
 // Renderiza uma grade editável inline (sub-tabela) dentro do formulário pai.
 // Estado fica só no cliente (form[campo.nome_campo] = array de linhas) até o
-// formulário inteiro ser salvo — o backend recebe o array completo e faz
+// formulário inteiro ser salvo; o backend recebe o array completo e faz
 // apagar-e-reinserir (ver subGridService.js).
 export function InputSubGrid({ campo, val, isRO, saving, setField }) {
   const cfg = campo.opcoes || {}

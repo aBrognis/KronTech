@@ -3,7 +3,7 @@ import { SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search } from 'lu
 import ColumnFilter from './filters/ColumnFilter.jsx'
 
 // Painel de filtros avançados: um campo de filtro por coluna, em grade
-// responsiva, numa área retrátil acima da grade — em vez de embutido no
+// responsiva, numa área retrátil acima da grade, em vez de embutido no
 // cabeçalho da tabela. Filtros só aplicam ao clicar em "Buscar".
 export default function PainelFiltros({ camposData, fFiltros, setFiltroCampo, fBusca, setFBusca, pastasSugest, lookupOpcoes, limparFiltrosAcesso, onBuscar, fLoading }) {
   const [aberto, setAberto] = useState(true)

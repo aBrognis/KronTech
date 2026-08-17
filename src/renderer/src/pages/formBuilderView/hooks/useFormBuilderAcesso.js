@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 // Encapsula a aba "Acesso": filtros por coluna (server-side, via
 // fb:listarRegistrosFiltrado) e paginação real. Nenhuma consulta roda
-// automaticamente — só ao clicar "Buscar" (tabelas grandes não devem ser
+// automaticamente, só ao clicar "Buscar" (tabelas grandes não devem ser
 // carregadas por padrão ao abrir a aba). Paginação e ordenação, uma vez que
 // já existe um resultado carregado, aplicam de imediato.
 export function useFormBuilderAcesso({ nomeTabela, tela, registros, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab }) {
@@ -42,7 +42,7 @@ export function useFormBuilderAcesso({ nomeTabela, tela, registros, carregarForm
     }
   }
 
-  // Filtro/busca só atualizam estado local — a query roda ao clicar "Buscar".
+  // Filtro/busca só atualizam estado local; a query roda ao clicar "Buscar".
   function setFiltroCampo(nomeCampo, filtro) {
     setFFiltrosState(f => ({ ...f, [nomeCampo]: filtro }))
   }
@@ -76,7 +76,7 @@ export function useFormBuilderAcesso({ nomeTabela, tela, registros, carregarForm
     executarConsulta({ fOrdenar: nomeCampo, fDirecao: novaDir })
   }
 
-  // Só limpa os campos de filtro — não reconsulta. Os registros já exibidos
+  // Só limpa os campos de filtro, não reconsulta. Os registros já exibidos
   // permanecem na tela até o usuário clicar "Buscar" de novo.
   function limparFiltrosAcesso() {
     setFFiltrosState({})

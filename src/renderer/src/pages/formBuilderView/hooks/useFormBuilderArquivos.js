@@ -61,7 +61,7 @@ export function useFormBuilderArquivos({ tela, nomeTabela, form, setForm, setErr
       if (camposAtivos.find(c => c.nome_campo === pref + '_ext'))     mapeamento.ext     = pref + '_ext'
       if (camposAtivos.find(c => c.nome_campo === pref + '_tamanho')) mapeamento.tamanho = pref + '_tamanho'
       if (camposAtivos.find(c => c.nome_campo === pref + '_path'))    mapeamento.path    = pref + '_path'
-      // campo "nome" genérico — recebe o basename sem extensão como título
+      // campo "nome" genérico, recebe o basename sem extensão como título
       // sempre mapeado independente de arquivo_nome existir (são colunas separadas)
       if (camposAtivos.find(c => c.nome_campo === 'nome' && c.tipo === 'texto'))
         mapeamento.nomeGenerico = 'nome'
@@ -72,7 +72,7 @@ export function useFormBuilderArquivos({ tela, nomeTabela, form, setForm, setErr
       if (campoCod) mapeamento.codigo = campoCod.nome_campo
 
       if (typeof window.api.formBuilder.importarPasta !== 'function') {
-        finalizar({ fase: 'erro', erro: 'Função não disponível — reinicie o aplicativo.' })
+        finalizar({ fase: 'erro', erro: 'Função não disponível. Reinicie o aplicativo.' })
         return
       }
       const res = await window.api.formBuilder.importarPasta({ tbl: nomeTabela, mapeamento, hasTs, seqChars })

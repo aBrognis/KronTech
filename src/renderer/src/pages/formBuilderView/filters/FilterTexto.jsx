@@ -1,4 +1,4 @@
-// Texto com filtro "contém" — atualiza estado local apenas; a busca roda ao
+// Texto com filtro "contém": atualiza estado local apenas; a busca roda ao
 // clicar "Buscar" (ver PainelFiltros.jsx).
 export default function FilterTexto({ value, onChange }) {
   return (

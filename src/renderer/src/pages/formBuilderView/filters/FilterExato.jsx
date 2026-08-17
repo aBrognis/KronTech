@@ -1,4 +1,4 @@
-// Dropdown de igualdade exata — select/radio (opções fixas), pasta (valores
+// Dropdown de igualdade exata: select/radio (opções fixas), pasta (valores
 // distintos já pré-carregados), lookup (opções do registro relacionado).
 // Dispara imediato (sem debounce).
 export default function FilterExato({ campo, value, onChange, pastasSugest, lookupOpcoes }) {

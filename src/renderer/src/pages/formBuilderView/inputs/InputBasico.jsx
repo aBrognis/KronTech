@@ -1,6 +1,6 @@
 import { Star, Calculator } from 'lucide-react'
 
-// Campos simples que só precisam de val/setField/isRO/ops — sem busca externa,
+// Campos simples que só precisam de val/setField/isRO/ops, sem busca externa,
 // sem estado próprio de loading/erro.
 
 export function InputFavorito({ form, isRO, saving, setField }) {
@@ -26,7 +26,7 @@ export function InputFavorito({ form, isRO, saving, setField }) {
 }
 
 export function InputTimestamps({ isRO, curReg, fmtDate }) {
-  const placeholder = isRO ? '—' : 'preenchido ao salvar'
+  const placeholder = isRO ? '' : 'preenchido ao salvar'
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, height: '100%', alignContent: 'center' }}>
       <div className="form-group" style={{ marginBottom: 0 }}>
@@ -70,7 +70,7 @@ export function InputSelect({ campo, val, ops, isRO, saving, setField }) {
     <select className="form-select" value={val}
       onChange={e => setField(campo.nome_campo, e.target.value)}
       disabled={isRO || saving} style={{ height: '100%' }}>
-      <option value="">— selecione —</option>
+      <option value="">Selecione</option>
       {ops.map((o, i) => <option key={i} value={o.valor}>{o.label}</option>)}
     </select>
   )
@@ -107,7 +107,7 @@ export function InputRadio({ campo, val, ops, isRO, saving, setField }) {
 export function InputCodigoAuto({ val }) {
   return (
     <div className="form-input" style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: val ? 'var(--or)' : 'var(--t3)', letterSpacing: 2, height: '100%', cursor: 'default' }}>
-      {val || '—'}
+      {val || 'gerado ao salvar'}
     </div>
   )
 }
@@ -238,7 +238,7 @@ export function InputCalculo({ campo, form }) {
   return (
     <div className="form-input" style={{ display: 'flex', alignItems: 'center', gap: 6, height: '100%', cursor: 'default', background: 'rgba(255,107,43,.04)', borderColor: 'rgba(255,107,43,.3)' }}>
       <Calculator size={12} style={{ color: 'var(--or)', flexShrink: 0 }} />
-      <span style={{ fontWeight: 700, color: 'var(--t1)', fontSize: 13 }}>{resultado || '—'}</span>
+      <span style={{ fontWeight: 700, color: 'var(--t1)', fontSize: 13 }}>{resultado || '0'}</span>
       {formula && <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--t3)', fontFamily: 'monospace' }}>{formula}</span>}
     </div>
   )

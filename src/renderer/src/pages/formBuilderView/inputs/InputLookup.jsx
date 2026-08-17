@@ -13,7 +13,7 @@ export function InputLookup({ campo, val, isRO, saving, setField, lookupOpcoes, 
     <select className="form-select" value={numVal ?? ''} style={{ height: '100%' }}
       onChange={e => setField(campo.nome_campo, e.target.value ? Number(e.target.value) : null)}
       disabled={isRO || saving}>
-      <option value="">— nenhum —</option>
+      <option value="">Nenhum</option>
       {opts.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
     </select>
   )
@@ -23,7 +23,7 @@ export function InputLookup({ campo, val, isRO, saving, setField, lookupOpcoes, 
     <div style={{ display: 'flex', gap: 4, height: '100%' }}>
       <div className="form-input" style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', cursor: (!isRO && !saving) ? 'pointer' : 'default', fontSize: 12 }}
         onClick={() => !isRO && !saving && openLookupModal(campo)}>
-        {displayLabel || <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>— nenhum —</span>}
+        {displayLabel || <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>Nenhum</span>}
       </div>
       <button className="btn btn-ghost" style={{ flexShrink: 0, padding: '0 8px', height: '100%' }}
         onClick={() => openLookupModal(campo)} disabled={saving || isRO} title="Buscar">

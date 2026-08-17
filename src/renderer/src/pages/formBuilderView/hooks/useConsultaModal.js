@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-// Encapsula a abertura/seleção do modal "Pesquisa Padrão" — a busca em si
+// Encapsula a abertura/seleção do modal "Pesquisa Padrão"; a busca em si
 // agora é feita server-side pelo próprio PesquisaPadraoModal via onBuscar
 // (window.api.formBuilder.pesquisarRegistros), não mais em memória aqui.
 export function useConsultaModal({ tela, registros, currentIdx, carregarForm, carregar, setCurrentIdx, setMode, setActiveTab }) {

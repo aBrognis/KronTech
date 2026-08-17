@@ -1,6 +1,6 @@
 const TIPO_INPUT = { data: 'date', data_hora: 'datetime-local', hora: 'time' }
 
-// Range de data/hora "de" / "até" — atualiza estado local apenas; a busca
+// Range de data/hora "de" / "até": atualiza estado local apenas; a busca
 // roda ao clicar "Buscar".
 export default function FilterData({ campo, value, onChange }) {
   const tipoInput = TIPO_INPUT[campo.tipo] || 'date'
