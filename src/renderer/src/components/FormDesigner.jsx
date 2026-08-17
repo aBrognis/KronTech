@@ -643,7 +643,7 @@ export default function FormDesigner({
         {/* Side panel ───────────────────────────────────────────────── */}
         <div style={{ width: panelCollapsed ? 28 : 264, flexShrink:0, display:'flex', flexDirection:'column', transition:'width .18s ease', overflow:'hidden', position:'relative', background:'var(--s1)', border:'1px solid var(--bd)', borderRadius:12, boxShadow:'var(--sh-xs)' }}>
 
-          {/* Expand button — shown only when collapsed */}
+          {/* Expand button, shown only when collapsed */}
           {panelCollapsed && (
             <button
               onClick={() => setPanelCollapsed(false)}
@@ -658,7 +658,7 @@ export default function FormDesigner({
             </button>
           )}
 
-          {/* Panel content — hidden when collapsed */}
+          {/* Panel content, hidden when collapsed */}
           {!panelCollapsed && (
           <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
 
@@ -700,7 +700,7 @@ export default function FormDesigner({
             <div style={{ padding:'10px 12px 8px', borderBottom:'1px solid var(--bd)', flexShrink:0, display:'flex', alignItems:'center', gap:8 }}>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:'var(--t1)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                  {selMulti ? `${selCampos.length} selecionados` : selSingle.tipo==='divisor' ? '— Divisor' : (selSingle.label||selSingle.nomeCampo||'Campo')}
+                  {selMulti ? `${selCampos.length} selecionados` : selSingle.tipo==='divisor' ? 'Divisor' : (selSingle.label||selSingle.nomeCampo||'Campo')}
                 </div>
                 {selSingle && (
                   <div style={{ fontSize:9, color:'var(--t3)', fontFamily:'monospace', marginTop:1 }}>
@@ -726,7 +726,7 @@ export default function FormDesigner({
 
           {/* Canvas panel ────────────────────────────────────────────── */}
           {!selSingle && !selMulti && panelTab === 'campos' && (<>
-            {/* Quick add — full-width prominent buttons in 2 cols */}
+            {/* Quick add: full-width prominent buttons in 2 cols */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:5 }}>
               {TIPOS_PANEL.map(({ valor, label, Icon }) => (
                 <button key={valor} onClick={() => addCampo(valor)} title={`Adicionar campo: ${label}`}

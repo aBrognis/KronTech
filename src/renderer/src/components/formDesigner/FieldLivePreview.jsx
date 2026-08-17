@@ -21,11 +21,11 @@ export default function FieldLivePreview({ campo }) {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, height:'100%', alignContent:'center' }}>
         <div className="form-group" style={{ marginBottom:0 }}>
           <label className="form-label" style={{ fontSize:10 }}>Criado em</label>
-          <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, cursor:'default', background:'#fff', color:'#333', border:'1px solid #ddd' }}>—</div>
+          <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, cursor:'default', background:'#fff', color:'#333', border:'1px solid #ddd' }}>...</div>
         </div>
         <div className="form-group" style={{ marginBottom:0 }}>
           <label className="form-label" style={{ fontSize:10 }}>Atualizado em</label>
-          <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, cursor:'default', background:'#fff', color:'#333', border:'1px solid #ddd' }}>—</div>
+          <div className="form-input" style={{ fontSize:11, display:'flex', alignItems:'center', height:32, cursor:'default', background:'#fff', color:'#333', border:'1px solid #ddd' }}>...</div>
         </div>
       </div>
     )
@@ -46,7 +46,7 @@ export default function FieldLivePreview({ campo }) {
     )
     if (campo.tipo === 'select') return (
       <select className="form-select" disabled style={{ width:'100%', height:'100%', fontSize:12 }}>
-        <option>— selecione —</option>
+        <option>Selecione</option>
         {ops.map((o, i) => <option key={i}>{o.label}</option>)}
       </select>
     )
@@ -74,7 +74,7 @@ export default function FieldLivePreview({ campo }) {
       return (
         <div style={{ display:'flex', gap:4, height:'100%' }}>
           <div className="form-input" style={{ flex:1, height:'100%', display:'flex', alignItems:'center', fontSize:12, color:'var(--t3)', fontStyle:'italic' }}>
-            {cfg.lookupTabela ? `← ${cfg.lookupTabela}` : '— nenhum —'}
+            {cfg.lookupTabela ? `← ${cfg.lookupTabela}` : 'Nenhum'}
           </div>
           <button className="btn btn-ghost" style={{ flexShrink:0, padding:'0 8px', height:'100%' }} disabled><Search size={13}/></button>
         </div>
@@ -147,8 +147,8 @@ export default function FieldLivePreview({ campo }) {
       </div>
     )
     if (campo.tipo === 'calculo') {
-      let formula = '—'
-      try { formula = JSON.parse(campo.valorPadrao || '{}').formula || '—' } catch {}
+      let formula = ''
+      try { formula = JSON.parse(campo.valorPadrao || '{}').formula || '' } catch {}
       return (
         <div style={{ display:'flex', alignItems:'center', gap:6, height:'100%', padding:'0 10px', background:'rgba(255,107,43,.06)', border:'1.5px solid rgba(255,107,43,.25)', borderRadius:8, boxSizing:'border-box', width:'100%' }}>
           <Calculator size={12} style={{ color:'var(--or)', flexShrink:0 }}/>
@@ -167,7 +167,7 @@ export default function FieldLivePreview({ campo }) {
     <div className="form-group" style={{ width:'100%', height:'100%', padding:'0 2px', boxSizing:'border-box', marginBottom:0, display:'flex', flexDirection:'column', gap:6 }}>
       {!SKIP_LABEL.includes(campo.tipo) && (
         <label className="form-label">
-          {campo.label || campo.nomeCampo || '—'}
+          {campo.label || campo.nomeCampo || 'Sem nome'}
           {campo.obrigatorio && <span style={{ color:'var(--red)', marginLeft:2 }}>*</span>}
         </label>
       )}

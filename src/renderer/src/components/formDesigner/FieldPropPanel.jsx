@@ -14,7 +14,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
   const numInp = (key, val, min, max) => <input type="number" className="form-input" min={min} max={max} value={val ?? ''} onChange={e => up({ [key]: e.target.value === '' ? null : Number(e.target.value) })} style={{ height:26, fontSize:11, width:'100%', padding:'0 6px' }}/>
 
   if (campo.tipo === 'favorito' || campo.tipo === 'timestamps') {
-    return <div style={{ fontSize:11, color:'var(--t3)', fontStyle:'italic' }}>{campo.tipo === 'favorito' ? 'Campo de favorito — sem configuração.' : 'Gera criado_em e atualizado_em automaticamente.'}</div>
+    return <div style={{ fontSize:11, color:'var(--t3)', fontStyle:'italic' }}>{campo.tipo === 'favorito' ? 'Campo de favorito, sem configuração.' : 'Gera criado_em e atualizado_em automaticamente.'}</div>
   }
 
   const tiposComOpcoes = ['select','radio','flags']
@@ -47,7 +47,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
         <div>
           {lbl('Campo a copiar')}
           <select className="form-select" value={campo.valorPadrao || ''} onChange={e => up({ valorPadrao: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
-            <option value="">— selecione —</option>
+            <option value="">Selecione</option>
             {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
           </select>
         </div>
@@ -66,8 +66,8 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
     const camposPorTipo = fnCampoRef.includes(fn) ? allCampos.filter(c => c._key !== campo._key && c.tipo === tiposFiltro[fn] && c.nomeCampo) : []
     const camposRef = allCampos.filter(c => c._key !== campo._key && !['divisor','botao'].includes(c.tipo) && c.nomeCampo)
     const grupos = [
-      { id:'geral', label:'— Geral' }, { id:'arquivo', label:'— Arquivo' },
-      { id:'registro', label:'— Registro' }, { id:'consulta', label:'— Consultas externas' },
+      { id:'geral', label:'Geral' }, { id:'arquivo', label:'Arquivo' },
+      { id:'registro', label:'Registro' }, { id:'consulta', label:'Consultas externas' },
     ]
     return (
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -87,7 +87,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
             {lbl(`Campo ${tiposFiltro[fn]}`)}
             {camposPorTipo.length
               ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
-                  <option value="">— selecione —</option>
+                  <option value="">Selecione</option>
                   {camposPorTipo.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
                 </select>
               : <div style={{ fontSize:10, color:'#fb923c', padding:'4px 0' }}>Adicione um campo do tipo "{tiposFiltro[fn]}" primeiro.</div>
@@ -99,7 +99,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
             {lbl('Campo')}
             {camposRef.length
               ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
-                  <option value="">— campo —</option>
+                  <option value="">Selecione</option>
                   {camposRef.map(c => <option key={c._key} value={`{${c.nomeCampo}}`}>{c.label || c.nomeCampo}</option>)}
                 </select>
               : <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })} placeholder="Texto fixo ou {campo}" style={{ height:28, fontSize:11, width:'100%' }}/>
@@ -150,7 +150,7 @@ export default function FieldPropPanel({ campo, updateProp, campos }) {
           {lbl('Valor padrão')}
           {tiposComOpcoes.includes(campo.tipo) && opcoes.length > 0
             ? <select className="form-select" value={campo.valorPadrao || ''} onChange={e => up({ valorPadrao: e.target.value })} style={{ height:28, fontSize:11, width:'100%' }}>
-                <option value="">— nenhum —</option>
+                <option value="">Nenhum</option>
                 {opcoes.map((op,i) => <option key={i} value={op.valor}>{op.label}</option>)}
               </select>
             : inp('valorPadrao', campo.valorPadrao, { placeholder:'opcional' })
