@@ -1,9 +1,9 @@
-// Motor de drag-and-drop imperativo (sem React state) — enquanto arrasta,
+// Motor de drag-and-drop imperativo (sem React state): enquanto arrasta,
 // um CLONE do card (fora da árvore do React) segue o mouse via style.left/
 // top em requestAnimationFrame; o card original nunca é tocado/movido
 // diretamente, só recebe uma classe CSS (.agenda-dragging-source) pra ficar
 // visualmente oculto. Isso evita mexer em qualquer propriedade que o React
-// controla via style={{...}} no card real — tentar "desfazer" manipulações
+// controla via style={{...}} no card real: tentar "desfazer" manipulações
 // nesse nó depois (mesmo com removeProperty) dessincroniza a árvore de
 // reconciliação do React do DOM real, e foi a causa do evento sumir
 // permanentemente ao arrastar nas views Dia/Semana. Só o mouseup volta a

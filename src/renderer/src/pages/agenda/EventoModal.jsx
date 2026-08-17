@@ -53,11 +53,11 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <SeletorBusca
               label="Categoria"
-              placeholder="— sem categoria —"
+              placeholder="Sem categoria"
               valorExibido={categoriaAtual?.nome}
               onLimpar={() => set('categoria_id', '')}
               disabled={isRO}
-              titulo={`Pesquisa Padrão — ${pesquisaCategoria.tabela || '...'}`}
+              titulo={`Pesquisa Padrão · ${pesquisaCategoria.tabela || '...'}`}
               campos={pesquisaCategoria.campos}
               colunasExibidas={pesquisaCategoria.colunasExibidas}
               campoInicial={pesquisaCategoria.campoInicial}
@@ -67,11 +67,11 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
             />
             <SeletorBusca
               label="Status"
-              placeholder="— sem status —"
+              placeholder="Sem status"
               valorExibido={statusAtual?.nome}
               onLimpar={() => set('status_id', '')}
               disabled={isRO}
-              titulo={`Pesquisa Padrão — ${pesquisaStatus.tabela || '...'}`}
+              titulo={`Pesquisa Padrão · ${pesquisaStatus.tabela || '...'}`}
               campos={pesquisaStatus.campos}
               colunasExibidas={pesquisaStatus.colunasExibidas}
               campoInicial={pesquisaStatus.campoInicial}
@@ -84,11 +84,11 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
           {/* Cliente */}
           <SeletorBusca
             label="Cliente"
-            placeholder="— sem cliente —"
+            placeholder="Sem cliente"
             valorExibido={clienteAtual?.nome}
             onLimpar={() => set('cliente_id', '')}
             disabled={isRO}
-            titulo={`Pesquisa Padrão — ${pesquisaCliente.tabela || '...'}`}
+            titulo={`Pesquisa Padrão · ${pesquisaCliente.tabela || '...'}`}
             campos={pesquisaCliente.campos}
             colunasExibidas={pesquisaCliente.colunasExibidas}
             campoInicial={pesquisaCliente.campoInicial}

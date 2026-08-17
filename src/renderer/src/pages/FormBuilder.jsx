@@ -273,7 +273,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       : { display: 'flex', flexDirection: 'column', gap: 16, padding: '20px 24px', height: '100%', overflow: 'auto' }
     }>
 
-      {/* Header – oculto na janela Designer */}
+      {/* Header, oculto na janela Designer */}
       {!hideHeader && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -298,7 +298,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
         </div>
       )}
 
-      {/* Abas — ocultas quando a navegação é feita externamente (Designer) */}
+      {/* Abas, ocultas quando a navegação é feita externamente (Designer) */}
       {!hideTabs && <div style={hideHeader
         ? { display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--bd)', padding: '0 16px', flexShrink: 0, background: 'var(--s3)', minHeight: 44 }
         : { display: 'flex', gap: 0, borderBottom: '1px solid var(--bd)', marginBottom: -4 }
@@ -353,7 +353,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
 
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 1 }}>Módulos</span>
-              <span style={{ fontSize: 11, color: 'var(--t3)' }}>— agrupe telas no sidebar</span>
+              <span style={{ fontSize: 11, color: 'var(--t3)' }}>agrupe telas no sidebar</span>
             </div>
 
             {/* Criar módulo */}
@@ -449,7 +449,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
                           <button className="btn btn-danger" style={{ height: 26, padding: '0 7px' }}
                             onClick={() => handleExcluirModulo(mod)}
                             disabled={qtd > 0}
-                            title={qtd > 0 ? `${qtd} tela(s) vinculada(s) — remova antes` : 'Excluir módulo'}>
+                            title={qtd > 0 ? `${qtd} tela(s) vinculada(s), remova antes` : 'Excluir módulo'}>
                             <Trash2 size={11} />
                           </button>
                         </>
@@ -470,7 +470,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <Menu size={13} color="var(--or)" />
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Menu Lateral</span>
-                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>— ordem das seções e telas</span>
+                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>ordem das seções e telas</span>
                 </div>
                 <button className="btn btn-primary" style={{ height: 30, padding: '0 14px', fontSize: 11 }}
                   onClick={salvarMenuLateral} disabled={salvandoMenu}>
@@ -547,7 +547,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       {/* ABA TELAS */}
       {abaAtiva === 'telas' && (hideHeader ? (
         <>
-          {/* Busca — fixa acima do scroll */}
+          {/* Busca, fixa acima do scroll */}
           <div style={{ padding: '10px 16px 9px', borderBottom: '1px solid var(--bd)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--s1)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: 8, padding: '0 11px', flex: 1, maxWidth: 440, height: 32, boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)' }}>
               <Search size={13} color="var(--t3)" style={{ flexShrink: 0 }} />

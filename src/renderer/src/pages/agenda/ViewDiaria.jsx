@@ -113,7 +113,7 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
                     <div style={{ display:'flex', gap:8, marginTop:2, flexWrap:'wrap', overflow:'hidden' }}>
                       {(ev.hr_inicio||ev.hr_fim) && (
                         <span style={{ fontSize:9, color:'var(--t3)', display:'flex', alignItems:'center', gap:2, whiteSpace:'nowrap' }}>
-                          <Clock size={9}/>{ev.hr_inicio?.slice(0,5)}{ev.hr_fim?` – ${ev.hr_fim.slice(0,5)}`:''}
+                          <Clock size={9}/>{ev.hr_inicio?.slice(0,5)}{ev.hr_fim?` às ${ev.hr_fim.slice(0,5)}`:''}
                         </span>
                       )}
                       {height > 56 && ev.local && <span style={{ fontSize:9, color:'var(--t3)', display:'flex', alignItems:'center', gap:2 }}><MapPin size={9}/>{ev.local}</span>}

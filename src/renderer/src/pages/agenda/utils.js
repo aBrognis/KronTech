@@ -78,15 +78,15 @@ export function corStatus(ev) {
 }
 
 export function nomeCategoria(ev) {
-  return ev.categoria_nome || '—'
+  return ev.categoria_nome || 'Sem categoria'
 }
 
 export function nomeStatus(ev) {
-  return ev.status_nome || '—'
+  return ev.status_nome || 'Sem status'
 }
 
 export function nomeCliente(ev) {
-  return ev.cliente_nome || '—'
+  return ev.cliente_nome || 'Sem cliente'
 }
 
 export const STATUS_AUTO_LABEL = {
@@ -151,7 +151,7 @@ export function layoutEventosComHora(events, isoDate, pxPorHora) {
 
   // Agrupa em clusters de eventos mutuamente conectados por overlap (transitivo).
   // Um item pode sobrepor mais de um cluster já existente (ex: A-B formam um
-  // cluster, e um item C chega sobrepondo só B mas não A — sem merge, C e A
+  // cluster, e um item C chega sobrepondo só B mas não A; sem merge, C e A
   // ficariam em clusters separados mesmo fazendo parte da mesma "cadeia" de
   // conflitos). Por isso, junta (merge) todos os clusters que o item tocar.
   const clusters = []

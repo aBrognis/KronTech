@@ -35,7 +35,7 @@ export function StatusBadge({ ev, style }) {
   const cor = corStatusOf(ev)
   return (
     <span style={{ fontSize:9, fontWeight:700, color:cor, border:`1px solid ${cor}44`, borderRadius:4, padding:'1px 6px', ...style }}>
-      {ev.status_nome || '—'}
+      {ev.status_nome || 'Sem status'}
     </span>
   )
 }

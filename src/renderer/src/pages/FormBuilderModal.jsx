@@ -38,7 +38,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   const [telasList,     setTelasList]     = useState([])
   const [lookupColMap,  setLookupColMap]  = useState({}) // { nomeTabela: [col1, col2, ...] }
 
-  // Estado do designer — persiste ao trocar de aba
+  // Estado do designer, persiste ao trocar de aba
   const [dsLivePreview,  setDsLivePreview]  = useState(false)
   const [dsShowGrid,     setDsShowGrid]     = useState(true)
   const [dsShowRulers,   setDsShowRulers]   = useState(false)
@@ -129,11 +129,11 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, height: fill ? '100%' : 'auto', alignContent: 'center' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label" style={{ textAlign: 'center' }}>Criado em</label>
-            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, textAlign: 'center' }}>—</div>
+            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, textAlign: 'center' }}>...</div>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label" style={{ textAlign: 'center' }}>Atualizado em</label>
-            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, textAlign: 'center' }}>—</div>
+            <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 32, textAlign: 'center' }}>...</div>
           </div>
         </div>
       )
@@ -154,7 +154,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
       )
       if (campo.tipo === 'select') return (
         <select className="form-select" disabled style={{ width: '100%', height: fill ? '100%' : 37, fontSize: 12 }}>
-          <option>— selecione —</option>
+          <option>Selecione</option>
           {ops.map((o, i) => <option key={i}>{o.label}</option>)}
         </select>
       )
@@ -185,7 +185,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         return (
           <div style={{ display: 'flex', gap: 4, height: fill ? '100%' : 37 }}>
             <div className="form-input" style={{ flex: 1, height: '100%', display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--t3)', fontStyle: 'italic' }}>
-              {cfg.lookupTabela ? `← ${cfg.lookupTabela}` : '— nenhum —'}
+              {cfg.lookupTabela ? `← ${cfg.lookupTabela}` : 'Nenhum'}
             </div>
             <button className="btn btn-ghost" style={{ flexShrink: 0, padding: '0 8px', height: '100%' }} disabled><Search size={13} /></button>
           </div>
@@ -359,7 +359,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
       <div className="form-group" style={{ width: '100%', height: fill ? '100%' : 'auto', padding: '0 2px', boxSizing: 'border-box', marginBottom: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {!SKIP_LABEL.includes(campo.tipo) && (
           <label className="form-label" style={{ flexShrink: 0, marginBottom: 2, fontWeight: campo.semNegrito ? 400 : undefined, fontSize: campo.fontSize ? `${campo.fontSize}px` : '10px', color: campo.labelCor || undefined }}>
-            {campo.label || campo.nomeCampo || '—'}
+            {campo.label || campo.nomeCampo || 'Sem nome'}
             {campo.obrigatorio && <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span>}
           </label>
         )}
@@ -525,7 +525,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     // Preview normal (aba preview do modal)
     return (
       <div>
-        <div style={{ ...secHead, marginBottom: 10 }}>{nomeTela || 'Sem nome'} — Preview do Formulário</div>
+        <div style={{ ...secHead, marginBottom: 10 }}>{nomeTela || 'Sem nome'} · Preview do Formulário</div>
         {temLayout ? (
           <div style={{ overflow: 'auto', border: '1px solid var(--bd)', borderRadius: 12 }}>
             <div style={{ position: 'relative', width: cW, height: alturaCanvas, background: 'var(--s1)' }}>
@@ -583,7 +583,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
           <div className="form-group">
             <label className="form-label">Módulo</label>
             <select className="form-select" style={h ? { height: h } : {}} value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={salvando}>
-              <option value="">— Nenhum —</option>
+              <option value="">Nenhum</option>
               <optgroup label="Nativos">
                 <option value="__inicio">Início</option>
                 <option value="__gestao">Gestão</option>
@@ -688,7 +688,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
           </button>
           <div style={{ width: 1, height: 18, background: 'var(--bd)', flexShrink: 0 }} />
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-            {editando ? `Editar — ${tela.nome_tela}` : 'Nova Tela'}
+            {editando ? `Editar · ${tela.nome_tela}` : 'Nova Tela'}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

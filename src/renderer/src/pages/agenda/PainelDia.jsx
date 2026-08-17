@@ -44,7 +44,7 @@ export default function PainelDia({ year, month, day, events, onOpenNew, onOpenE
                 {ev.titulo}
               </div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
-                {ev.hr_inicio && <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:2 }}><Clock size={9}/>{ev.hr_inicio.slice(0,5)}{ev.hr_fim?` – ${ev.hr_fim.slice(0,5)}`:''}</span>}
+                {ev.hr_inicio && <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:2 }}><Clock size={9}/>{ev.hr_inicio.slice(0,5)}{ev.hr_fim?` às ${ev.hr_fim.slice(0,5)}`:''}</span>}
                 {ev.local && <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:2 }}><MapPin size={9}/>{ev.local}</span>}
                 <span style={{ fontSize:9, color:cor }}>{nomeCategoria(ev)}</span>
                 {ev.cliente_id && <span style={{ fontSize:9, color:'var(--t3)' }}>{nomeCliente(ev)}</span>}

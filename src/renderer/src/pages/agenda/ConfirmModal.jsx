@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react'
 
 // Modal de confirmação genérico in-app (substitui window.confirm nativo).
-// options: [{ label, value, primary?, danger? }] — se omitido, usa OK/Cancelar padrão.
+// options: [{ label, value, primary?, danger? }]; se omitido, usa OK/Cancelar padrão.
 export default function ConfirmModal({ titulo, mensagem, options, onChoose, onClose }) {
   const opts = options || [
     { label:'Cancelar', value:false },

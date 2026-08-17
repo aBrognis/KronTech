@@ -53,7 +53,7 @@ export default function ViewLista({ events, onOpenEdit, onOpenNew }) {
                       <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
                         {(ev.hr_inicio||ev.hr_fim) && (
                           <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:3 }}>
-                            <Clock size={10}/>{ev.hr_inicio?.slice(0,5)}{ev.hr_fim?` – ${ev.hr_fim.slice(0,5)}`:''}
+                            <Clock size={10}/>{ev.hr_inicio?.slice(0,5)}{ev.hr_fim?` às ${ev.hr_fim.slice(0,5)}`:''}
                           </span>
                         )}
                         {ev.local && <span style={{ fontSize:10, color:'var(--t3)', display:'flex', alignItems:'center', gap:3 }}><MapPin size={10}/>{ev.local}</span>}

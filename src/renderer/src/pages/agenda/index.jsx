@@ -149,8 +149,8 @@ export default function Agenda({ newTrigger }) {
     if (view==='mensal') return `${MESES[month]} ${year}`
     if (view==='semanal') {
       const ini = weekDays[0], fim = weekDays[6]
-      if (ini.getMonth()===fim.getMonth()) return `${ini.getDate()} – ${fim.getDate()} ${MESES[fim.getMonth()]} ${fim.getFullYear()}`
-      return `${ini.getDate()} ${MESES_CURTO[ini.getMonth()]} – ${fim.getDate()} ${MESES_CURTO[fim.getMonth()]} ${fim.getFullYear()}`
+      if (ini.getMonth()===fim.getMonth()) return `${ini.getDate()} a ${fim.getDate()} ${MESES[fim.getMonth()]} ${fim.getFullYear()}`
+      return `${ini.getDate()} ${MESES_CURTO[ini.getMonth()]} a ${fim.getDate()} ${MESES_CURTO[fim.getMonth()]} ${fim.getFullYear()}`
     }
     if (view==='diaria') return `${DIAS_SEMANA_LONGO[currentDate.getDay()]}, ${currentDate.getDate()} de ${MESES[currentDate.getMonth()]} ${currentDate.getFullYear()}`
     return `${MESES[month]} ${year}`

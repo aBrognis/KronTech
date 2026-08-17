@@ -53,7 +53,7 @@ function fmtSize(bytes) {
 }
 
 function fmtDate(ts) {
-  if (!ts) return '—'
+  if (!ts) return ''
   return new Date(ts).toLocaleDateString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -294,7 +294,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
   async function handleIncluir() {
     const f = {}
     tela.campos.filter(c => c.ativo && !c.sequencial && !TIPOS_SISTEMA.includes(c.tipo)).forEach(c => {
-      // flags sempre iniciam vazias — valor_padrao não se aplica a flags
+      // flags sempre iniciam vazias, valor_padrao não se aplica a flags
       f[c.nome_campo] = c.tipo === 'flags' ? '' : (c.valor_padrao ?? '')
     })
     tela.campos.filter(c => c.ativo && c.tipo === 'sub_grid').forEach(c => { f[c.nome_campo] = [] })
@@ -358,7 +358,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       const temSubGrid = camposSubGrid.length > 0
       const campoComHook = camposSubGrid.find(c => c.opcoes?.posSaveHook)
       // Quando há um hook (ex: status calculado pelo servidor a partir das
-      // parcelas), o campo status não deve ser enviado como veio do form —
+      // parcelas), o campo status não deve ser enviado como veio do form:
       // o hook é quem decide o valor real.
       if (campoComHook && 'status' in dados) delete dados.status
 
@@ -455,9 +455,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       const prefixo = campo.nome_campo.slice(0, -arqSuffix.length)
       const campoArqPai = tela?.campos.find(c => c.nome_campo === prefixo && c.tipo === 'arquivo')
       if (campoArqPai) {
-        let exibe = '—'
+        let exibe = ''
         if (val) {
-          if (arqSuffix === '_tamanho') exibe = fmtSize(Number(val)) || '—'
+          if (arqSuffix === '_tamanho') exibe = fmtSize(Number(val)) || ''
           else if (arqSuffix === '_ext') exibe = String(val).toUpperCase()
           else exibe = String(val)
         }
@@ -803,9 +803,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                       const isPaiArq = tela?.campos.find(c => c.nome_campo === prefixoW && c.tipo === 'arquivo')
                       if (isPaiArq) {
                         const valW = form[campo.nome_campo] ?? ''
-                        let exibeW = '—'
+                        let exibeW = ''
                         if (valW) {
-                          if (arqSuffixW === '_tamanho') exibeW = fmtSize(Number(valW)) || '—'
+                          if (arqSuffixW === '_tamanho') exibeW = fmtSize(Number(valW)) || ''
                           else if (arqSuffixW === '_ext') exibeW = String(valW).toUpperCase()
                           else exibeW = String(valW)
                         }
@@ -851,7 +851,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {[
                               ['Nome original', meta.nome],
-                              ['Extensão',      meta.ext?.toUpperCase() || '—'],
+                              ['Extensão',      meta.ext?.toUpperCase() || 'Desconhecida'],
                               ['Tamanho',       fmtSize(meta.tamanho)],
                             ].map(([k, v]) => (
                               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
@@ -917,7 +917,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       {/* Modal Pesquisa Padrão */}
       {showConsulta && (
         <PesquisaPadraoModal
-          titulo={`Pesquisa Padrão — ${tela?.nome_tela}`}
+          titulo={`Pesquisa Padrão · ${tela?.nome_tela}`}
           campos={camposModal}
           colunasExibidas={camposModal.slice(0, 5)}
           campoInicial={campoInicial}
@@ -933,9 +933,9 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
             const v = r[c.nome_campo]
             if (c.tipo === 'lookup') {
               const lbl = (lookupOpcoes[c.nome_campo] || []).find(o => o.id === Number(v))?.label
-              return lbl || (v ? `#${v}` : '—')
+              return lbl || (v ? `#${v}` : '')
             }
-            return String(v ?? '—')
+            return String(v ?? '')
           }}
         />
       )}
@@ -1016,7 +1016,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
           onClick={e => { if (e.target === e.currentTarget) setLkpModalOpen(false) }}>
           <div style={{ width: 520, maxWidth: '92vw', maxHeight: '80vh', background: 'var(--s1)', borderRadius: 14, boxShadow: 'var(--sh-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', background: 'var(--s2)', borderBottom: '1px solid var(--bd)' }}>
-              <span style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--t1)' }}>Selecionar — {lkpModalCampo?.label}</span>
+              <span style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--t1)' }}>Selecionar · {lkpModalCampo?.label}</span>
               <button onClick={() => setLkpModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}><X size={15} /></button>
             </div>
             <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--bd)' }}>
