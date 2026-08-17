@@ -14,7 +14,7 @@ function nextPos(widgets) {
 }
 
 function emptyForm() {
-  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_x: 0, grid_y: 0, grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '' }
+  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_x: 0, grid_y: 0, grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '', formato: 'numero' }
 }
 
 export default function DashboardDesigner({ newTrigger, onNavigate }) {
@@ -130,6 +130,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       grid_h:       w.grid_h       || 2,
       comparar_anterior:  w.comparar_anterior  || false,
       sql_query_anterior: w.sql_query_anterior || '',
+      formato:            w.formato            || 'numero',
     })
     resetPreview()
     setShowGuide(false)
@@ -634,6 +635,20 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                           style={{ width:'100%', height:37, background:'var(--s3)', border:'1px solid var(--bd2)' }}
                         >
                           {INTERVALOS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <FieldLabel>Formato dos valores</FieldLabel>
+                        <select
+                          className="form-select"
+                          value={form.formato || 'numero'}
+                          onChange={e => f('formato', e.target.value)}
+                          style={{ width:'100%', height:37, background:'var(--s3)', border:'1px solid var(--bd2)' }}
+                        >
+                          <option value="numero">Número</option>
+                          <option value="moeda">Moeda (R$)</option>
+                          <option value="percentual">Percentual (%)</option>
                         </select>
                       </div>
                     </div>

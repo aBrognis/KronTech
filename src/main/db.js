@@ -1001,6 +1001,9 @@ export async function initDb() {
   await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS comparar_anterior BOOLEAN DEFAULT FALSE`).catch(e => console.warn('[migration] alter dash_001 comparar_anterior (startup):', e.message))
   await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS sql_query_anterior TEXT`).catch(e => console.warn('[migration] alter dash_001 sql_query_anterior (startup):', e.message))
 
+  // Formato de exibição dos valores numéricos do widget: numero | moeda | percentual
+  await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS formato VARCHAR(20) DEFAULT 'numero'`).catch(e => console.warn('[migration] alter dash_001 formato (startup):', e.message))
+
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()
 }

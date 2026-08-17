@@ -1,6 +1,6 @@
 {
   "name": "krontech",
-  "version": "1.2.9",
+  "version": "1.2.10",
   "description": "KronTech — Ordem no caos do dia a dia.",
   "main": "out/main/index.js",
   "scripts": {

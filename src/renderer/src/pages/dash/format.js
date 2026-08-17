@@ -1,14 +1,19 @@
 // Formatação de números e intervalos
 
-export function fmtNum(val) {
+export function fmtNum(val, formato = 'numero') {
   if (val == null || val === '') return ''
   const n = Number(String(val).trim())
-  if (!isNaN(n)) {
-    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M'
-    if (Number.isInteger(n)) return n.toLocaleString('pt-BR')
-    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  if (isNaN(n)) return String(val)
+
+  if (formato === 'moeda') {
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   }
-  return String(val)
+  if (formato === 'percentual') {
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'
+  }
+  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M'
+  if (Number.isInteger(n)) return n.toLocaleString('pt-BR')
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export function isNumCol(rows, col) {

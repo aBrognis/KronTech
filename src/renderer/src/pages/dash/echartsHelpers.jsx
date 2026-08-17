@@ -1,19 +1,38 @@
 // Helpers de estilo compartilhados entre os renderers ECharts + estados vazio/erro
 import { AlertCircle, ArrowUp, ArrowDown, Sparkles } from 'lucide-react'
 
+// ECharts desenha em <canvas>, que não entende var(--token) — precisa da cor
+// já resolvida em hex/rgb. Lê o valor real computado no <html> (onde os temas
+// definem os tokens) e cacheia por token+tema, invalidando quando o tema muda.
+let _cssVarCache = new Map()
+let _cssVarTheme = null
+export function cssVar(token) {
+  const root = document.documentElement
+  const theme = root.className
+  if (theme !== _cssVarTheme) { _cssVarCache = new Map(); _cssVarTheme = theme }
+  if (_cssVarCache.has(token)) return _cssVarCache.get(token)
+  const val = getComputedStyle(root).getPropertyValue(token).trim() || '#888888'
+  _cssVarCache.set(token, val)
+  return val
+}
+
 export function grad(color, op = '55') {
   return { type:'linear', x:0, y:0, x2:0, y2:1, colorStops:[{ offset:0, color }, { offset:1, color: color + op }] }
 }
-export const TT = {
-  backgroundColor:'var(--s2)', borderColor:'var(--bd2)', borderWidth:1,
-  textStyle:{ color:'var(--t1)', fontSize:11 }, padding:[8,12],
-  extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:8px;',
+export function TT() {
+  return {
+    backgroundColor: cssVar('--s2'), borderColor: cssVar('--bd2'), borderWidth:1,
+    textStyle:{ color: cssVar('--t1'), fontSize:11 }, padding:[8,12],
+    extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:8px;',
+  }
 }
-export const AX = {
-  axisLine:  { lineStyle:{ color:'var(--bd)' } },
-  axisTick:  { show:false },
-  axisLabel: { color:'var(--t3)', fontSize:10 },
-  splitLine: { lineStyle:{ color:'var(--bd)', type:'dashed', opacity:.6 } },
+export function AX() {
+  return {
+    axisLine:  { lineStyle:{ color: cssVar('--bd') } },
+    axisTick:  { show:false },
+    axisLabel: { color: cssVar('--t3'), fontSize:10 },
+    splitLine: { lineStyle:{ color: cssVar('--bd'), type:'dashed', opacity:.6 } },
+  }
 }
 
 export function NoData() { return <div style={{ color:'var(--t3)', fontSize:11, padding:'8px 0' }}>Sem dados</div> }

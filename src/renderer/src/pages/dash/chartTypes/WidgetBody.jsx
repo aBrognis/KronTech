@@ -30,7 +30,8 @@ export function WidgetBody({ widget, rows, fields, prevRows, prevFields, fillHei
 
   const fn = RENDERERS[widget.tipo]
   if (!fn) return null
-  const body = fn({ widget, rows, fields, labels, valKeys, color, chartStyle, anim, fillHeight, prevRows, prevFields, hasComparison })
+  const formato = widget.formato || 'numero'
+  const body = fn({ widget, rows, fields, labels, valKeys, color, chartStyle, anim, fillHeight, prevRows, prevFields, hasComparison, formato })
 
   if (hasComparison && NO_OVERLAY_TYPES.has(widget.tipo)) {
     const delta = computeAggregateDelta(rows, fields, prevRows, prevFields)
