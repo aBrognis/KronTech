@@ -1,0 +1,22 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - run: npm ci
+      - run: npm run build
+
+      # Reporta vulnerabilidades nos logs sem travar o push — hoje ainda há
+      # 23 pendentes fora do escopo desta rodada (electron 30.x direto,
+      # tooling de dev, cadeia de to-ico). Ver docs/ da auditoria técnica.
+      - run: npm audit --audit-level=high
+        continue-on-error: true
