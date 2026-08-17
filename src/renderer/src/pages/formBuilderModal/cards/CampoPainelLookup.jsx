@@ -22,7 +22,7 @@ export function CampoPainelLookup({ campo, setCampos, atualizarCampo, salvando, 
         <label className="form-label">Tabela de origem *</label>
         <select className="form-select" value={cfg.lookupTabela} disabled={salvando}
           onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
-          <option value="">— selecione —</option>
+          <option value="">Selecione</option>
           {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
         </select>
       </div>
@@ -30,14 +30,14 @@ export function CampoPainelLookup({ campo, setCampos, atualizarCampo, salvando, 
         <div className="form-group">
           <label className="form-label">Campo a exibir *</label>
           <select className="form-select" value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela} onChange={e => setLkp({ lookupExibir: e.target.value })}>
-            <option value="">— selecione a tabela primeiro —</option>
+            <option value="">Selecione a tabela primeiro</option>
             {cols.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div className="form-group">
           <label className="form-label">Campo de código (prefixo)</label>
           <select className="form-select" value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela} onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
-            <option value="">— nenhum —</option>
+            <option value="">Nenhum</option>
             {cols.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>

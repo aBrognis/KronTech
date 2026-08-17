@@ -47,7 +47,7 @@ export function CampoCardCopiar({ campo, idx, campos, setCampos, atualizarCampo,
       <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Campo</span>
       <select className="form-select" style={{ height: 26, fontSize: 11, flex: 1, minWidth: 0 }}
         value={campo.valorPadrao||''} onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
-        <option value="">— selecione —</option>
+        <option value="">Selecione</option>
         {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label||c.nomeCampo}</option>)}
       </select>
       <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Texto</span>
@@ -68,7 +68,7 @@ export function CampoCardFavoritoTimestamps({ campo, idx, setCampos, tipInfoIdx,
       style={{ display: 'flex', alignItems: 'center', gap: 8, height: 40, padding: '0 10px', background: isFav ? 'rgba(255,107,43,.04)' : 'rgba(96,165,250,.05)', border: `1px solid ${isFav ? 'rgba(255,107,43,.2)' : 'rgba(96,165,250,.2)'}`, borderLeft: `3px solid ${color}`, borderRadius: 8 }}>
       <Icon size={13} color={color} style={{ flexShrink: 0 }} />
       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>{isFav ? 'Favorito' : 'Timestamps'}</span>
-      <span style={{ fontSize: 10, color: 'var(--t3)' }}>— {isFav ? 'estrela de favorito' : 'criado em · atualizado em'}</span>
+      <span style={{ fontSize: 10, color: 'var(--t3)' }}>{isFav ? 'estrela de favorito' : 'criado em · atualizado em'}</span>
       <div style={{ flex: 1 }} />
       <DelBtn campo={campo} idx={idx} setCampos={setCampos} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
     </div>

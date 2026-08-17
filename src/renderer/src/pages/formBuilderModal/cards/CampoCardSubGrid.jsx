@@ -2,7 +2,7 @@ import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { TIPO_META, TIPOS } from '../constants.js'
 import { DelBtn } from './CampoCardSimples.jsx'
 
-// Tipos escalares elegíveis para uma coluna filha de sub_grid — exclui
+// Tipos escalares elegíveis para uma coluna filha de sub_grid, exclui
 // sub_grid (sem aninhamento, v1) e os tipos de sistema/layout que não fazem
 // sentido numa linha de grade.
 const TIPOS_SUBGRID = TIPOS.filter(t => !['sub_grid'].includes(t.valor))
@@ -78,7 +78,7 @@ export function CampoCardSubGrid({ campo, idx, setCampos, atualizarCampo, isExp,
           </div>
 
           <div style={{ fontSize: 10, color: 'var(--t3)', fontFamily: 'monospace' }}>
-            Tabela filha: {cfg.subGridTabela || '—'}
+            Tabela filha: {cfg.subGridTabela || 'nenhuma'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

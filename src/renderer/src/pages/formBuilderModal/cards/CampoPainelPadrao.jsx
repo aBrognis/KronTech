@@ -55,7 +55,7 @@ export function CampoPainelPadrao({ campo, campos, atualizarCampo, salvando, edi
             <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Valor padrão</label>
             {TIPOS_COM_OPCOES.includes(campo.tipo) && Array.isArray(campo.opcoes) && campo.opcoes.length > 0
               ? <select className="form-select" value={campo.valorPadrao || ''} onChange={e => upC('valorPadrao', e.target.value)} disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11 }}>
-                  <option value="">— nenhum —</option>
+                  <option value="">Nenhum</option>
                   {campo.opcoes.map((op, i) => <option key={i} value={op.valor}>{op.label}</option>)}
                 </select>
               : <input className="form-input" value={campo.valorPadrao} onChange={e => upC('valorPadrao', e.target.value)}

@@ -54,7 +54,7 @@ export function CampoPainelCopiar({ campo, campos, atualizarCampo, salvando }) {
       <div className="form-group">
         <label className="form-label">Campo a copiar</label>
         <select className="form-select" value={campo.valorPadrao || ''} onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
-          <option value="">— selecione —</option>
+          <option value="">Selecione</option>
           {camposTexto.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
         </select>
       </div>

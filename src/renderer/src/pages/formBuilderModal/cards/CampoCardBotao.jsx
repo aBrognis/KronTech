@@ -19,10 +19,10 @@ export function CampoCardBotao({ campo, idx, campos, setCampos, atualizarCampo, 
     ? campos.filter(c => c._key !== campo._key && c.tipo === tiposFiltro[fn] && c.nomeCampo)
     : []
   const grupos = [
-    { id: 'geral',    label: '— Geral' },
-    { id: 'arquivo',  label: '— Arquivo' },
-    { id: 'registro', label: '— Registro' },
-    { id: 'consulta', label: '— Consultas externas' },
+    { id: 'geral',    label: 'Geral' },
+    { id: 'arquivo',  label: 'Arquivo' },
+    { id: 'registro', label: 'Registro' },
+    { id: 'consulta', label: 'Consultas externas' },
   ]
   return (
     <div key={campo._key}
@@ -31,7 +31,7 @@ export function CampoCardBotao({ campo, idx, campos, setCampos, atualizarCampo, 
         onClick={() => toggleExpand(campo._key)}>
         <CircleDot size={13} color="var(--or)" style={{ flexShrink: 0 }} />
         <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{campo.label || 'Botão'}</span>
-        <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>— {fnLabel}</span>
+        <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>{fnLabel}</span>
         <ChevronDown size={12} color="var(--t3)" style={{ transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }} />
         <DelBtn campo={campo} idx={idx} setCampos={setCampos} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
       </div>
@@ -60,7 +60,7 @@ export function CampoCardBotao({ campo, idx, campos, setCampos, atualizarCampo, 
               <label style={lbl}>Campo {tiposFiltro[fn]}</label>
               {camposPorTipo.length
                 ? <select className="form-select" style={{ height: 28, fontSize: 11 }} value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
-                    <option value="">— selecione —</option>
+                    <option value="">Selecione</option>
                     {camposPorTipo.map(c => <option key={c._key} value={c.nomeCampo}>{c.label||c.nomeCampo}</option>)}
                   </select>
                 : <div style={{ fontSize: 10, color: 'var(--red,#ef4444)', padding: '6px 4px' }}>
@@ -75,7 +75,7 @@ export function CampoCardBotao({ campo, idx, campos, setCampos, atualizarCampo, 
               <label style={lbl}>Campo</label>
               {camposRef.length
                 ? <select className="form-select" style={{ height: 28, fontSize: 11 }} value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
-                    <option value="">— campo —</option>
+                    <option value="">Selecione</option>
                     {camposRef.map(c => <option key={c._key} value={`{${c.nomeCampo}}`}>{c.label||c.nomeCampo}</option>)}
                   </select>
                 : <input className="form-input" style={{ height: 28, fontSize: 11 }} value={param} onChange={e => updateCfg({ param: e.target.value })} placeholder="Texto fixo ou {campo}" disabled={salvando} />

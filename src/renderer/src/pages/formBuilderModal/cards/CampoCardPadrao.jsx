@@ -5,7 +5,7 @@ import OpcoesList from '../OpcoesList.jsx'
 import { DelBtn } from './CampoCardSimples.jsx'
 
 // Card genérico usado por todos os tipos de campo que não têm accordion
-// próprio (divisor, copiar, favorito/timestamps, botao, lookup) — cobre
+// próprio (divisor, copiar, favorito/timestamps, botao, lookup), cobre
 // texto/número/opções/documento/cálculo/avaliação e as opções comuns de
 // layout (label, largura, tamanho no BD, obrigatório, etc).
 export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, toggleExpand, tipInfoIdx, setTipInfoIdx, salvando, editando }) {
@@ -20,7 +20,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
         <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: campo.label ? 'var(--t1)' : 'var(--t3)', fontStyle: campo.label ? 'normal' : 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {campo.label || 'Sem label'}
         </span>
-        <code style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--t3)', background: 'var(--s3)', padding: '2px 6px', borderRadius: 3, flexShrink: 0 }}>{campo.nomeCampo || '—'}</code>
+        <code style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--t3)', background: 'var(--s3)', padding: '2px 6px', borderRadius: 3, flexShrink: 0 }}>{campo.nomeCampo || 'sem_nome'}</code>
         {campo.obrigatorio && <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 5px', background: 'rgba(248,113,113,.12)', color: 'var(--red)', borderRadius: 3, flexShrink: 0 }}>OBR</span>}
         <ChevronDown size={12} color="var(--t3)" style={{ transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }} />
         <DelBtn campo={campo} idx={idx} setCampos={setCampos} tipInfoIdx={tipInfoIdx} setTipInfoIdx={setTipInfoIdx} salvando={salvando} />
@@ -80,7 +80,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
                 Use <code style={{ fontFamily: 'monospace', background: 'var(--s3)', padding: '0 4px', borderRadius: 3 }}>{'{nome_campo}'}</code> para referenciar outros campos. Suporta <code style={{ fontFamily: 'monospace', background: 'var(--s3)', padding: '0 4px', borderRadius: 3 }}>+  -  *  /  (  )</code> e funções JS como <code style={{ fontFamily: 'monospace', background: 'var(--s3)', padding: '0 4px', borderRadius: 3 }}>Math.round()</code>.
               </span>
               <span style={{ fontSize: 9.5, color: 'var(--t3)' }}>
-                O campo não é gravado no banco — é calculado em tempo real no formulário.
+                O campo não é gravado no banco, é calculado em tempo real no formulário.
               </span>
             </div>
           )}
@@ -131,7 +131,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
               {TIPOS_COM_OPCOES.includes(campo.tipo) && Array.isArray(campo.opcoes) && campo.opcoes.length > 0 ? (
                 <select className="form-select" style={{ height: 30 }} value={campo.valorPadrao || ''}
                   onChange={e => atualizarCampo(campo._key, 'valorPadrao', e.target.value)} disabled={salvando}>
-                  <option value="">— nenhum —</option>
+                  <option value="">Nenhum</option>
                   {campo.opcoes.map((op, i) => <option key={i} value={op.valor}>{op.label}</option>)}
                 </select>
               ) : (
@@ -175,7 +175,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
                   <input type="number" className="form-input" min={8} max={32}
                     value={campo.fontSize || ''}
                     onChange={e => atualizarCampo(campo._key, 'fontSize', e.target.value ? Number(e.target.value) : null)}
-                    placeholder="—" disabled={salvando}
+                    placeholder="auto" disabled={salvando}
                     style={{ width: 44, height: 22, fontSize: 10, padding: '0 4px' }} />
                 </div>
 
@@ -193,7 +193,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
                   <input type="number" className="form-input" min={8} max={32}
                     value={campo.inputFontSize || ''}
                     onChange={e => atualizarCampo(campo._key, 'inputFontSize', e.target.value ? Number(e.target.value) : null)}
-                    placeholder="—" disabled={salvando}
+                    placeholder="auto" disabled={salvando}
                     style={{ width: 44, height: 22, fontSize: 10, padding: '0 4px' }} />
                 </div>
 
@@ -221,7 +221,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
 
               </div>
 
-              {/* Sequencial — linha extra só quando ativo */}
+              {/* Sequencial: linha extra só quando ativo */}
               {campo.sequencial && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--t2)' }}>
                   <span>Dígitos do código sequencial:</span>

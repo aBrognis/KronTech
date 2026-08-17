@@ -13,10 +13,10 @@ export function CampoPainelBotao({ campo, campos, atualizarCampo, salvando }) {
   const tiposFiltro = { abrirArquivo: 'arquivo', previewArquivo: 'arquivo', copiarArquivoLocal: 'arquivo', copiarArquivoClipboard: 'arquivo', buscarCNPJ: 'cnpj', buscarCEP: 'cep' }
   const camposPorTipo = fnCampoRef.includes(fn) ? campos.filter(c => c._key !== campo._key && c.tipo === tiposFiltro[fn] && c.nomeCampo) : []
   const grupos = [
-    { id: 'geral',    label: '— Geral' },
-    { id: 'arquivo',  label: '— Arquivo' },
-    { id: 'registro', label: '— Registro' },
-    { id: 'consulta', label: '— Consultas externas' },
+    { id: 'geral',    label: 'Geral' },
+    { id: 'arquivo',  label: 'Arquivo' },
+    { id: 'registro', label: 'Registro' },
+    { id: 'consulta', label: 'Consultas externas' },
   ]
   return (
     <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -40,7 +40,7 @@ export function CampoPainelBotao({ campo, campos, atualizarCampo, salvando }) {
           <label className="form-label">Campo {tiposFiltro[fn]}</label>
           {camposPorTipo.length
             ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
-                <option value="">— selecione —</option>
+                <option value="">Selecione</option>
                 {camposPorTipo.map(c => <option key={c._key} value={c.nomeCampo}>{c.label || c.nomeCampo}</option>)}
               </select>
             : <div style={{ fontSize: 11, color: '#fb923c', padding: '6px 0' }}>Adicione um campo do tipo "{tiposFiltro[fn]}" primeiro.</div>
@@ -52,7 +52,7 @@ export function CampoPainelBotao({ campo, campos, atualizarCampo, salvando }) {
           <label className="form-label">Campo</label>
           {camposRef.length
             ? <select className="form-select" value={param} onChange={e => updateCfg({ param: e.target.value })} disabled={salvando}>
-                <option value="">— campo —</option>
+                <option value="">Selecione</option>
                 {camposRef.map(c => <option key={c._key} value={`{${c.nomeCampo}}`}>{c.label || c.nomeCampo}</option>)}
               </select>
             : <input className="form-input" value={param} onChange={e => updateCfg({ param: e.target.value })} placeholder="Texto fixo ou {campo}" disabled={salvando} />

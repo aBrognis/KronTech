@@ -6,7 +6,7 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
   const meta = TIPO_META.lookup
   const cfg = (campo.opcoes && !Array.isArray(campo.opcoes)) ? campo.opcoes : { lookupTabela: '', lookupExibir: '', lookupCodigo: '', lookupModo: 'select' }
   const cols = lookupColMap[cfg.lookupTabela] || []
-  const dbName = campo.nomeCampo ? campo.nomeCampo.replace(/_id$/, '') + '_id' : '—'
+  const dbName = campo.nomeCampo ? campo.nomeCampo.replace(/_id$/, '') + '_id' : ''
   const lbl = { fontSize: 9, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }
   function setLkp(updates) {
     setCampos(prev => prev.map(c => c._key !== campo._key ? c : { ...c, opcoes: { ...cfg, ...updates } }))
@@ -51,7 +51,7 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               <label className="form-label">Tabela de origem *</label>
               <select className="form-select" style={{ height: 32 }} value={cfg.lookupTabela} disabled={salvando}
                 onChange={e => { const t = e.target.value; setLkp({ lookupTabela: t, lookupExibir: '', lookupCodigo: '' }); carregarColunasLookup(t) }}>
-                <option value="">— selecione —</option>
+                <option value="">Selecione</option>
                 {telasList.map(t => <option key={t.id} value={t.nome_tabela}>{t.nome_tela}</option>)}
               </select>
             </div>
@@ -59,7 +59,7 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               <label className="form-label">Campo a exibir *</label>
               <select className="form-select" style={{ height: 32 }} value={cfg.lookupExibir} disabled={salvando || !cfg.lookupTabela}
                 onChange={e => setLkp({ lookupExibir: e.target.value })}>
-                <option value="">— selecione a tabela primeiro —</option>
+                <option value="">Selecione a tabela primeiro</option>
                 {cols.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -67,7 +67,7 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               <label className="form-label">Campo de código (prefixo)</label>
               <select className="form-select" style={{ height: 32 }} value={cfg.lookupCodigo || ''} disabled={salvando || !cfg.lookupTabela}
                 onChange={e => setLkp({ lookupCodigo: e.target.value || '' })}>
-                <option value="">— nenhum —</option>
+                <option value="">Nenhum</option>
                 {cols.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -92,7 +92,7 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
               <label className="form-label">Filtrar por (opcional)</label>
               <select className="form-select" style={{ height: 32 }} value={cfg.lookupFiltro?.campo || ''} disabled={salvando || !cfg.lookupTabela}
                 onChange={e => setLkp({ lookupFiltro: e.target.value ? { campo: e.target.value, op: cfg.lookupFiltro?.op || 'ilike', valor: cfg.lookupFiltro?.valor || '' } : null })}>
-                <option value="">— sem filtro —</option>
+                <option value="">Sem filtro</option>
                 {cols.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
