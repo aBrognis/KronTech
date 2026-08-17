@@ -70,7 +70,7 @@ function AcaoForm({ acao, onChange, telas }) {
       )}
       {acao.tipo === 'navegar' && (
         <FSelect label="Destino" value={acao.destino || ''} onChange={e => onChange({ ...acao, destino: e.target.value })} style={{ minWidth: 160 }}>
-          <option value="">— selecione —</option>
+          <option value="">Selecione</option>
           {['dashboard','agenda','arquivos','sql'].map(r => <option key={r} value={r}>{r}</option>)}
           {telas.map(t => <option key={t.id} value={`fb__${t.nome_tabela}`}>{t.nome_tela}</option>)}
         </FSelect>
@@ -163,7 +163,7 @@ export default function SecaoAutomacoes({ telas }) {
       </Card>
 
       <Card>
-        <SectionTitle>Gatilho — quando executar</SectionTitle>
+        <SectionTitle>Gatilho: quando executar</SectionTitle>
         <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <FSelect label="Evento" value={editando.trigger.tipo}
             onChange={e => setEditando(p => ({ ...p, trigger: { ...p.trigger, tipo: e.target.value } }))}>
@@ -192,7 +192,7 @@ export default function SecaoAutomacoes({ telas }) {
           </Btn>
         </div>
         {editando.condicoes.length === 0 && (
-          <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>Sem condições — sempre executa ao gatilho.</div>
+          <div style={{ fontSize: 11, color: 'var(--t3)', fontStyle: 'italic' }}>Sem condições, sempre executa ao gatilho.</div>
         )}
         {editando.condicoes.map((c, i) => (
           <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8, flexWrap: 'wrap' }}>
@@ -211,7 +211,7 @@ export default function SecaoAutomacoes({ telas }) {
 
       <Card>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <SectionTitle>Ações — o que fazer</SectionTitle>
+          <SectionTitle>Ações: o que fazer</SectionTitle>
           <Btn size="sm" variant="ghost" onClick={() => setEditando(p => ({ ...p, acoes: [...p.acoes, { id: genId(), tipo: 'alerta', mensagem: '', tipoAlerta: 'info' }] }))}>
             <Plus size={11} /> Ação
           </Btn>

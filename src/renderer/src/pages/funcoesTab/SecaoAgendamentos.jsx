@@ -82,7 +82,7 @@ export default function SecaoAgendamentos({ scripts }) {
           </FSelect>
           {editando.acao.tipo === 'script' && (
             <FSelect label="Script" value={editando.acao.id} onChange={e => setEditando(p => ({ ...p, acao: { ...p.acao, id: e.target.value } }))}>
-              <option value="">— selecione —</option>
+              <option value="">Selecione</option>
               {scripts.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
             </FSelect>
           )}

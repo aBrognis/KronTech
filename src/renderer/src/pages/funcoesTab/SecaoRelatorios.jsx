@@ -81,7 +81,7 @@ export default function SecaoRelatorios() {
         <Btn onClick={novo}><Plus size={13} /> Novo Relatório</Btn>
       </div>
       {lista.length === 0
-        ? <EmptyState icon={BarChart2} title="Nenhum relatório" subtitle="Salve queries SQL como relatórios reutilizáveis — execute com um clique, exporte CSV, agrupe por categoria"
+        ? <EmptyState icon={BarChart2} title="Nenhum relatório" subtitle="Salve queries SQL como relatórios reutilizáveis: execute com um clique, exporte CSV, agrupe por categoria"
             action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="ghost" onClick={carregarExemplos}><BookOpen size={13} /> Carregar Exemplos</Btn><Btn onClick={novo}><Plus size={13} /> Criar Relatório</Btn></div>} />
         : categorias.map(cat => (
           <div key={cat}>
@@ -121,7 +121,7 @@ export default function SecaoRelatorios() {
                             </tr></thead>
                             <tbody>{res.rows.slice(0, 50).map((row, i) => (
                               <tr key={i} style={{ background: i % 2 === 0 ? 'var(--s1)' : 'var(--s2)' }}>
-                                {Object.values(row).map((v, j) => <td key={j} style={{ padding: '4px 8px', color: 'var(--t2)', borderBottom: '1px solid var(--bd)', whiteSpace: 'nowrap' }}>{v === null ? '—' : String(v)}</td>)}
+                                {Object.values(row).map((v, j) => <td key={j} style={{ padding: '4px 8px', color: 'var(--t2)', borderBottom: '1px solid var(--bd)', whiteSpace: 'nowrap' }}>{v === null ? 'NULL' : String(v)}</td>)}
                               </tr>
                             ))}</tbody>
                           </table>

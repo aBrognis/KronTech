@@ -13,7 +13,7 @@ function daApi(n) {
 const EXEMPLOS_NOTIFICACOES = [
   { nome: 'Salvo com sucesso', tipo: 'toast', titulo: 'KronTech', mensagem: 'Registro salvo com sucesso!', tipoToast: 'sucesso', url: '' },
   { nome: 'Erro de validação', tipo: 'toast', titulo: 'KronTech', mensagem: 'Preencha todos os campos obrigatórios antes de continuar.', tipoToast: 'erro', url: '' },
-  { nome: 'Aviso de prazo', tipo: 'desktop', titulo: 'KronTech — Lembrete', mensagem: 'Você tem tarefas com prazo para hoje. Acesse o painel para verificar.', tipoToast: 'aviso', url: '' },
+  { nome: 'Aviso de prazo', tipo: 'desktop', titulo: 'KronTech · Lembrete', mensagem: 'Você tem tarefas com prazo para hoje. Acesse o painel para verificar.', tipoToast: 'aviso', url: '' },
   { nome: 'Notificação informativa', tipo: 'toast', titulo: 'KronTech', mensagem: 'Nova atualização disponível. Reinicie o sistema para aplicar.', tipoToast: 'info', url: '' },
 ]
 
@@ -111,7 +111,7 @@ export default function SecaoNotificacoes() {
         <Btn onClick={novo}><Plus size={13} /> Nova Notificação</Btn>
       </div>
       {lista.length === 0
-        ? <EmptyState icon={Bell} title="Nenhuma notificação configurada" subtitle="Toast, desktop, webhook — defina templates reutilizáveis e dispare com um clique ou por automação"
+        ? <EmptyState icon={Bell} title="Nenhuma notificação configurada" subtitle="Toast, desktop, webhook: defina templates reutilizáveis e dispare com um clique ou por automação"
             action={<div style={{ display: 'flex', gap: 8 }}><Btn variant="ghost" onClick={carregarExemplos}><BookOpen size={13} /> Carregar Exemplos</Btn><Btn onClick={novo}><Plus size={13} /> Criar Template</Btn></div>} />
         : lista.map(n => {
           const Ic = iconTipo[n.tipo] || Bell
@@ -123,7 +123,7 @@ export default function SecaoNotificacoes() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', marginBottom: 2 }}>{n.nome}</div>
-                  <div style={{ fontSize: 11, color: 'var(--t3)' }}>{n.tipo} · {n.mensagem?.slice(0, 60) || '—'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--t3)' }}>{n.tipo} · {n.mensagem?.slice(0, 60) || ''}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 5 }}>
                   <Btn size="sm" variant="ghost" disabled={testando === n.id} onClick={() => testar(n)}><Play size={12} /> Testar</Btn>

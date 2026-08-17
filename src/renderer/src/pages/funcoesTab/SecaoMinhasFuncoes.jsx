@@ -162,7 +162,7 @@ export default function SecaoMinhasFuncoes() {
         <SectionTitle>Parâmetros (entradas da função)</SectionTitle>
         <FInput style={{ marginTop: 8 }} value={editando.parametros}
           onChange={e => setEditando(p => ({ ...p, parametros: e.target.value }))}
-          placeholder="Ex: preco, desconto, data  — separados por vírgula. Deixe vazio se não precisar." />
+          placeholder="Ex: preco, desconto, data, separados por vírgula. Deixe vazio se não precisar." />
         {editando.parametros && (
           <div style={{ marginTop: 6, fontSize: 10, color: 'var(--t3)' }}>
             Parâmetros: {editando.parametros.split(',').map(p => <code key={p} style={{ background: 'var(--s3)', padding: '1px 5px', borderRadius: 4, marginRight: 4, color: 'var(--blue)' }}>{p.trim()}</code>)}
@@ -197,7 +197,7 @@ export default function SecaoMinhasFuncoes() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <Btn variant="ghost" style={{ height: 30 }} onClick={() => setMostrarExemplos(false)}><X size={13} /> Fechar</Btn>
-        <span style={{ fontSize: 13, fontWeight: 700 }}>Exemplos prontos — clique para carregar</span>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>Exemplos prontos: clique para carregar</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {EXEMPLOS_FUNCOES.map(ex => (
