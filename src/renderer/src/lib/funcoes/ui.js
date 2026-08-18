@@ -1,3 +1,5 @@
+import { notificar } from '../../components/Notificacao'
+
 function _getContainer() {
   let container = document.getElementById('kron-alerts')
   if (container) return container
@@ -131,7 +133,7 @@ export function mostrarAlerta(mensagem, tipo = 'info') {
 }
 
 export function confirmar(mensagem) {
-  return window.confirm(mensagem)
+  return notificar.confirmar(mensagem)
 }
 
 export function mostrarCarregando(ativo) {

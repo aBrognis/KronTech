@@ -3,6 +3,7 @@
    ============================================================ */
 
 @import './styles/animations.css';
+@import './styles/dashHud.css';
 
 /* ── Layout ── */
 .app {
@@ -801,6 +802,7 @@ html.light .sql-guide-pre      { color: #2a6e3c; }
 @keyframes widgetEnter  { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes shimmer      { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes toastPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* Dashboard BI — Grid livre + Painel lateral */
 .dash-wrapper    { display: flex; height: 100%; overflow: hidden; }

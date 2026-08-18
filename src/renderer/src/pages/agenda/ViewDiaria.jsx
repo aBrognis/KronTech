@@ -21,10 +21,10 @@ export default function ViewDiaria({ date, today, events, onOpenNew, onOpenEdit,
       {/* Header do dia */}
       <div style={{ padding:'12px 20px', borderBottom:'1px solid var(--bd)', flexShrink:0, display:'flex', alignItems:'center', gap:16 }}>
         <div>
-          <div style={{ fontSize:10, fontWeight:600, color: isWeekend?'#F87171':'var(--t3)', textTransform:'uppercase', letterSpacing:.8 }}>
+          <div style={{ fontSize:10, fontWeight:600, color: isWeekend?'var(--cal-weekend-color)':'var(--t3)', textTransform:'uppercase', letterSpacing:.8 }}>
             {DIAS_SEMANA_LONGO[date.getDay()]}
           </div>
-          <div style={{ fontSize:28, fontWeight:700, color: isToday?'var(--or)': isWeekend?'#F87171':'var(--t1)', lineHeight:1 }}>
+          <div style={{ fontSize:28, fontWeight:700, color: isToday?'var(--or)': isWeekend?'var(--cal-weekend-color)':'var(--t1)', lineHeight:1 }}>
             {date.getDate()} <span style={{ fontSize:16, color:'var(--t3)' }}>{MESES[date.getMonth()]} {date.getFullYear()}</span>
           </div>
         </div>

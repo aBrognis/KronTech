@@ -27,12 +27,12 @@ export default function ViewSemanal({ weekDays, today, events, onOpenNew, onOpen
           const isWeekend = d.getDay()===0||d.getDay()===6
           return (
             <div key={i} style={{ padding:'8px 4px', textAlign:'center', borderLeft:'1px solid var(--bd)' }}>
-              <div style={{ fontSize:9, fontWeight:600, color: isWeekend?'#F87171':'var(--t3)', letterSpacing:.8, textTransform:'uppercase' }}>
+              <div style={{ fontSize:9, fontWeight:600, color: isWeekend?'var(--cal-weekend-color)':'var(--t3)', letterSpacing:.8, textTransform:'uppercase' }}>
                 {DIAS_SEMANA_CURTO[d.getDay()]}
               </div>
               <div style={{
                 fontSize:16, fontWeight:700, marginTop:2,
-                color: isToday?'#fff': isWeekend?'#F87171':'var(--t1)',
+                color: isToday?'#fff': isWeekend?'var(--cal-weekend-color)':'var(--t1)',
                 background: isToday?'var(--or)':'transparent',
                 borderRadius:'50%', width:28, height:28,
                 display:'flex', alignItems:'center', justifyContent:'center', margin:'2px auto 0',

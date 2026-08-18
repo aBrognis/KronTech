@@ -32,6 +32,7 @@ import {
   InputPasta, InputDataHora, InputHora, InputUrl, InputLogin, InputSenha, InputPadrao,
 } from './formBuilderView/inputs/InputEspecial.jsx'
 import { maskCPF, maskCNPJ, maskCEP, maskCPFStr, maskCNPJStr, maskCEPStr } from '../lib/utils/masks.js'
+import { notificar } from '../components/Notificacao'
 import '../App.css'
 
 const POR_PAG = 50
@@ -405,7 +406,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       if (!res.ok) throw new Error(res.erro)
       await carregar(tela, pagina, busca, null)
     } catch (e) {
-      alert('Erro ao excluir: ' + (e.message || e))
+      notificar.erro('Erro ao excluir: ' + (e.message || e))
     }
   }
 
@@ -553,7 +554,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
             const r = await window.api.arquivos.copiarLocal(meta.path, meta.nome)
             if (!r.ok) return mostrarAlerta(r.erro || 'Não foi possível copiar.', 'erro')
             mostrarAlerta('Arquivo copiado para pasta temp.', 'sucesso')
-            if (confirm(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`))
+            if (await notificar.confirmar(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`, { titulo: 'Arquivo copiado' }))
               await window.api.arquivos.abrirPasta(r.destino.substring(0, r.destino.lastIndexOf('\\')))
           },
           copiarArquivoClipboard: async () => {
@@ -566,7 +567,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
           // Registro
           excluirRegistro: async () => {
             const msg = p || 'Excluir este registro?'
-            if (!confirm(msg)) return
+            if (!(await notificar.confirmar(msg, { titulo: 'Excluir registro', confirmarLabel: 'Excluir', perigo: true }))) return
             try {
               const res = await window.api.formBuilder.inativarRegistro(nomeTabela, registros[currentIdx].id, tela.col_timestamps !== false)
               if (!res.ok) throw new Error(res.erro)

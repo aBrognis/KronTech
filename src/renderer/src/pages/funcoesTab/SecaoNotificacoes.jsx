@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, Monitor, Globe, Mail, Play, Save, X, Edit2, Trash2, Plus, BookOpen } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { Btn, FInput, FSelect, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
 
 function paraApi(n) {
@@ -49,7 +50,7 @@ export default function SecaoNotificacoes() {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir esta notificação?')) return
+    if (!(await notificar.confirmar('Excluir esta notificação?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     await window.api.funcoes.excluirNotificacao(id)
     setLista(prev => prev.filter(n => n.id !== id))
   }, [])

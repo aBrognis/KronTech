@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { GitBranch, Filter, Terminal, Globe, Bell, Clock, Activity, Save, X, Edit2, Trash2, Plus, Play } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { genId, Btn, FInput, FSelect, Row, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
 
 const OPERADORES = [
@@ -112,7 +113,7 @@ export default function SecaoFluxos({ telas = [] }) {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir este fluxo?')) return
+    if (!(await notificar.confirmar('Excluir este fluxo?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     await window.api.funcoes.excluirFluxo(id)
     setLista(prev => prev.filter(f => f.id !== id))
   }, [])

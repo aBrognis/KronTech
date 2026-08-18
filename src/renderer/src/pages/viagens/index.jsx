@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, FileDown, FileX, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search } from 'lucide-react'
+import { Plus, Trash2, FileDown, FileX, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search, Settings } from 'lucide-react'
 import '../../App.css'
 import FormToolbar from '../../components/FormToolbar'
 import SeletorBusca from '../../components/SeletorBusca'
 import InputData from '../../components/InputData'
+import { notificar } from '../../components/Notificacao'
 import PaginacaoBar from '../formBuilderView/PaginacaoBar.jsx'
 import { EMPTY_FORM, STATUS_ORDEM, STATUS_META, MEIOS_TRANSPORTE, diaDaSemana, fmtDataBR, fmtMoeda, novoItem } from './utils'
 
@@ -32,6 +33,7 @@ export default function Viagens({ sessao, newTrigger }) {
   const [pagina, setPagina]     = useState(1)
   const [porPagina, setPorPagina] = useState(25)
   const [jaConsultou, setJaConsultou] = useState(false)
+  const [pastaExportacoes, setPastaExportacoes] = useState('')
 
   const carregar = useCallback(async (f = filtros, b = buscaGeral) => {
     setLoading(true)
@@ -57,6 +59,19 @@ export default function Viagens({ sessao, newTrigger }) {
     if (newTrigger) openNew()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newTrigger])
+
+  useEffect(() => {
+    window.api.config.get().then(res => setPastaExportacoes((res.ok ? res.data?.Caminhos?.exportacoes : '') || ''))
+  }, [])
+
+  async function handleConfigurarPastaExportacoes() {
+    const res = await window.api.config.selecionarPasta({ chave: 'exportacoes', titulo: 'Selecionar pasta de exportações' })
+    const nova = res.ok ? res.data : null
+    if (nova) {
+      setPastaExportacoes(nova)
+      notificar.sucesso(`Pasta de exportações atualizada:\n${nova}\n\nAs exportações passam a ser salvas automaticamente aqui, organizadas por Cliente/Ano/Mês.`)
+    }
+  }
 
   function limparFiltros() {
     setFiltros(FILTROS_VAZIOS)
@@ -163,7 +178,8 @@ export default function Viagens({ sessao, newTrigger }) {
   async function handleExportar() {
     if (!form.id) return
     const res = await window.api.viagens.exportarExcel(form.id)
-    if (!res?.ok && !res?.cancelado) setErro(res?.erro || 'Falha ao exportar.')
+    if (!res?.ok && !res?.cancelado) { setErro(res?.erro || 'Falha ao exportar.'); return }
+    if (res?.ok && res?.path) notificar.sucesso(`Exportado com sucesso:\n${res.path}`)
   }
 
   // ── Itens (grid editável) ──────────────────────────────────────────────
@@ -222,6 +238,16 @@ export default function Viagens({ sessao, newTrigger }) {
         <button className={`page-tab${activeTab === 'acesso' ? ' active' : ''}`} onClick={() => setActiveTab('acesso')}>Acesso</button>
         <button className={`page-tab${activeTab === 'cadastro' ? ' active' : ''}`} onClick={() => setActiveTab('cadastro')}>Cadastro</button>
         {form.id && <span className="page-tab-info">#{form.id} · {form.cliente_nome || form.consultor_nome}</span>}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="btn btn-ghost" onClick={handleConfigurarPastaExportacoes}
+            title={pastaExportacoes ? `Pasta de exportações: ${pastaExportacoes}` : 'Nenhuma pasta configurada — exportações abrem "Salvar como"'}
+            style={{ height: 28, fontSize: 11, padding: '0 10px' }}>
+            <Settings size={12} />
+            {pastaExportacoes
+              ? <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{pastaExportacoes}</span>
+              : 'Pasta de Exportações'}
+          </button>
+        </div>
       </div>
 
       <div className="page-content">

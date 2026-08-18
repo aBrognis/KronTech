@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { MENU_BASE, MENU_DESIGNER } from '../../components/Sidebar'
+import { notificar } from '../../components/Notificacao'
 
 function TilaIcon({ nome, size = 15, cor = 'var(--or)' }) {
   const key  = (nome || 'layout').split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
@@ -178,7 +179,7 @@ export default function ModulosPage() {
       await carregar()
       setMenuSalvo(true)
       setTimeout(() => setMenuSalvo(false), 2500)
-    } catch (e) { alert('Erro ao salvar: ' + e.message) }
+    } catch (e) { notificar.erro('Erro ao salvar: ' + e.message) }
     finally { setSalvandoMenu(false) }
   }
 
@@ -200,16 +201,16 @@ export default function ModulosPage() {
       if (!res.ok) throw new Error(res.erro)
       setEditandoMod(null)
       await carregar()
-    } catch (e) { alert('Erro: ' + e.message) }
+    } catch (e) { notificar.erro('Erro: ' + e.message) }
   }
 
   async function handleExcluirModulo(mod) {
-    if (!confirm(`Excluir módulo "${mod.nome}"?`)) return
+    if (!(await notificar.confirmar(`Excluir módulo "${mod.nome}"?`, { titulo: 'Excluir módulo', confirmarLabel: 'Excluir', perigo: true }))) return
     try {
       const res = await window.api.formBuilder.excluirModulo(mod.id)
       if (!res.ok) throw new Error(res.erro)
       await carregar()
-    } catch (e) { alert('Erro: ' + e.message) }
+    } catch (e) { notificar.erro('Erro: ' + e.message) }
   }
 
   if (carregando && modulos.length === 0) {

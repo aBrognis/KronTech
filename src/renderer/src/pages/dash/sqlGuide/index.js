@@ -28,6 +28,7 @@ export const SQL_HINTS = {
   boxplot: `SELECT categoria, valor\nFROM kr_demo_vendas`,
   candlestick: `SELECT TO_CHAR(data_venda,'DD/MM') AS dia,\n  MIN(valor) AS abertura, MAX(valor) AS fechamento,\n  MIN(valor) AS minima, MAX(valor) AS maxima\nFROM kr_demo_vendas\nGROUP BY dia, data_venda\nORDER BY data_venda\nLIMIT 30`,
   pictorial_bar: `SELECT regiao, COUNT(*) AS total\nFROM kr_demo_vendas\nGROUP BY regiao\nORDER BY total DESC`,
+  mapa_br: `SELECT\n  UPPER(TRIM(SPLIT_PART(d.local_destino, '-', 2))) AS uf,\n  TRIM(SPLIT_PART(d.local_destino, '-', 1)) AS municipio,\n  CASE d.status\n    WHEN 'rascunho'    THEN 'Rascunho'\n    WHEN 'enviado'     THEN 'Enviado'\n    WHEN 'nao_enviado' THEN 'Não Enviado'\n    WHEN 'reembolsado' THEN 'Reembolsado'\n    ELSE d.status\n  END AS status,\n  d.cliente_nome,\n  SUM(i.valor) AS valor\nFROM despesa_001 d\nJOIN despesa_item_001 i ON i.despesa_id = d.id\nWHERE d.local_destino LIKE '%-%'\nGROUP BY uf, municipio, status, d.cliente_nome`,
 }
 
 export const SQL_GUIDE = {
@@ -179,6 +180,13 @@ export const SQL_GUIDE = {
     regra: 'Col 1 = categoria. Col 2 = valor. Renderiza como blocos repetidos em vez de barra sólida, ideal para poucas categorias com valores redondos.',
     exemplos: [
       { label: 'Vendas por região', sql: `SELECT regiao, COUNT(*) AS total\nFROM kr_demo_vendas\nGROUP BY regiao\nORDER BY total DESC` },
+    ],
+  },
+  mapa_br: {
+    regra: 'Colunas pelo NOME (não pela posição): "uf" (sigla, 2 letras, obrigatória), "valor" (numérico, obrigatório), "municipio" (obrigatória pra habilitar o drill-down por cidade — sem ela, o clique no estado abre a malha de municípios sem nenhum preenchimento de dado), "status", "cliente_nome" (opcionais, aparecem no hover). O widget não tenta adivinhar a UF/status — escreva a extração no próprio SQL, incluindo formatação de texto (ex.: status "enviado" → "Enviado") se quiser algo diferente do valor cru salvo no banco. local_destino é texto livre digitado pelo usuário (ex: "Criciúma - SC"); linhas fora desse padrão não terão UF reconhecida e ficam agrupadas como "não identificada".',
+    exemplos: [
+      { label: 'Despesas por UF/cidade, com status formatado e cliente', sql: `SELECT\n  UPPER(TRIM(SPLIT_PART(d.local_destino, '-', 2))) AS uf,\n  TRIM(SPLIT_PART(d.local_destino, '-', 1)) AS municipio,\n  CASE d.status\n    WHEN 'rascunho'    THEN 'Rascunho'\n    WHEN 'enviado'     THEN 'Enviado'\n    WHEN 'nao_enviado' THEN 'Não Enviado'\n    WHEN 'reembolsado' THEN 'Reembolsado'\n    ELSE d.status\n  END AS status,\n  d.cliente_nome,\n  SUM(i.valor) AS valor\nFROM despesa_001 d\nJOIN despesa_item_001 i ON i.despesa_id = d.id\nWHERE d.local_destino LIKE '%-%'\nGROUP BY uf, municipio, status, d.cliente_nome` },
+      { label: 'Só por UF (sem drill-down por cidade)', sql: `SELECT\n  UPPER(TRIM(SPLIT_PART(local_destino, '-', 2))) AS uf,\n  SUM(i.valor) AS valor\nFROM despesa_001 d\nJOIN despesa_item_001 i ON i.despesa_id = d.id\nWHERE local_destino LIKE '%-%'\nGROUP BY uf` },
     ],
   },
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { notificar } from '../../../components/Notificacao'
 
 // Encapsula os handlers de arquivo/pasta da aba Cadastro: abrir, copiar
 // (local/clipboard), importar pasta em lote, preencher campos satélites
@@ -18,7 +19,7 @@ export function useFormBuilderArquivos({ tela, nomeTabela, form, setForm, setErr
     if (!r.ok) { setErro(r.erro || 'Não foi possível copiar.'); return }
     setCopiado('local')
     setTimeout(() => setCopiado(null), 2500)
-    if (confirm(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`)) {
+    if (await notificar.confirmar(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`, { titulo: 'Arquivo copiado', confirmarLabel: 'Abrir pasta' })) {
       const pasta = r.destino.substring(0, r.destino.lastIndexOf('\\'))
       await window.api.arquivos.abrirPasta(pasta)
     }

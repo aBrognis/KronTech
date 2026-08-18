@@ -8,6 +8,7 @@ import * as LucideIcons from 'lucide-react'
 import FormBuilderModal from './FormBuilderModal'
 import FuncoesTab from './FuncoesTab'
 import { MENU_BASE, MENU_DESIGNER } from '../components/Sidebar'
+import { notificar } from '../components/Notificacao'
 
 function TilaIcon({ nome, size = 15, cor = 'var(--or)' }) {
   const key  = (nome || 'layout').split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
@@ -120,7 +121,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
 
   async function handleToggleAtivo(tela) {
     const acao = tela.ativo ? 'Inativar' : 'Reativar'
-    if (!confirm(`${acao} a tela "${tela.nome_tela}"?`)) return
+    if (!(await notificar.confirmar(`${acao} a tela "${tela.nome_tela}"?`, { titulo: `${acao} tela`, confirmarLabel: acao }))) return
     try {
       const res = tela.ativo
         ? await window.api.formBuilder.inativarTela(tela.id)
@@ -128,17 +129,17 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       if (!res.ok) throw new Error(res.erro)
       await carregar()
       notifyTelasUpdated(onTelasUpdated)
-    } catch(e) { alert('Erro: ' + e.message) }
+    } catch(e) { notificar.erro('Erro: ' + e.message) }
   }
 
   async function handleExcluir(tela) {
-    if (!confirm(`ATENÇÃO: Isso vai EXCLUIR a tabela "${tela.nome_tabela}" e TODOS os dados.\n\nDeseja continuar?`)) return
+    if (!(await notificar.confirmar(`ATENÇÃO: Isso vai EXCLUIR a tabela "${tela.nome_tabela}" e TODOS os dados.\n\nDeseja continuar?`, { titulo: 'Excluir tela', confirmarLabel: 'Excluir', perigo: true }))) return
     try {
       const res = await window.api.formBuilder.excluirTela(tela.id)
       if (!res.ok) throw new Error(res.erro)
       await carregar()
       notifyTelasUpdated(onTelasUpdated)
-    } catch(e) { alert('Erro: ' + e.message) }
+    } catch(e) { notificar.erro('Erro: ' + e.message) }
   }
 
   async function abrirEditar(tela) {
@@ -146,7 +147,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       const res = await window.api.formBuilder.buscarTela(tela.id)
       if (!res.ok) throw new Error(res.erro)
       setTelaEditando(res.data); setModalAberto(true)
-    } catch(e) { alert('Erro ao carregar tela: ' + e.message) }
+    } catch(e) { notificar.erro('Erro ao carregar tela: ' + e.message) }
   }
 
   async function handleSalvar() {
@@ -218,7 +219,7 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       await carregar()
       setMenuSalvo(true)
       setTimeout(() => setMenuSalvo(false), 2500)
-    } catch(e) { alert('Erro ao salvar: ' + e.message) }
+    } catch(e) { notificar.erro('Erro ao salvar: ' + e.message) }
     finally { setSalvandoMenu(false) }
   }
 
@@ -240,16 +241,16 @@ export default function FormBuilder({ onTelasUpdated, hideHeader = false, hideTa
       if (!res.ok) throw new Error(res.erro)
       setEditandoMod(null)
       await carregar()
-    } catch(e) { alert('Erro: ' + e.message) }
+    } catch(e) { notificar.erro('Erro: ' + e.message) }
   }
 
   async function handleExcluirModulo(mod) {
-    if (!confirm(`Excluir módulo "${mod.nome}"?`)) return
+    if (!(await notificar.confirmar(`Excluir módulo "${mod.nome}"?`, { titulo: 'Excluir módulo', confirmarLabel: 'Excluir', perigo: true }))) return
     try {
       const res = await window.api.formBuilder.excluirModulo(mod.id)
       if (!res.ok) throw new Error(res.erro)
       await carregar()
-    } catch(e) { alert('Erro: ' + e.message) }
+    } catch(e) { notificar.erro('Erro: ' + e.message) }
   }
 
   // ── Estilos inline (seguem tokens KronTech) ───────────────────────────────

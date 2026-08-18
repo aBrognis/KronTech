@@ -16,8 +16,8 @@ export function funnel({ rows, fields, color, chartStyle }) {
         sort:'descending', gap:2,
         label:{ show:true, position:'inside', color:'#fff', fontSize:11, formatter:'{b}\n{c}' },
         itemStyle:{ borderColor:cssVar('--bg'), borderWidth:1 },
-        data: rows.map((r,i)=>({ name:String(r[fields[0]]), value:Number(r[fields[1]])||0,
-          itemStyle:{ color: i===0?color:PALETA[i%PALETA.length] } })),
+        data: rows.map((r,i)=>{ const c = i===0?color:PALETA[i%PALETA.length]; return { name:String(r[fields[0]]), value:Number(r[fields[1]])||0,
+          itemStyle:{ color:c } } }),
       }],
     }} />
   )

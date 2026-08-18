@@ -3,16 +3,17 @@ import * as basic from './basic'
 import * as flow from './flow'
 import * as matrix from './matrix'
 import * as statistical from './statistical'
+import * as map from './map'
 import { ComparisonBadge, computeAggregateDelta } from '../echartsHelpers'
 
-const RENDERERS = { ...basic, ...flow, ...matrix, ...statistical }
+const RENDERERS = { ...basic, ...flow, ...matrix, ...statistical, ...map }
 
 // Tipos onde uma segunda série/overlay não faz sentido visualmente, recebem
 // em vez disso um badge no canto com o delta agregado da 1ª coluna numérica.
 const NO_OVERLAY_TYPES = new Set([
   'pie','funnel','treemap','sunburst','heatmap','calendar_heatmap',
   'scatter','radar','graph','tree','sankey','theme_river','boxplot',
-  'candlestick','parallel','grid','gauge',
+  'candlestick','parallel','grid','gauge','mapa_br',
 ])
 
 export function WidgetBody({ widget, rows, fields, prevRows, prevFields, fillHeight = false }) {
@@ -28,10 +29,19 @@ export function WidgetBody({ widget, rows, fields, prevRows, prevFields, fillHei
 
   const hasComparison = !!(widget.comparar_anterior && prevRows?.length)
 
-  const fn = RENDERERS[widget.tipo]
-  if (!fn) return null
+  const Fn = RENDERERS[widget.tipo]
+  if (!Fn) return null
   const formato = widget.formato || 'numero'
-  const body = fn({ widget, rows, fields, labels, valKeys, color, chartStyle, anim, fillHeight, prevRows, prevFields, hasComparison, formato })
+  // Renderiza como elemento React de verdade (<Fn .../>), não como chamada
+  // de função pura (Fn(...)) — tipos com hooks internos (ex.: mapa_br usa
+  // useState/useRef/useEffect pra zoom/pan) precisam de uma instância fixa
+  // de componente com key estável; chamando como função pura, os hooks
+  // ficam emprestando o slot de hooks do WidgetBody, o que quebra
+  // silenciosamente efeitos/refs entre re-renders quando os dados do
+  // widget atualizam (ex. auto-refresh).
+  const body = <Fn widget={widget} rows={rows} fields={fields} labels={labels} valKeys={valKeys}
+    color={color} chartStyle={chartStyle} anim={anim} fillHeight={fillHeight}
+    prevRows={prevRows} prevFields={prevFields} hasComparison={hasComparison} formato={formato} />
 
   if (hasComparison && NO_OVERLAY_TYPES.has(widget.tipo)) {
     const delta = computeAggregateDelta(rows, fields, prevRows, prevFields)

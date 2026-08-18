@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
          Check, X, Search, AlertCircle, Copy, RefreshCw, Database,
-         LayoutGrid, Sliders, Palette, Ruler, Clock3, Table2, ListOrdered } from 'lucide-react'
+         LayoutGrid, Sliders, Palette, Clock3, Table2, ListOrdered } from 'lucide-react'
 import { getAllIcons, LucideIcon, WidgetBody,
          TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
 
@@ -161,13 +161,16 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         const payload = { ...form, grid_x: pos.x, grid_y: pos.y }
         const res = await window.api.dash.create(payload)
         if (!res.ok) return
-        const newW = { ...payload, id: res.data.id }
-        setWidgets(prev => [...prev, newW])
         setSelected(res.data.id)
       } else {
         await window.api.dash.update({ id: selected, ...form })
-        setWidgets(prev => prev.map(w => w.id === selected ? { ...w, ...form } : w))
       }
+      // O backend reempilha (recalcula grid_x/grid_y de TODOS os widgets)
+      // sempre que largura/altura muda — sem recarregar do banco aqui, o
+      // Designer continuava mostrando posições antigas em memória mesmo
+      // com o banco já correto, dando a impressão de "não aceita"/travado.
+      const res = await window.api.dash.getAll()
+      if (res.ok) setWidgets(res.data)
       window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setSaving(false)
@@ -581,44 +584,85 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                   </SecCard>
 
                   {selected !== 'new' && (
-                    <SecCard icon={<ListOrdered size={14} />} title="Ordem no Dashboard">
+                    <SecCard icon={<ListOrdered size={14} />} title="Ordem, sequência e linha">
                       {(() => {
                         const ordenados = [...widgets].sort((a, b) => (a.posicao ?? 0) - (b.posicao ?? 0))
                         const idx = ordenados.findIndex(w => w.id === selected)
                         const total = ordenados.length
+                        // Calcula em que "linha" visual este widget cai, simulando o
+                        // mesmo flow-layout usado pelo Dashboard real (dash:autoLayout):
+                        // entra na linha atual se couber (largura acumulada ≤ 12
+                        // colunas), senão quebra pra próxima linha.
+                        let cursorX = 0, linha = 1, minhaLinha = 1
+                        for (let i = 0; i < ordenados.length; i++) {
+                          const w = i === idx ? form.grid_w : (ordenados[i].grid_w || 3)
+                          if (cursorX > 0 && cursorX + w > 12) { cursorX = 0; linha++ }
+                          if (i === idx) minhaLinha = linha
+                          cursorX += w
+                        }
                         return (
-                          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                            <div style={{ display:'flex', gap:6 }}>
-                              <button
-                                onClick={() => handleReorder('up')}
-                                disabled={saving || idx <= 0}
-                                title="Subir posição"
-                                style={{
-                                  display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
-                                  borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
-                                  color: idx <= 0 ? 'var(--t3)' : 'var(--t1)',
-                                  cursor: (saving || idx <= 0) ? 'not-allowed' : 'pointer', opacity: idx <= 0 ? .45 : 1,
-                                }}
-                              >
-                                <ArrowUp size={15} />
-                              </button>
-                              <button
-                                onClick={() => handleReorder('down')}
-                                disabled={saving || idx < 0 || idx >= total - 1}
-                                title="Descer posição"
-                                style={{
-                                  display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
-                                  borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
-                                  color: (idx < 0 || idx >= total - 1) ? 'var(--t3)' : 'var(--t1)',
-                                  cursor: (saving || idx < 0 || idx >= total - 1) ? 'not-allowed' : 'pointer',
-                                  opacity: (idx < 0 || idx >= total - 1) ? .45 : 1,
-                                }}
-                              >
-                                <ArrowDown size={15} />
-                              </button>
+                          <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                              <div style={{ display:'flex', gap:6 }}>
+                                <button
+                                  onClick={() => handleReorder('up')}
+                                  disabled={saving || idx <= 0}
+                                  title="Subir posição"
+                                  style={{
+                                    display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
+                                    borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
+                                    color: idx <= 0 ? 'var(--t3)' : 'var(--t1)',
+                                    cursor: (saving || idx <= 0) ? 'not-allowed' : 'pointer', opacity: idx <= 0 ? .45 : 1,
+                                  }}
+                                >
+                                  <ArrowUp size={15} />
+                                </button>
+                                <button
+                                  onClick={() => handleReorder('down')}
+                                  disabled={saving || idx < 0 || idx >= total - 1}
+                                  title="Descer posição"
+                                  style={{
+                                    display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
+                                    borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
+                                    color: (idx < 0 || idx >= total - 1) ? 'var(--t3)' : 'var(--t1)',
+                                    cursor: (saving || idx < 0 || idx >= total - 1) ? 'not-allowed' : 'pointer',
+                                    opacity: (idx < 0 || idx >= total - 1) ? .45 : 1,
+                                  }}
+                                >
+                                  <ArrowDown size={15} />
+                                </button>
+                              </div>
+                              <div style={{ fontSize:12, color:'var(--t3)' }}>
+                                Sequência <b style={{ color:'var(--t1)' }}>{idx + 1}</b> de {total} · cai na <b style={{ color:'var(--t1)' }}>linha {minhaLinha}</b> do Dashboard.
+                              </div>
                             </div>
-                            <div style={{ fontSize:12, color:'var(--t3)' }}>
-                              Posição <b style={{ color:'var(--t1)' }}>{idx + 1}</b> de {total} — controla se este dashboard aparece acima ou abaixo dos demais.
+
+                            <div style={{ display:'flex', gap:26 }}>
+                              <div style={{ flex:1 }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:9 }}>
+                                  Largura <b style={{ color:'var(--t1)', fontVariantNumeric:'tabular-nums', fontWeight:700 }}>{form.grid_w}/12</b>
+                                </div>
+                                <input
+                                  type="range" min={2} max={12} step={1}
+                                  value={form.grid_w}
+                                  onChange={e => f('grid_w', Number(e.target.value))}
+                                  style={{ width:'100%' }}
+                                />
+                              </div>
+                              <div style={{ flex:1 }}>
+                                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:9 }}>
+                                  Altura <b style={{ color:'var(--t1)', fontVariantNumeric:'tabular-nums', fontWeight:700 }}>{form.grid_h} lin.</b>
+                                </div>
+                                <input
+                                  type="range" min={1} max={8} step={1}
+                                  value={form.grid_h}
+                                  onChange={e => f('grid_h', Number(e.target.value))}
+                                  style={{ width:'100%' }}
+                                />
+                              </div>
+                            </div>
+                            <div style={{ fontSize:10.5, color:'var(--t3)' }}>
+                              Dois widgets de largura 6 cabem lado a lado na mesma linha (6+6=12); mude a largura pra controlar quantos ficam por linha.
                             </div>
                           </div>
                         )
@@ -767,32 +811,6 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                     </div>
                   </SecCard>
 
-                  <SecCard icon={<Ruler size={14} />} title="Tamanho do card">
-                    <div style={{ display:'flex', gap:26 }}>
-                      <div style={{ flex:1 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:9 }}>
-                          Largura <b style={{ color:'var(--t1)', fontVariantNumeric:'tabular-nums', fontWeight:700 }}>{form.grid_w}/12</b>
-                        </div>
-                        <input
-                          type="range" min={2} max={12} step={1}
-                          value={form.grid_w}
-                          onChange={e => f('grid_w', Number(e.target.value))}
-                          style={{ width:'100%' }}
-                        />
-                      </div>
-                      <div style={{ flex:1 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:9 }}>
-                          Altura <b style={{ color:'var(--t1)', fontVariantNumeric:'tabular-nums', fontWeight:700 }}>{form.grid_h} lin.</b>
-                        </div>
-                        <input
-                          type="range" min={1} max={8} step={1}
-                          value={form.grid_h}
-                          onChange={e => f('grid_h', Number(e.target.value))}
-                          style={{ width:'100%' }}
-                        />
-                      </div>
-                    </div>
-                  </SecCard>
 
                   <label style={{
                     display:'flex', alignItems:'center', gap:10, color:'var(--t2)', fontSize:13, cursor:'pointer',
@@ -1026,7 +1044,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                           <Check size={14} />
                           Assim vai aparecer no card do Dashboard
                         </div>
-                        <div style={{ border:'1px solid var(--bd)', borderRadius:10, overflow:'hidden', background:'var(--s1)', boxShadow:'var(--sh-md)', maxWidth:460 }}>
+                        <div className="dash-hud dash-widget-card" style={{ border:'1px solid var(--bd)', borderRadius:10, overflow:'hidden', background:'var(--s1)', boxShadow:'var(--sh-md)', maxWidth:460 }}>
                           <div style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 14px', borderBottom:'1px solid var(--bd)', background:'var(--s2)' }}>
                             <span style={{ width:24, height:24, borderRadius:6, background:(form.cor||'#FF6B2B')+'26', color:form.cor||'#FF6B2B', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                               <LucideIcon name={form.icone_lucide || tipoAtual?.icon || 'hash'} size={13} />

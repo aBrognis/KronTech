@@ -7,6 +7,7 @@ import LoginPage       from './pages/LoginPage'
 import Sidebar         from './components/Sidebar'
 import UpdateBanner    from './components/UpdateBanner'
 import ErrorBoundary   from './components/ErrorBoundary'
+import NotificacaoRoot from './components/Notificacao'
 import Dashboard           from './pages/Dashboard'
 import DashboardDesigner  from './pages/DashboardDesigner'
 import Arquivos        from './pages/Arquivos'
@@ -486,7 +487,7 @@ export default function App() {
   }
 
   if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} accentColor={accentColor} />
-  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); setAppPhase('app') }} accentColor={accentColor} /><UpdateBanner /></>
+  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); setAppPhase('app') }} accentColor={accentColor} /><UpdateBanner /><NotificacaoRoot /></>
 
   return (
     <div className="app">
@@ -569,6 +570,7 @@ export default function App() {
 
       </div>
       <UpdateBanner />
+      <NotificacaoRoot />
     </div>
   )
 }

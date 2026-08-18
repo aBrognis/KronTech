@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import FormBuilderModal from '../FormBuilderModal'
+import { notificar } from '../../components/Notificacao'
 
 function TilaIcon({ nome, size = 15, cor = 'var(--or)' }) {
   const key  = (nome || 'layout').split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
@@ -49,7 +50,7 @@ export default function TelasPage() {
 
   async function handleToggleAtivo(tela) {
     const acao = tela.ativo ? 'Inativar' : 'Reativar'
-    if (!confirm(`${acao} a tela "${tela.nome_tela}"?`)) return
+    if (!(await notificar.confirmar(`${acao} a tela "${tela.nome_tela}"?`, { titulo: `${acao} tela`, confirmarLabel: acao }))) return
     try {
       const res = tela.ativo
         ? await window.api.formBuilder.inativarTela(tela.id)
@@ -57,17 +58,17 @@ export default function TelasPage() {
       if (!res.ok) throw new Error(res.erro)
       await carregar()
       notifyTelasUpdated()
-    } catch (e) { alert('Erro: ' + e.message) }
+    } catch (e) { notificar.erro('Erro: ' + e.message) }
   }
 
   async function handleExcluir(tela) {
-    if (!confirm(`ATENÇÃO: Isso vai EXCLUIR a tabela "${tela.nome_tabela}" e TODOS os dados.\n\nDeseja continuar?`)) return
+    if (!(await notificar.confirmar(`ATENÇÃO: Isso vai EXCLUIR a tabela "${tela.nome_tabela}" e TODOS os dados.\n\nDeseja continuar?`, { titulo: 'Excluir tela', confirmarLabel: 'Excluir', perigo: true }))) return
     try {
       const res = await window.api.formBuilder.excluirTela(tela.id)
       if (!res.ok) throw new Error(res.erro)
       await carregar()
       notifyTelasUpdated()
-    } catch (e) { alert('Erro: ' + e.message) }
+    } catch (e) { notificar.erro('Erro: ' + e.message) }
   }
 
   async function abrirEditar(tela) {
@@ -75,7 +76,7 @@ export default function TelasPage() {
       const res = await window.api.formBuilder.buscarTela(tela.id)
       if (!res.ok) throw new Error(res.erro)
       setTelaEditando(res.data); setModalAberto(true)
-    } catch (e) { alert('Erro ao carregar tela: ' + e.message) }
+    } catch (e) { notificar.erro('Erro ao carregar tela: ' + e.message) }
   }
 
   async function handleSalvar() {

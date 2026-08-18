@@ -1,0 +1,47 @@
+/* ============================================================
+   KRONTECH — Dashboard "control-room / HUD"
+   Referência: dashboards ROQT (fundo sólido escuro, sem textura, borda
+   fina, tipografia grande e nítida, UMA cor de acento aplicada em tudo —
+   KPIs, gráficos, mapa, badges). Nada de animação decorativa contínua:
+   com 2+ widgets, várias `animation: infinite` por card (box-shadow,
+   filter, e principalmente top/left animados) empilhavam custo de
+   repaint/reflow e travavam o app inteiro. O visual "tech" vem de
+   layout, cor e tipografia — não de movimento de fundo.
+   Escopado sob .dash-hud — não vaza pro resto do app.
+   ============================================================ */
+
+.dash-hud {
+  --hud-ac:  var(--or);
+  --hud-ac2: var(--or2);
+}
+
+/* Card: borda fina discreta, sem glow/sombra animada. */
+.dash-hud .dash-widget-card {
+  position: relative;
+  border-radius: 8px !important;
+  border: 1px solid var(--bd);
+}
+
+/* Dot de status — estático, só indica "ativo". */
+.dash-hud .dash-hud-live {
+  display: inline-block;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--hud-ac);
+  flex-shrink: 0;
+}
+
+/* Sincronização (auto-refresh): feedback barato — flash de borda com
+   transição rápida (.2s, sem animation:infinite rodando). */
+.dash-hud .dash-widget-card {
+  transition: border-color .2s ease;
+}
+.dash-hud .dash-widget-card.dash-hud-syncing-frame {
+  border-color: var(--hud-ac) !important;
+}
+
+/* Números tabulares (KPIs, tabela) — alinhamento correto de dígitos,
+   sem trocar a fonte do app por uma monoespaçada. */
+.dash-hud .dash-num,
+.dash-hud .dash-table td.num {
+  font-variant-numeric: tabular-nums;
+}

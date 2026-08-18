@@ -19,15 +19,16 @@ export function registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, sa
   }))
   ipcMain.handle('config:getIniPath', wrap(() => INI_PATH))
 
-  ipcMain.handle('config:selecionarPasta', wrap(async (e) => {
+  ipcMain.handle('config:selecionarPasta', wrap(async (e, opts = {}) => {
+    const chave = opts.chave || 'arquivos'
     const win = BrowserWindow.fromWebContents(e.sender)
     const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'Selecionar pasta de arquivos',
+      title: opts.titulo || 'Selecionar pasta de arquivos',
       properties: ['openDirectory', 'createDirectory'],
     })
     if (canceled || !filePaths.length) return null
     const pasta = filePaths[0]
-    saveConfig('Caminhos', 'arquivos', pasta)
+    saveConfig('Caminhos', chave, pasta)
     if (!existsSync(pasta)) mkdirSync(pasta, { recursive: true })
     return pasta
   }))

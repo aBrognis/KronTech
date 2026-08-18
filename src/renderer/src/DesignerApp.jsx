@@ -3,6 +3,7 @@ import {
   Sun, Moon, X, Plus, ChevronLeft, ChevronRight, LayoutGrid, Package, Zap,
 } from 'lucide-react'
 import Sidebar from './components/Sidebar'
+import NotificacaoRoot from './components/Notificacao'
 import FuncoesTab from './pages/FuncoesTab'
 import TelasPage from './pages/designer/TelasPage'
 import ModulosPage from './pages/designer/ModulosPage'
@@ -412,6 +413,7 @@ export default function DesignerApp() {
         </div>
 
       </div>
+      <NotificacaoRoot />
     </div>
   )
 }

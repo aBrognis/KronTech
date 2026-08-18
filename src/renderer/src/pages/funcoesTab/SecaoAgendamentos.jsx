@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Save, X, Power, PowerOff, Edit2, Trash2, Plus, Calendar, Clock } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { Btn, FInput, FSelect, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
 
 const INTERVALOS = [
@@ -35,7 +36,7 @@ export default function SecaoAgendamentos({ scripts }) {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir este agendamento?')) return
+    if (!(await notificar.confirmar('Excluir este agendamento?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     await window.api.funcoes.excluirAgendamento(id)
     setLista(prev => prev.filter(a => a.id !== id))
   }, [])

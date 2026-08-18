@@ -25,6 +25,7 @@ export const TIPOS = [
   { value: 'theme_river',      icon: 'waves',              label: 'Rio temático',         desc: 'Fluxo de séries no tempo',            defW: 6, defH: 4 },
   { value: 'pictorial_bar',    icon: 'image',              label: 'Barras pictóricas',    desc: 'Barras com ícones repetidos',         defW: 4, defH: 5 },
   { value: 'parallel',         icon: 'columns-3',          label: 'Coordenadas paralelas',desc: 'Comparação multi-dimensional',        defW: 6, defH: 5 },
+  { value: 'mapa_br',          icon: 'map',                label: 'Mapa do Brasil',       desc: 'Distribuição geográfica por UF/município', defW: 6, defH: 6 },
 ]
 
 export const PALETA = ['#FF6B2B','#60A5FA','#4ADE80','#FBD24C','#A78BFA','#F472B6','#34D399','#FB923C','#E879F9','#22D3EE','#F43F5E','#84CC16']

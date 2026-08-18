@@ -1,7 +1,7 @@
 // Tipos "básicos" (família cartesiana + card/gauge/tabela)
 import EChart from '../EChart'
 import { fmtNum, isNumCol, isStatusCol, corStatusValor } from '../format'
-import { grad, cssVar, TT, AX, NoData, SqlErr, ComparisonBadge } from '../echartsHelpers'
+import { cssVar, TT, AX, NoData, SqlErr, ComparisonBadge } from '../echartsHelpers'
 import { PALETA } from '../constants'
 
 // Séries "(anterior)" acopladas ao final do array, index-aligned com a linha atual.
@@ -25,28 +25,25 @@ export function card({ widget, rows, fields, color, prevRows, prevFields, hasCom
   const [main, ...secs] = cols
   const prevVal = hasComparison && prevRows[0] ? Number(prevRows[0][prevFields?.[0] ?? main]) : null
   return (
-    <div style={{ display:'flex', overflow:'hidden' }}>
-      <div style={{ width:3, flexShrink:0, background:color, borderRadius:3, marginRight:14, alignSelf:'stretch' }} />
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:46, fontWeight:800, lineHeight:1, letterSpacing:-2, fontVariantNumeric:'tabular-nums', color }}>
-          {fmtNum(row[main], formato)}
-        </div>
-        <div style={{ fontSize:10, color:'var(--t3)', marginTop:4, letterSpacing:1.5, textTransform:'uppercase', fontWeight:600 }}>{main}</div>
-        {hasComparison && (
-          <ComparisonBadge current={Number(row[main]) || 0} previous={prevVal} label="vs. período anterior" />
-        )}
-        {secs.length > 0 && (
-          <div style={{ display:'flex', gap:20, flexWrap:'wrap', marginTop:12, paddingTop:10, borderTop:'1px solid var(--bd)' }}>
-            {secs.map(c => (
-              <div key={c}>
-                <div style={{ fontSize:20, fontWeight:700, color:'var(--t1)', lineHeight:1, fontVariantNumeric:'tabular-nums' }}>{fmtNum(row[c], formato)}</div>
-                <div style={{ fontSize:9, color:'var(--t3)', marginTop:3, letterSpacing:1, textTransform:'uppercase' }}>{c}</div>
-              </div>
-            ))}
-          </div>
-        )}
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', justifyContent:'center' }}>
+      <div className="dash-num" style={{ fontSize:32, fontWeight:700, lineHeight:1, color:'var(--t1)' }}>
+        {fmtNum(row[main], formato)}
       </div>
-      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'50%', background:`radial-gradient(ellipse at 100% 50%, ${color}10, transparent 70%)`, pointerEvents:'none' }} />
+      {hasComparison ? (
+        <ComparisonBadge current={Number(row[main]) || 0} previous={prevVal} label="vs. período anterior" />
+      ) : (
+        <div style={{ fontSize:11, color:'var(--t3)', marginTop:6 }}>{main.replace(/_/g,' ')}</div>
+      )}
+      {secs.length > 0 && (
+        <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginTop:16, paddingTop:12, borderTop:'1px solid var(--bd)' }}>
+          {secs.map(c => (
+            <div key={c}>
+              <div className="dash-num" style={{ fontSize:16, fontWeight:600, color:'var(--t1)', lineHeight:1 }}>{fmtNum(row[c], formato)}</div>
+              <div style={{ fontSize:10, color:'var(--t3)', marginTop:4 }}>{c.replace(/_/g,' ')}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -65,7 +62,7 @@ export function bar({ rows, fields, labels, valKeys, color, chartStyle, anim, pr
       series: [
         ...valKeys.map((k,i) => {
           const c = i===0 ? color : PALETA[i % PALETA.length]
-          return { name:k, type:'bar', data:rows.map(r=>Number(r[k])||0), barMaxWidth:52, barMinHeight:2, itemStyle:{ borderRadius:[5,5,0,0], color:grad(c) }, emphasis:{ itemStyle:{ color:c } } }
+          return { name:k, type:'bar', data:rows.map(r=>Number(r[k])||0), barMaxWidth:52, barMinHeight:2, itemStyle:{ borderRadius:[3,3,0,0], color:c }, emphasis:{ itemStyle:{ color:c } } }
         }),
         ...(hasComparison ? prevSeries(prevRows, prevFields, valKeys, 'bar', { barMaxWidth:52 }) : []),
       ],
@@ -108,7 +105,7 @@ export function bar_h({ rows, labels, valKeys, color, chartStyle, anim, prevRows
       series: [
         ...valKeys.map((k,i) => {
           const c = i===0 ? color : PALETA[i % PALETA.length]
-          return { name:k, type:'bar', data:[...rows].reverse().map(r=>Number(r[k])||0), barMaxWidth:32, barMinHeight:2, itemStyle:{ borderRadius:[0,5,5,0], color:grad(c,'66') }, emphasis:{ itemStyle:{ color:c } } }
+          return { name:k, type:'bar', data:[...rows].reverse().map(r=>Number(r[k])||0), barMaxWidth:32, barMinHeight:2, itemStyle:{ borderRadius:[0,3,3,0], color:c }, emphasis:{ itemStyle:{ color:c } } }
         }),
         ...(hasComparison ? prevSeries([...(prevRows||[])].reverse(), prevFields, valKeys, 'bar', { barMaxWidth:32 }) : []),
       ],
@@ -129,7 +126,11 @@ function renderLine({ rows, labels, valKeys, color, chartStyle, anim, prevRows, 
       series: [
         ...valKeys.map((k,i) => {
           const c = i===0 ? color : PALETA[i % PALETA.length]
-          return { name:k, type:'line', smooth:0.4, data:rows.map(r=>Number(r[k])||0), lineStyle:{ color:c, width:2.5 }, itemStyle:{ color:c, borderWidth:2.5, borderColor:cssVar('--bg') }, symbol:'circle', symbolSize:6, areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{ offset:0, color:c+areaOpacity },{ offset:1, color:c+'05' }] } } }
+          return { name:k, type:'line', smooth:0.4, data:rows.map(r=>Number(r[k])||0),
+            lineStyle:{ color:c, width:2.5 },
+            itemStyle:{ color:c },
+            symbol:'circle', symbolSize:5,
+            areaStyle:{ color:{ type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{ offset:0, color:c+areaOpacity },{ offset:1, color:c+'05' }] } } }
         }),
         ...(hasComparison ? prevSeries(prevRows, prevFields, valKeys, 'line', { smooth:0.4, symbol:'none' }) : []),
       ],
@@ -140,22 +141,33 @@ function renderLine({ rows, labels, valKeys, color, chartStyle, anim, prevRows, 
 export function line(ctx) { return renderLine(ctx, '38') }
 export function line_area(ctx) { return renderLine(ctx, '70') }
 
+// Centro do donut compartilhado entre o series.center do ECharts e o
+// overlay HTML do total — único ponto de ajuste, elimina o "número mágico"
+// duplicado que causava o bug de centralização (graphic.left/top do ECharts
+// é relativo à área de plotagem, não ao centro visual do donut).
+const PIE_CENTER = { x: '31%', y: '50%' }
+
 export function pie({ rows, fields, color, chartStyle, formato }) {
   if (!rows.length) return <NoData />
   if (fields.length < 2) return <SqlErr msg="SQL precisa de 2 colunas: label e valor." />
   const total   = rows.reduce((s,r) => s + (Number(r[fields[1]])||0), 0)
   const pieData = rows.map((r,i) => ({ name:String(r[fields[0]]??''), value:Number(r[fields[1]])||0, itemStyle:{ color:i===0?color:PALETA[i%PALETA.length], borderColor:cssVar('--bg'), borderWidth:2 } }))
   return (
-    <EChart style={chartStyle} opts={{ renderer:'canvas' }} option={{
-      backgroundColor:'transparent', animation:true, animationDuration:800,
-      tooltip:{ trigger:'item', ...TT(), formatter:p=>`${p.name}<br/><b>${fmtNum(p.value, formato)}</b> (${p.percent}%)` },
-      legend:{ orient:'vertical', right:8, top:'middle', textStyle:{ color:cssVar('--t3'), fontSize:10 }, itemWidth:10, itemHeight:10, itemGap:10, formatter:n=>n.length>16?n.slice(0,15)+'…':n },
-      graphic:[
-        { type:'text', left:'30%', top:'42%', style:{ text:fmtNum(total, formato), textAlign:'center', fill:cssVar('--t1'), fontSize:20, fontWeight:700 } },
-        { type:'text', left:'30%', top:'57%', style:{ text:'total', textAlign:'center', fill:cssVar('--t3'), fontSize:10 } },
-      ],
-      series:[{ type:'pie', center:['31%','50%'], radius:['48%','74%'], data:pieData, label:{show:false}, emphasis:{ scale:true, scaleSize:5, itemStyle:{ shadowBlur:14, shadowColor:'rgba(0,0,0,.5)' } }, animationType:'scale', animationEasing:'elasticOut' }],
-    }} />
+    <div style={{ position:'relative', width:'100%', height:'100%' }}>
+      <EChart style={chartStyle} opts={{ renderer:'canvas' }} option={{
+        backgroundColor:'transparent', animation:true, animationDuration:800,
+        tooltip:{ trigger:'item', ...TT(), formatter:p=>`${p.name}<br/><b>${fmtNum(p.value, formato)}</b> (${p.percent}%)` },
+        legend:{ orient:'vertical', right:8, top:'middle', textStyle:{ color:cssVar('--t3'), fontSize:10 }, itemWidth:10, itemHeight:10, itemGap:10, formatter:n=>n.length>16?n.slice(0,15)+'…':n },
+        series:[{ type:'pie', center:[PIE_CENTER.x, PIE_CENTER.y], radius:['48%','74%'], data:pieData, label:{show:false}, emphasis:{ scale:true, scaleSize:5, itemStyle:{ shadowBlur:14, shadowColor:'rgba(0,0,0,.5)' } }, animationType:'scale', animationEasing:'elasticOut' }],
+      }} />
+      <div style={{
+        position:'absolute', left:PIE_CENTER.x, top:PIE_CENTER.y, transform:'translate(-50%,-50%)',
+        pointerEvents:'none', textAlign:'center',
+      }}>
+        <div className="dash-num" style={{ fontSize:20, fontWeight:700, color:'var(--t1)', lineHeight:1 }}>{fmtNum(total, formato)}</div>
+        <div style={{ fontSize:10, color:'var(--t3)', marginTop:3 }}>total</div>
+      </div>
+    </div>
   )
 }
 

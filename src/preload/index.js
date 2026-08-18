@@ -49,6 +49,7 @@ const api = {
     create:       (d)       => ipcRenderer.invoke('dash:create', d),
     update:       (d)       => ipcRenderer.invoke('dash:update', d),
     reorder:      (id, direcao) => ipcRenderer.invoke('dash:reorder', { id, direcao }),
+    autoLayout:   ()        => ipcRenderer.invoke('dash:autoLayout'),
     updateLayout: (layouts) => ipcRenderer.invoke('dash:updateLayout', layouts),
     delete:       (id)      => ipcRenderer.invoke('dash:delete', id),
     seedDemo:     ()        => ipcRenderer.invoke('dash:seedDemo'),
@@ -128,7 +129,7 @@ const api = {
     set:             (section, key, value)    => ipcRenderer.invoke('config:set', { section, key, value }),
     setSection:      (section, kvs)           => ipcRenderer.invoke('config:setSection', { section, kvs }),
     getIniPath:      ()                       => ipcRenderer.invoke('config:getIniPath'),
-    selecionarPasta: ()                       => ipcRenderer.invoke('config:selecionarPasta'),
+    selecionarPasta: (opts)                   => ipcRenderer.invoke('config:selecionarPasta', opts),
     onPersonalizacaoAlterada: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('config:personalizacaoAlterada', fn)

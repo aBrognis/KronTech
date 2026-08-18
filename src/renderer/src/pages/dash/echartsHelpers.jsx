@@ -19,10 +19,16 @@ export function cssVar(token) {
 export function grad(color, op = '55') {
   return { type:'linear', x:0, y:0, x2:0, y2:1, colorStops:[{ offset:0, color }, { offset:1, color: color + op }] }
 }
+
+function isLightTheme() {
+  return document.documentElement.classList.contains('light')
+}
+
 export function TT() {
   return {
     backgroundColor: cssVar('--s2'), borderColor: cssVar('--bd2'), borderWidth:1,
-    textStyle:{ color: cssVar('--t1'), fontSize:11 }, padding:[8,12],
+    textStyle:{ color: cssVar('--t1'), fontSize:11, fontFamily: cssVar('--hud-mono') },
+    padding:[8,12],
     extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:8px;',
   }
 }
@@ -30,8 +36,11 @@ export function AX() {
   return {
     axisLine:  { lineStyle:{ color: cssVar('--bd') } },
     axisTick:  { show:false },
-    axisLabel: { color: cssVar('--t3'), fontSize:10 },
-    splitLine: { lineStyle:{ color: cssVar('--bd'), type:'dashed', opacity:.6 } },
+    axisLabel: { color: cssVar('--t3'), fontSize:10, fontFamily: cssVar('--hud-mono') },
+    // Grid mais discreto no tema claro — linha tracejada padrão do ECharts
+    // (1px sólido antialiased) já lê "pesada" sobre fundo branco mesmo com
+    // opacidade reduzida; no escuro pode ficar um pouco mais presente.
+    splitLine: { lineStyle:{ color: cssVar('--bd'), type:'dashed', opacity: isLightTheme() ? 0.5 : 0.6 } },
   }
 }
 
@@ -52,10 +61,10 @@ export function ComparisonBadge({ current, previous, corner = false, label }) {
     ? { position:'absolute', top:8, right:8, zIndex:2 }
     : { marginTop:6 }
   return (
-    <div style={{ ...style, display:'inline-flex', alignItems:'center', gap:4, fontSize:10, fontWeight:700, color, background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:20, padding:'2px 8px' }}>
+    <div className="dash-num" style={{ ...style, display:'inline-flex', alignItems:'center', gap:4, fontSize:10, fontWeight:700, color, background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:20, padding:'2px 8px' }}>
       <Icon size={10} />
       {texto}
-      {label && <span style={{ color:'var(--t3)', fontWeight:500 }}>{label}</span>}
+      {label && <span style={{ color:'var(--t3)', fontWeight:500, fontFamily:'var(--ft)' }}>{label}</span>}
     </div>
   )
 }

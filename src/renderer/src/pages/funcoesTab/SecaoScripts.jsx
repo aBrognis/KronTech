@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Plus, Play, RefreshCw, X, Terminal, Download, CheckCircle, AlertTriangle, BookOpen } from 'lucide-react'
 import { mostrarAlerta, exportarCSV, executarSQL } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { Btn, FInput, SectionTitle, EmptyState } from './_shared.jsx'
 
 function paraApi(s) { return { id: s.id, nome: s.nome, sql_texto: s.sql, ativo: s.ativo ?? true } }
@@ -65,7 +66,7 @@ export default function SecaoScripts() {
   }
 
   const remover = async (id) => {
-    if (!confirm('Excluir este script?')) return
+    if (!(await notificar.confirmar('Excluir este script?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     await window.api.funcoes.excluirScript(id)
     setScripts(prev => {
       const nova = prev.filter(s => s.id !== id)

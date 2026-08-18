@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { RefreshCw, Settings2, AlertTriangle, LayoutDashboard } from 'lucide-react'
+import { RefreshCw, Settings2, AlertTriangle, LayoutDashboard, LayoutGrid } from 'lucide-react'
 import GridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -11,9 +11,14 @@ function Widget({ widget, onRefresh, loading, error }) {
   const isFillH = ['line','bar','bar_h','pie','scatter','radar',
     'bar_stacked','line_area','funnel','heatmap','calendar_heatmap','treemap','sunburst',
     'boxplot','candlestick','graph','tree','sankey','theme_river','pictorial_bar','parallel',
+    'mapa_br',
   ].includes(widget.tipo)
+
   return (
-    <div className="dash-widget-card" style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', cursor:'default' }}>
+    <div
+      className={`dash-widget-card${loading ? ' dash-hud-syncing-frame' : ''}`}
+      style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden', cursor:'default' }}
+    >
       <div
         className="widget-drag-handle"
         style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 12px 8px', cursor:'grab', flexShrink:0, borderBottom:'1px solid var(--bd)', background:'var(--s2)', borderRadius:'8px 8px 0 0' }}
@@ -29,6 +34,7 @@ function Widget({ widget, onRefresh, loading, error }) {
             {fmtInterval(widget.intervalo)}
           </span>
         )}
+        <span className="dash-hud-live" />
         <button
           className="icon-btn"
           onClick={e => { e.stopPropagation(); onRefresh(widget.id) }}
@@ -41,7 +47,6 @@ function Widget({ widget, onRefresh, loading, error }) {
       </div>
 
       <div className="dash-widget-card-body" style={{ flex:1, position:'relative', overflow:'hidden', padding: isFillH ? 0 : '12px 14px' }}>
-        {loading && <div className="skel" style={{ position:'absolute', inset:0, zIndex:2, borderRadius: isFillH ? 0 : 6 }} />}
         {error ? (
           <div style={{ display:'flex', alignItems:'center', gap:6, color:'#F87171', fontSize:11, padding: isFillH ? 12 : 0 }}>
             <AlertTriangle size={13} />{error}
@@ -163,6 +168,22 @@ export default function Dashboard({ onNavigate }) {
     setWidgets(prev => prev.map(x => x.id === id ? updated : x))
   }
 
+  async function handleAutoLayout() {
+    const res = await window.api.dash.autoLayout()
+    if (res.ok) {
+      setWidgets(prev => {
+        const posById = new Map(res.data.map(w => [w.id, w]))
+        return prev.map(w => ({ ...w, ...posById.get(w.id) }))
+      })
+      setLayout(res.data.map(w => ({
+        i: String(w.id),
+        x: w.grid_x ?? 0, y: w.grid_y ?? 0,
+        w: w.grid_w ?? 3,  h: w.grid_h ?? 2,
+        minW: 2, minH: 2,
+      })))
+    }
+  }
+
   function handleLayoutChange(newLayout) {
     setLayout(newLayout)
     if (layoutDebRef.current) clearTimeout(layoutDebRef.current)
@@ -175,7 +196,7 @@ export default function Dashboard({ onNavigate }) {
 
   if (!loading && widgets.length === 0) {
     return (
-      <div className="dash-wrapper" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
+      <div className="dash-wrapper dash-hud" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:16 }}>
         <LayoutDashboard size={52} style={{ color:'var(--t3)', opacity:.35 }} />
         <div style={{ textAlign:'center' }}>
           <div style={{ fontSize:15, fontWeight:600, color:'var(--t2)', marginBottom:6 }}>Nenhum widget cadastrado</div>
@@ -190,7 +211,7 @@ export default function Dashboard({ onNavigate }) {
   }
 
   return (
-    <div className="dash-wrapper" style={{ display:'flex', flexDirection:'column' }}>
+    <div className="dash-wrapper dash-hud" style={{ display:'flex', flexDirection:'column' }}>
       <div ref={containerRef} className="dash-grid-area" style={{ flex:1, overflowY:'auto', padding:'12px 16px' }}>
         {loading ? (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:16 }}>
@@ -221,6 +242,24 @@ export default function Dashboard({ onNavigate }) {
           </GridLayout>
         )}
       </div>
+
+      <button
+        onClick={handleAutoLayout}
+        title="Reorganizar widgets (corrige sobreposição, respeitando largura/altura de cada um)"
+        style={{
+          position:'fixed', right:210, bottom:22, zIndex:100,
+          display:'flex', alignItems:'center', gap:7,
+          padding:'9px 18px', borderRadius:24,
+          background:'var(--s2)', color:'var(--t1)',
+          border:'1px solid var(--bd2)', cursor:'pointer',
+          fontSize:12, fontWeight:600, letterSpacing:.3,
+          boxShadow:'0 4px 20px rgba(0,0,0,.25)',
+          transition:'opacity .15s',
+        }}
+      >
+        <LayoutGrid size={14} />
+        Reorganizar
+      </button>
 
       <button
         onClick={() => onNavigate?.('dashboard-designer')}

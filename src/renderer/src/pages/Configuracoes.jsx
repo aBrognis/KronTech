@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search } from 'lucide-react'
+import { notificar } from '../components/Notificacao'
 
 const CORES = [
   { nome: 'KronTech',  hex: '#D95218' },
@@ -192,7 +193,7 @@ export default function Configuracoes() {
         detail: { cor: form.cor, nomeSistema: form.nomeSistema, nomeUsuario: form.nomeUsuario, cargoUsuario: form.cargoUsuario }
       }))
     } catch (e) {
-      alert('Erro ao salvar: ' + e.message)
+      notificar.erro('Erro ao salvar: ' + e.message)
     } finally {
       setSalvando(false)
     }

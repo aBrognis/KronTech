@@ -11,8 +11,8 @@ export default function ViewMensal({ year, month, today, events, selectedDay, on
         {DIAS_SEMANA_CURTO.map((d,i) => (
           <div key={d} style={{
             padding:'8px 0', textAlign:'center', fontSize:10, fontWeight:700, letterSpacing:.8,
-            color: i===0||i===6 ? '#F87171' : 'var(--t3)',
-            background: i===0||i===6 ? 'rgba(248,113,113,.04)' : 'transparent',
+            color: i===0||i===6 ? 'var(--cal-weekend-color)' : 'var(--t3)',
+            background: i===0||i===6 ? 'var(--cal-weekend-head-bg)' : 'transparent',
           }}>{d}</div>
         ))}
       </div>
@@ -34,13 +34,13 @@ export default function ViewMensal({ year, month, today, events, selectedDay, on
               style={{
                 borderRight:'1px solid var(--bd)', borderBottom:'1px solid var(--bd)',
                 padding:'5px 5px 3px', cursor:'pointer', minHeight:90,
-                background: isSel ? 'rgba(255,107,43,.08)' : isWeekend ? 'rgba(248,113,113,.03)' : 'transparent',
+                background: isSel ? 'var(--or3)' : isWeekend ? 'var(--cal-weekend-bg)' : 'transparent',
                 outline: isSel ? '2px solid var(--or)' : 'none', outlineOffset:'-2px',
               }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
                 <span style={{
                   fontSize:12, fontWeight: isToday ? 700 : 400,
-                  color: isToday ? '#fff' : isWeekend ? '#F87171' : 'var(--t2)',
+                  color: isToday ? '#fff' : isWeekend ? 'var(--cal-weekend-color)' : 'var(--t2)',
                   background: isToday ? 'var(--or)' : 'transparent',
                   borderRadius:'50%', width:22, height:22,
                   display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,

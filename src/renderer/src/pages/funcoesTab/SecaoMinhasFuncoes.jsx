@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Code, Play, Save, X, Edit2, Trash2, Plus, BookOpen, Filter, Copy, CheckCircle, AlertTriangle } from 'lucide-react'
 import { mostrarAlerta, copiarTexto } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { genId, carregarSecao, salvarSecao, Btn, FInput, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
 
 const EXEMPLOS_FUNCOES = [
@@ -101,7 +102,7 @@ export default function SecaoMinhasFuncoes() {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir esta função?')) return
+    if (!(await notificar.confirmar('Excluir esta função?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     const nova = lista.filter(f => f.id !== id); setLista(nova); await salvarSecao('FuncoesCustom', nova)
   }, [lista])
 

@@ -32,6 +32,7 @@ desktop.ini
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # Arquivos de build temporários
 builder-debug.yml
@@ -39,3 +40,4 @@ builder-debug.yml
 
 # Launcher compilado (gerado localmente)
 scripts/launcher/KronTechLauncher.exe
+db_backups/

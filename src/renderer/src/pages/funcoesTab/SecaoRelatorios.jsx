@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { BarChart2, Play, RefreshCw, Download, Save, X, Edit2, Trash2, Plus, BookOpen } from 'lucide-react'
 import { mostrarAlerta, exportarCSV, executarSQL } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { genId, carregarSecao, salvarSecao, Btn, FInput, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
 
 const EXEMPLOS_RELATORIOS = [
@@ -32,7 +33,7 @@ export default function SecaoRelatorios() {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir este relatório?')) return
+    if (!(await notificar.confirmar('Excluir este relatório?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     const nova = lista.filter(r => r.id !== id); setLista(nova); await salvarSecao('Relatorios', nova)
   }, [lista])
 

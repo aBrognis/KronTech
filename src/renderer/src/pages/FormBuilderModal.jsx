@@ -381,10 +381,11 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         if (!(c.label || '').trim())     return setErro('Há campos sem label definido.')
         if (!(c.nomeCampo || '').trim()) return setErro(`Campo "${c.label || '?'}" sem nome de coluna.`)
       }
+      const moduloIdStr = moduloId != null ? String(moduloId) : ''
       const payload = {
         nomeTela, nomeTabela, descricao, icone,
-        moduloId:  (moduloId && !moduloId.startsWith('__')) ? moduloId : null,
-        grupoFixo: moduloId?.startsWith('__') ? moduloId.slice(2) : null,
+        moduloId:  (moduloIdStr && !moduloIdStr.startsWith('__')) ? moduloIdStr : null,
+        grupoFixo: moduloIdStr.startsWith('__') ? moduloIdStr.slice(2) : null,
         ordemMenu: ordemMenu || 99,
         canvasW: canvasW || 780, canvasH: canvasH || 480,
         colFavorito:   campos.some(c => c.tipo === 'favorito')   || (tela?.col_favorito   === true),

@@ -77,6 +77,34 @@ export function corStatus(ev) {
   return ev.status_cor || COR_STATUS_FALLBACK
 }
 
+// Ajusta uma cor livre (categoria/status, escolhida pelo usuário via
+// <input type="color">, sem garantia nenhuma de contraste) para ficar
+// legível como TEXTO sobre fundo escuro (dark) ou claro (light) —
+// clareia no dark, escurece no light, preservando o matiz original em
+// vez de trocar por preto/branco genérico. Resolve o "azul sobre azul
+// escuro" / "vermelho sobre vermelho escuro" reportado no calendário.
+export function corLegivel(hex, isDark = true) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim())
+  if (!m) return hex || (isDark ? '#E8EAEE' : '#1a1a1a')
+  const n = parseInt(m[1], 16)
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255
+  // Luminância relativa (WCAG) — decide se a cor já é clara/escura o
+  // bastante ou precisa de ajuste na direção oposta ao fundo.
+  const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+  const blend = (c, target, amount) => Math.round(c + (target - c) * amount)
+  if (isDark && lum < 0.55) {
+    // Cor escura sobre fundo escuro: clareia em direção ao branco.
+    const amt = 0.55 - lum
+    r = blend(r, 255, amt); g = blend(g, 255, amt); b = blend(b, 255, amt)
+  } else if (!isDark && lum > 0.45) {
+    // Cor clara sobre fundo claro: escurece em direção ao preto.
+    const amt = lum - 0.45
+    r = blend(r, 0, amt); g = blend(g, 0, amt); b = blend(b, 0, amt)
+  }
+  const hx = v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')
+  return `#${hx(r)}${hx(g)}${hx(b)}`
+}
+
 export function nomeCategoria(ev) {
   return ev.categoria_nome || 'Sem categoria'
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Zap, Plus, Save, Trash2, Edit2, X, Power, PowerOff, Filter, BookOpen } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { genId, Btn, FInput, FSelect, Row, SectionTitle, StatusBadge, EmptyState, Card } from './_shared.jsx'
 
 function paraApi(a) {
@@ -125,7 +126,7 @@ export default function SecaoAutomacoes({ telas }) {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir esta automação?')) return
+    if (!(await notificar.confirmar('Excluir esta automação?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     await window.api.funcoes.excluirAutomacao(id)
     setLista(prev => prev.filter(a => a.id !== id))
   }, [])

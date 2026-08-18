@@ -11,6 +11,7 @@ import { thS, tdS } from './formBuilderView/gridStyles.js'
 import PaginacaoBar from './formBuilderView/PaginacaoBar.jsx'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import FormToolbar from '../components/FormToolbar.jsx'
+import { notificar } from '../components/Notificacao'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const CATEGORIAS = ['Contrato', 'Manual', 'Financeiro', 'Relatório', 'Script', 'Imagem', 'Apresentação', 'Outro']
@@ -186,7 +187,7 @@ export default function Arquivos({ newTrigger }) {
   async function handleExcluir() {
     if (items.length === 0) return
     const item = items[currentIdx]
-    if (!confirm(`Excluir "${item.nome}"?\nO arquivo em disco também será removido.`)) return
+    if (!(await notificar.confirmar(`Excluir "${item.nome}"?\nO arquivo em disco também será removido.`, { titulo: 'Excluir arquivo', confirmarLabel: 'Excluir', perigo: true }))) return
     await window.api.arquivos.delete(item.id)
     const updated = items.filter(i => i.id !== item.id)
     setItems(updated)
@@ -339,7 +340,7 @@ export default function Arquivos({ newTrigger }) {
   async function handleConfigurarPasta() {
     const res = await window.api.config.selecionarPasta()
     const nova = res.ok ? res.data : null
-    if (nova) { setPastaAtual(nova); alert(`Pasta atualizada:\n${nova}\n\nO sistema usará este caminho para novos arquivos importados.`) }
+    if (nova) { setPastaAtual(nova); notificar.sucesso(`Pasta atualizada:\n${nova}\n\nO sistema usará este caminho para novos arquivos importados.`) }
   }
 
   const [copiado, setCopiado] = useState(null) // 'local' | 'clip' | null
@@ -350,7 +351,7 @@ export default function Arquivos({ newTrigger }) {
     setCopiado('local')
     setTimeout(() => setCopiado(null), 3000)
     // mostra onde foi copiado, abre a pasta temp
-    if (confirm(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`)) {
+    if (await notificar.confirmar(`Arquivo copiado para:\n${r.destino}\n\nAbrir a pasta?`, { titulo: 'Arquivo copiado' })) {
       const pasta = r.destino.substring(0, r.destino.lastIndexOf('\\'))
       await window.api.arquivos.abrirPasta(pasta)
     }

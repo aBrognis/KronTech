@@ -1,7 +1,9 @@
 import { getPool } from '../db.js'
 import { existsSync, unlinkSync, writeFileSync } from 'fs'
+import { join } from 'path'
 import { BrowserWindow, dialog } from 'electron'
 import { gerarExcelViagem } from '../services/exportViagem.js'
+import { pastaExportacaoAutomatica } from '../services/exportPaths.js'
 
 export const STATUS_VALIDOS = ['rascunho', 'nao_enviado', 'enviado', 'reembolsado']
 
@@ -184,7 +186,6 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
       if (!cabecalho) return { ok: false, erro: `Despesa #${id} não encontrada.` }
       const itens = await query('SELECT * FROM despesa_item_001 WHERE despesa_id=$1 ORDER BY data, id', [id])
 
-      const win = BrowserWindow.fromWebContents(e.sender)
       const fmtDataArquivo = d => {
         const dt = new Date(d)
         if (Number.isNaN(dt.getTime())) return ''
@@ -192,14 +193,23 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
       }
       const nomeSugerido = `DESPESAS VIAGEM ${fmtDataArquivo(cabecalho.data_inicio)} ATE ${fmtDataArquivo(cabecalho.data_fim)} - ${(cabecalho.consultor_nome || 'CONSULTOR').toUpperCase()}.xlsx`
         .replace(/[\\/:*?"<>|]/g, '')
+
+      const buffer = await gerarExcelViagem({ ...cabecalho, itens })
+
+      const pastaAuto = pastaExportacaoAutomatica(cabecalho.cliente_nome, cabecalho.data_inicio)
+      if (pastaAuto) {
+        const filePath = join(pastaAuto, nomeSugerido)
+        writeFileSync(filePath, buffer)
+        return { ok: true, path: filePath }
+      }
+
+      const win = BrowserWindow.fromWebContents(e.sender)
       const { canceled, filePath } = await dialog.showSaveDialog(win, {
         title: 'Exportar despesas de viagem',
         defaultPath: nomeSugerido,
         filters: [{ name: 'Excel', extensions: ['xlsx'] }],
       })
       if (canceled || !filePath) return { ok: false, cancelado: true }
-
-      const buffer = await gerarExcelViagem({ ...cabecalho, itens })
       writeFileSync(filePath, buffer)
       return { ok: true, path: filePath }
     } catch (err) {

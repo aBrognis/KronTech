@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Globe, Plus, Play, RefreshCw, X, Save, Edit2, Trash2, BookOpen } from 'lucide-react'
 import { mostrarAlerta } from '../../lib/funcoes/index.js'
+import { notificar } from '../../components/Notificacao'
 import { Btn, FInput, FSelect, FTextarea, Row, SectionTitle, EmptyState, Card } from './_shared.jsx'
 
 function paraApi(item) {
@@ -61,7 +62,7 @@ export default function SecaoIntegracoes() {
   }, [lista])
 
   const remover = useCallback(async (id) => {
-    if (!confirm('Excluir esta integração?')) return
+    if (!(await notificar.confirmar('Excluir esta integração?', { perigo: true, confirmarLabel: 'Excluir' }))) return
     await window.api.funcoes.excluirIntegracao(id)
     setLista(prev => prev.filter(i => i.id !== id))
   }, [])
