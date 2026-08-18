@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, ArrowUp, ArrowDown, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
+import { useState, useEffect, useRef, useMemo } from 'react'
+import GridLayout from 'react-grid-layout'
+import 'react-grid-layout/css/styles.css'
+import 'react-resizable/css/styles.css'
+import { ArrowLeft, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
          Check, X, Search, AlertCircle, Copy, RefreshCw, Database,
-         LayoutGrid, Sliders, Palette, Clock3, Table2, ListOrdered } from 'lucide-react'
+         LayoutGrid, Sliders, Palette, Clock3, Table2, Move } from 'lucide-react'
 import { getAllIcons, LucideIcon, WidgetBody,
          TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
 
@@ -42,9 +45,11 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [searchWidget,  setSearchWidget]  = useState('')
   const [openGroups,    setOpenGroups]    = useState(() => new Set())
   const [tab,           setTab]           = useState('geral')
+  const [layoutW,       setLayoutW]       = useState(800)
   const iconRef  = useRef(null)
   const typeRef  = useRef(null)
   const colorPickerRef = useRef(null)
+  const layoutContainerRef = useRef(null)
   const allIcons = getAllIcons()
 
   async function handleSeedDemo() {
@@ -109,7 +114,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
 
   function openNew() {
     setSelected('new')
-    setForm(emptyForm())
+    const pos = nextPos(widgets)
+    setForm({ ...emptyForm(), grid_x: pos.x, grid_y: pos.y })
     resetPreview()
     setShowGuide(false)
     setTab('geral')
@@ -157,18 +163,14 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     setSaving(true)
     try {
       if (selected === 'new') {
-        const pos = nextPos(widgets)
-        const payload = { ...form, grid_x: pos.x, grid_y: pos.y }
-        const res = await window.api.dash.create(payload)
+        // form.grid_x/grid_y já refletem a posição escolhida pelo usuário na
+        // aba "Layout" (ou a posição livre default, se ele nem abriu a aba).
+        const res = await window.api.dash.create(form)
         if (!res.ok) return
         setSelected(res.data.id)
       } else {
         await window.api.dash.update({ id: selected, ...form })
       }
-      // O backend reempilha (recalcula grid_x/grid_y de TODOS os widgets)
-      // sempre que largura/altura muda — sem recarregar do banco aqui, o
-      // Designer continuava mostrando posições antigas em memória mesmo
-      // com o banco já correto, dando a impressão de "não aceita"/travado.
       const res = await window.api.dash.getAll()
       if (res.ok) setWidgets(res.data)
       window.dispatchEvent(new Event('dash:widgets-changed'))
@@ -177,17 +179,48 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     }
   }
 
-  async function handleReorder(direcao) {
-    if (selected === 'new' || saving) return
-    setSaving(true)
-    try {
-      const res = await window.api.dash.reorder(selected, direcao)
-      if (res.ok) {
-        setWidgets(res.data)
+  // Grid de layout arrastável (aba "Layout") — mesmo padrão da aba Dashboard:
+  // usuário arrasta/redimensiona livremente, sem botões de +1/-1 posição.
+  useEffect(() => {
+    if (tab !== 'layout' || !layoutContainerRef.current) return
+    const el = layoutContainerRef.current
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect?.width
+      if (w) setLayoutW(w)
+    })
+    ro.observe(el)
+    setLayoutW(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [tab])
+
+  const layoutItems = useMemo(() => {
+    const items = widgets
+      .filter(w => w.id !== selected)
+      .map(w => ({ i: String(w.id), x: w.grid_x ?? 0, y: w.grid_y ?? 0, w: w.grid_w ?? 3, h: w.grid_h ?? 2, minW: 2, minH: 1 }))
+    if (selected === 'new' || selected) {
+      items.push({ i: selected === 'new' ? 'new' : String(selected), x: form.grid_x ?? 0, y: form.grid_y ?? 0, w: form.grid_w, h: form.grid_h, minW: 2, minH: 1 })
+    }
+    return items
+  }, [widgets, selected, form.grid_x, form.grid_y, form.grid_w, form.grid_h])
+
+  function handleLayoutChange(newLayout) {
+    const mine = newLayout.find(it => it.i === (selected === 'new' ? 'new' : String(selected)))
+    if (mine) {
+      setForm(prev => ({ ...prev, grid_x: mine.x, grid_y: mine.y, grid_w: mine.w, grid_h: mine.h }))
+    }
+    // Widgets já salvos: persiste posição/tamanho na hora — igual à aba
+    // Dashboard — sem exigir clicar em "Salvar" pra cada arrasto.
+    const outros = newLayout.filter(it => it.i !== 'new' && it.i !== String(selected))
+    if (outros.length) {
+      window.api.dash.updateLayout(
+        outros.map(it => ({ i: Number(it.i), x: it.x, y: it.y, w: it.w, h: it.h }))
+      ).then(() => {
+        setWidgets(prev => prev.map(w => {
+          const found = outros.find(it => Number(it.i) === w.id)
+          return found ? { ...w, grid_x: found.x, grid_y: found.y, grid_w: found.w, grid_h: found.h } : w
+        }))
         window.dispatchEvent(new Event('dash:widgets-changed'))
-      }
-    } finally {
-      setSaving(false)
+      }).catch(() => {})
     }
   }
 
@@ -496,6 +529,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                 { id:'geral',     label:'Geral',      Icon: Sliders },
                 { id:'query',     label:'Query SQL',  Icon: Table2 },
                 { id:'resultado', label:'Resultado',  Icon: LayoutGrid, count: previewRows?.length },
+                { id:'layout',    label:'Layout',     Icon: Move },
               ].map(({ id, label, Icon, count }) => (
                 <button
                   key={id}
@@ -582,93 +616,6 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                       )}
                     </div>
                   </SecCard>
-
-                  {selected !== 'new' && (
-                    <SecCard icon={<ListOrdered size={14} />} title="Ordem, sequência e linha">
-                      {(() => {
-                        const ordenados = [...widgets].sort((a, b) => (a.posicao ?? 0) - (b.posicao ?? 0))
-                        const idx = ordenados.findIndex(w => w.id === selected)
-                        const total = ordenados.length
-                        // Calcula em que "linha" visual este widget cai, simulando o
-                        // mesmo flow-layout usado pelo Dashboard real (dash:autoLayout):
-                        // entra na linha atual se couber (largura acumulada ≤ 12
-                        // colunas), senão quebra pra próxima linha.
-                        let cursorX = 0, linha = 1, minhaLinha = 1
-                        for (let i = 0; i < ordenados.length; i++) {
-                          const w = i === idx ? form.grid_w : (ordenados[i].grid_w || 3)
-                          if (cursorX > 0 && cursorX + w > 12) { cursorX = 0; linha++ }
-                          if (i === idx) minhaLinha = linha
-                          cursorX += w
-                        }
-                        return (
-                          <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                              <div style={{ display:'flex', gap:6 }}>
-                                <button
-                                  onClick={() => handleReorder('up')}
-                                  disabled={saving || idx <= 0}
-                                  title="Subir posição"
-                                  style={{
-                                    display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
-                                    borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
-                                    color: idx <= 0 ? 'var(--t3)' : 'var(--t1)',
-                                    cursor: (saving || idx <= 0) ? 'not-allowed' : 'pointer', opacity: idx <= 0 ? .45 : 1,
-                                  }}
-                                >
-                                  <ArrowUp size={15} />
-                                </button>
-                                <button
-                                  onClick={() => handleReorder('down')}
-                                  disabled={saving || idx < 0 || idx >= total - 1}
-                                  title="Descer posição"
-                                  style={{
-                                    display:'flex', alignItems:'center', justifyContent:'center', width:34, height:34,
-                                    borderRadius:8, border:'1px solid var(--bd2)', background:'var(--s3)',
-                                    color: (idx < 0 || idx >= total - 1) ? 'var(--t3)' : 'var(--t1)',
-                                    cursor: (saving || idx < 0 || idx >= total - 1) ? 'not-allowed' : 'pointer',
-                                    opacity: (idx < 0 || idx >= total - 1) ? .45 : 1,
-                                  }}
-                                >
-                                  <ArrowDown size={15} />
-                                </button>
-                              </div>
-                              <div style={{ fontSize:12, color:'var(--t3)' }}>
-                                Sequência <b style={{ color:'var(--t1)' }}>{idx + 1}</b> de {total} · cai na <b style={{ color:'var(--t1)' }}>linha {minhaLinha}</b> do Dashboard.
-                              </div>
-                            </div>
-
-                            <div style={{ display:'flex', gap:26 }}>
-                              <div style={{ flex:1 }}>
-                                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:9 }}>
-                                  Largura <b style={{ color:'var(--t1)', fontVariantNumeric:'tabular-nums', fontWeight:700 }}>{form.grid_w}/12</b>
-                                </div>
-                                <input
-                                  type="range" min={2} max={12} step={1}
-                                  value={form.grid_w}
-                                  onChange={e => f('grid_w', Number(e.target.value))}
-                                  style={{ width:'100%' }}
-                                />
-                              </div>
-                              <div style={{ flex:1 }}>
-                                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:9 }}>
-                                  Altura <b style={{ color:'var(--t1)', fontVariantNumeric:'tabular-nums', fontWeight:700 }}>{form.grid_h} lin.</b>
-                                </div>
-                                <input
-                                  type="range" min={1} max={8} step={1}
-                                  value={form.grid_h}
-                                  onChange={e => f('grid_h', Number(e.target.value))}
-                                  style={{ width:'100%' }}
-                                />
-                              </div>
-                            </div>
-                            <div style={{ fontSize:10.5, color:'var(--t3)' }}>
-                              Dois widgets de largura 6 cabem lado a lado na mesma linha (6+6=12); mude a largura pra controlar quantos ficam por linha.
-                            </div>
-                          </div>
-                        )
-                      })()}
-                    </SecCard>
-                  )}
 
                   <SecCard icon={<Clock3 size={14} />} title="Identidade e atualização">
                     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:18 }}>
@@ -1064,6 +1011,66 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                         </div>
                       </div>
                     </>
+                  )}
+                </div>
+              )}
+
+              {/* LAYOUT */}
+              {tab === 'layout' && (
+                <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:14 }}>
+                  <div style={{ fontSize:12, color:'var(--t3)', lineHeight:1.6 }}>
+                    Arraste pelo cabeçalho e redimensione pelo canto inferior direito — igual à aba Dashboard.
+                    O card em destaque é o widget {selected === 'new' ? 'que está sendo criado' : 'selecionado'}.
+                  </div>
+                  <div ref={layoutContainerRef} style={{ background:'var(--s1)', border:'1px solid var(--bd)', borderRadius:10, padding:14, minHeight:400 }}>
+                    <GridLayout
+                      layout={layoutItems}
+                      cols={12}
+                      rowHeight={56}
+                      width={layoutW}
+                      draggableHandle=".layout-drag-handle"
+                      resizeHandles={['se']}
+                      onLayoutChange={handleLayoutChange}
+                      margin={[10, 10]}
+                      containerPadding={[0, 0]}
+                    >
+                      {layoutItems.map(item => {
+                        const isNovo = item.i === 'new'
+                        const isMine = isNovo || item.i === String(selected)
+                        const w = isMine ? null : widgets.find(x => String(x.id) === item.i)
+                        const tipo = isMine ? form.tipo : w?.tipo
+                        const meta = TIPOS.find(t => t.value === tipo)
+                        const titulo = isMine ? (form.titulo || (isNovo ? 'Novo widget' : '(sem título)')) : (w?.titulo || '(sem título)')
+                        const cor = isMine ? form.cor : (w?.cor || '#FF6B2B')
+                        return (
+                          <div key={item.i} style={{
+                            display:'flex', flexDirection:'column', height:'100%', overflow:'hidden',
+                            borderRadius:8, border: isMine ? `1.5px solid ${cor}` : '1px solid var(--bd)',
+                            background: isMine ? `${cor}14` : 'var(--s2)',
+                            boxShadow: isMine ? `0 0 0 3px ${cor}22` : 'none',
+                          }}>
+                            <div className="layout-drag-handle" style={{
+                              display:'flex', alignItems:'center', gap:7, padding:'8px 10px', cursor:'grab', flexShrink:0,
+                              borderBottom:'1px solid var(--bd)', background: isMine ? 'transparent' : 'var(--s3)',
+                            }}>
+                              <LucideIcon name={meta?.icon || 'hash'} size={12} color={cor} />
+                              <span style={{ flex:1, fontSize:11, fontWeight:600, color:'var(--t1)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                {titulo}
+                              </span>
+                              <span style={{ fontSize:9.5, color:'var(--t3)', fontVariantNumeric:'tabular-nums' }}>{item.w}×{item.h}</span>
+                            </div>
+                            <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'var(--t3)' }}>
+                              {meta?.label}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </GridLayout>
+                  </div>
+                  {selected === 'new' && (
+                    <div style={{ fontSize:11, color:'var(--t3)' }}>
+                      Posição escolhida é aplicada ao clicar em "Criar Widget".
+                    </div>
                   )}
                 </div>
               )}

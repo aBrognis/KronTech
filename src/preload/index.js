@@ -48,7 +48,6 @@ const api = {
     getAll:       ()        => ipcRenderer.invoke('dash:getAll'),
     create:       (d)       => ipcRenderer.invoke('dash:create', d),
     update:       (d)       => ipcRenderer.invoke('dash:update', d),
-    reorder:      (id, direcao) => ipcRenderer.invoke('dash:reorder', { id, direcao }),
     autoLayout:   ()        => ipcRenderer.invoke('dash:autoLayout'),
     updateLayout: (layouts) => ipcRenderer.invoke('dash:updateLayout', layouts),
     delete:       (id)      => ipcRenderer.invoke('dash:delete', id),
