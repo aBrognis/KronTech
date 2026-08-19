@@ -31,7 +31,7 @@ const PAGE_META = {
   arquivos:            { title: 'Arquivos',              sub: 'FERRAMENTAS · GESTÃO DE ARQUIVOS'  },
   sql:                 { title: 'Editor SQL',            sub: 'FERRAMENTAS · POSTGRESQL'          },
   formbuilder:         { title: 'Criador de Telas',      sub: 'FERRAMENTAS · CADASTROS DINÂMICOS' },
-  configuracoes:       { title: 'Personalização',        sub: 'SISTEMA · CONFIGURAÇÕES'           },
+  configuracoes:       { title: 'Configuração do Sistema', sub: 'SISTEMA · CONFIGURAÇÕES'         },
 }
 
 function pageLabel(pageId, dynamicTitles, labelsItens = {}) {
@@ -70,7 +70,7 @@ const FIXED_PAGES = [
   { pageId: 'viagens',             label: 'Despesas de Viagem',Icon: Receipt         },
   { pageId: 'arquivos',            label: 'Arquivos',          Icon: FolderOpen      },
   { pageId: 'sql',                 label: 'Editor SQL',        Icon: Database        },
-  { pageId: 'configuracoes',       label: 'Personalização',    Icon: Settings        },
+  { pageId: 'configuracoes',       label: 'Configuração do Sistema', Icon: Settings  },
 ]
 
 function telaIcon(nome) {
@@ -312,7 +312,13 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, sho
 // ── App principal ────────────────────────────────────────────────────────────
 export default function App() {
   const [appPhase, setAppPhase] = useState(import.meta.env.DEV ? 'app' : 'splash')
-  const [sessao,   setSessao]   = useState(null) // { usuario, nome, registro }
+  // Em dev o login é pulado (bypass acima) — sem isso sessao.nome fica vazio
+  // e a Sidebar cai no fallback do nome_usuario da Personalização (que é o
+  // nome real de produção, ex.: "Anderson"), fazendo parecer que você está
+  // logado como o usuário de produção quando na verdade é o admin.dev.
+  const [sessao, setSessao] = useState(
+    import.meta.env.DEV ? { usuario: 'admin.dev', nome: 'Admin (Dev)', registro: null } : null
+  )
   const [accentColor, setAccentColor] = useState('#D95218') // cor personalizada, usada por Splash/Login antes do CSS global carregar
 
   // Abas: cada aba tem { id, pageId, label }

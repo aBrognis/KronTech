@@ -18,6 +18,8 @@ import { registerFormBuilderHandlers } from './handlers/formBuilder'
 import { registerFuncoesHandlers } from './handlers/funcoes'
 import { registerPesquisaHandlers } from './handlers/pesquisa'
 import { registerViagensHandlers } from './handlers/viagens'
+import { registerImportarBancoHandlers } from './handlers/importarBanco'
+import { registerTokenImportacaoHandlers } from './handlers/tokenImportacao'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -35,4 +37,6 @@ export function registerHandlers() {
   registerFuncoesHandlers({ ipcMain, wrap, query, queryOne })
   registerPesquisaHandlers({ ipcMain, wrap, query, queryOne })
   registerViagensHandlers({ ipcMain, wrap, query, queryOne })
+  registerImportarBancoHandlers({ ipcMain, wrap })
+  registerTokenImportacaoHandlers({ ipcMain, wrap, query })
 }

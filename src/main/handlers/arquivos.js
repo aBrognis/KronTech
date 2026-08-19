@@ -251,7 +251,7 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
 
   ipcMain.handle('arquivos:copiarLocal', async (_, { caminhoOrigem, nomeArquivo }) => {
     const cfg     = getConfig()
-    const tempDir = cfg.Caminhos.temp || join('C:\\KronTech', 'temp')
+    const tempDir = cfg.Caminhos.temp
     if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true })
     const destino = join(tempDir, nomeArquivo)
     try {

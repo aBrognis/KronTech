@@ -514,11 +514,11 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
             {!designerMode && (<>
             <button
               className={`ni${activePage === 'configuracoes' ? ' active' : ''}`}
-              data-tip="Personalização"
+              data-tip="Configuração do Sistema"
               onClick={() => onNavigate('configuracoes')}
             >
               <span className="ni-icon"><Settings size={16} strokeWidth={1.75} /></span>
-              <span className="ni-label">Personalização</span>
+              <span className="ni-label">Configuração do Sistema</span>
             </button>
 
             <button
@@ -532,6 +532,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
               </span>
               <span className="ni-label">{reloading ? 'Carregando...' : 'Recarregar menu'}</span>
             </button>
+
             {onLogout && (
             <button className="ni" data-tip="Sair" onClick={onLogout}>
               <span className="ni-icon">
@@ -624,6 +625,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
           </div>
         </div>
       )}
+
     </>
   )
 }

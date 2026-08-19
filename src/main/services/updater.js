@@ -47,8 +47,6 @@ export function setupAutoUpdater() {
   autoUpdater.on('update-downloaded',    (info) => save('downloaded', info))
   autoUpdater.on('error',                (err)  => { log('ERRO: ' + err.message); save('error', err.message) })
 
-  ipcMain.handle('update:getLastState', () => ({ event: lastEvent, data: lastData }))
-
   app.whenReady().then(() => {
     setTimeout(() => {
       log('chamando checkForUpdates...')
@@ -68,6 +66,13 @@ export function downloadUpdate() {
 
 export function installUpdate() {
   autoUpdater.quitAndInstall(false, true)
+}
+
+// Em dev, setupAutoUpdater() nunca roda (autoUpdater não faz sentido fora
+// de um build empacotado) — lastEvent/lastData ficam null, e é isso mesmo
+// que o handler deve responder, em vez de não existir.
+export function getLastUpdateState() {
+  return { event: lastEvent, data: lastData }
 }
 
 function broadcast(channel, data) {

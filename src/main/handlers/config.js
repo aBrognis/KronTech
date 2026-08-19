@@ -28,8 +28,28 @@ export function registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, sa
     })
     if (canceled || !filePaths.length) return null
     const pasta = filePaths[0]
+    // apenasSelecionar: usado por telas que gravam a pasta numa seção
+    // diferente de Caminhos (ex.: BancoProducao.iniPath) — só abre o diálogo
+    // e devolve o caminho, sem gravar nem criar a pasta (pasta remota já
+    // deve existir; criar não faz sentido nesse caso).
+    if (opts.apenasSelecionar) return pasta
     saveConfig('Caminhos', chave, pasta)
     if (!existsSync(pasta)) mkdirSync(pasta, { recursive: true })
     return pasta
+  }))
+
+  // Seleção do arquivo krontech.ini de produção diretamente (não a pasta) —
+  // usado só por "Importar Banco". Guardar o caminho do arquivo em vez da
+  // pasta evita ambiguidade quando a pasta contém mais de um .ini ou quando
+  // o arquivo não se chama exatamente "krontech.ini".
+  ipcMain.handle('config:selecionarArquivoIni', wrap(async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Selecionar o krontech.ini de produção',
+      properties: ['openFile'],
+      filters: [{ name: 'Arquivo de configuração', extensions: ['ini'] }],
+    })
+    if (canceled || !filePaths.length) return null
+    return filePaths[0]
   }))
 }

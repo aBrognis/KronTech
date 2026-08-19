@@ -13,12 +13,13 @@ import { join } from 'path'
 // combina com qualquer cor de personalização escolhida, sem essa limitação.
 export function getIcon() {
   const name = nativeTheme.shouldUseDarkColors ? 'icon.ico' : 'icon-light.ico'
-  // Em produção, __dirname fica dentro do .asar e '../../resources' resolve
-  // certo (electron-builder empacota resources/ da raiz do projeto ali).
-  // Em dev, __dirname fica dentro de out/main — se out/ for uma junction
-  // (movida pra fora do OneDrive), subir pastas relativas resolveria para o
-  // destino físico da junction, não a raiz real do projeto. app.getAppPath()
-  // não tem esse problema.
-  const base = app.isPackaged ? join(__dirname, '../../resources') : join(app.getAppPath(), 'resources')
+  // Em produção, os .ico são copiados via extraResources (package.json) pra
+  // dentro de process.resourcesPath/resources — igual ao padrão já usado por
+  // migrate.js, mais direto que subir pastas relativas a partir de __dirname
+  // dentro do .asar. Em dev, __dirname fica dentro de out/main — se out/ for
+  // uma junction (movida pra fora do OneDrive), subir pastas relativas
+  // resolveria para o destino físico da junction, não a raiz real do
+  // projeto. app.getAppPath() não tem esse problema.
+  const base = app.isPackaged ? join(process.resourcesPath, 'resources') : join(app.getAppPath(), 'resources')
   return nativeImage.createFromPath(join(base, name))
 }

@@ -1,6 +1,13 @@
 import { app, shell, BrowserWindow, nativeTheme } from 'electron'
 import { join } from 'path'
-import { loadConfig, encryptSensitiveConfig } from './config'
+import { loadConfig, encryptSensitiveConfig, IS_DEV } from './config'
+
+// Perfil do Chromium (cache, cookies etc.) isolado do de produção — sem
+// isso, rodar dev e produção ao mesmo tempo faz as duas instâncias
+// disputarem o mesmo diretório de cache (erros "Unable to move the cache").
+// Precisa rodar antes de qualquer outra chamada de app.* (inclusive o lock
+// de instância única, mais abaixo).
+if (IS_DEV) app.setPath('userData', 'C:\\KronTech\\KronTech_Teste\\electron-userdata')
 import { registerHandlers } from './ipcHandlers'
 import { initDb } from './db'
 import { runMigrations } from './migrate'
@@ -136,7 +143,11 @@ if (!app.isPackaged) {
 } else {
   app.setAsDefaultProtocolClient('krontech')
 }
-const gotLock = app.requestSingleInstanceLock()
+// Em dev, cada execução roda contra um banco/config isolado (C:\KronTech\
+// KronTech_Teste) — não faz sentido brigar pelo lock de instância única com
+// uma instância de produção já aberta (nem com outra instância de dev, ao
+// testar cenários em paralelo). O lock só protege o app empacotado real.
+const gotLock = IS_DEV ? true : app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
@@ -151,7 +162,7 @@ if (!gotLock) {
   })
 
   app.whenReady().then(async () => {
-    loadConfig()              // lê/cria C:\KronTech\krontech.ini
+    loadConfig()              // lê/cria krontech.ini (BASE_DIR — produção ou dev)
     encryptSensitiveConfig() // criptografa senhas em texto puro (Windows DPAPI)
     registerHandlers()
     await runMigrations().catch(err => console.error('[migrate] runMigrations error:', err.message))

@@ -1,10 +1,13 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { safeStorage, app } from 'electron'
 
 const IS_DEV = !app.isPackaged
 
-const BASE_DIR = IS_DEV ? 'C:\\KronTech' : app.getPath('userData')
+// Empacotado (produção "portable"): tudo fica ao lado do próprio .exe, em
+// C:\KronTech\KronTech_Oficial. Dev roda isolado em C:\KronTech\
+// KronTech_Teste, com seu próprio .ini e seu próprio banco (krontech_dev).
+const BASE_DIR = IS_DEV ? 'C:\\KronTech\\KronTech_Teste' : dirname(process.execPath)
 const INI_PATH = join(BASE_DIR, 'krontech.ini')
 const ENC_PFX  = 'ENC:'
 
@@ -23,7 +26,7 @@ function decryptVal(val) {
 }
 
 // Campos sensíveis que devem ser criptografados
-const SENSITIVE = { Banco: ['senha'] }
+const SENSITIVE = { Banco: ['senha'], BancoProducao: ['senha'] }
 
 // ── Valores padrão ────────────────────────────────────────────────────────────
 const DEFAULTS = {
@@ -32,7 +35,19 @@ const DEFAULTS = {
     port:     '5432',
     database: IS_DEV ? 'krontech_dev' : 'krontech',
     usuario:  'postgres',
-    senha:    process.env.KRONTECH_DEV_DB_PASSWORD || 'postgres',
+    senha:    'postgres',
+  },
+  // Usada só pela feature "Importar Banco" (dev-only, ver
+  // src/main/services/importarBanco.js) — credenciais de leitura do banco de
+  // produção + caminho da pasta onde fica o krontech.ini de produção (pra
+  // trazer também a seção [Personalizacao], que não vem do banco).
+  BancoProducao: {
+    host:     '',
+    port:     '5432',
+    database: '',
+    usuario:  '',
+    senha:    '',
+    iniPath:  '',
   },
   Caminhos: {
     arquivos: join(BASE_DIR, 'arquivos'),
@@ -119,18 +134,11 @@ export function encryptSensitiveConfig() {
   if (changed) writeFileSync(INI_PATH, stringifyIni(cfg), 'utf-8')
 }
 
-// Retorna configuração do banco com a senha já descriptografada
+// Retorna configuração do banco com a senha já descriptografada — sempre a
+// partir do .ini (dev e produção), nunca hardcoded, pra sobreviver a troca
+// de senha do Postgres sem precisar mexer em código.
 export function getDecryptedBancoConfig() {
   const cfg = getConfig()
-  if (IS_DEV) {
-    return {
-      host:     'localhost',
-      port:     5432,
-      database: 'krontech_dev',
-      user:     'postgres',
-      password: process.env.KRONTECH_DEV_DB_PASSWORD || 'postgres',
-    }
-  }
   return {
     host:     cfg.Banco.host,
     port:     Number(cfg.Banco.port),
@@ -138,6 +146,32 @@ export function getDecryptedBancoConfig() {
     user:     cfg.Banco.usuario,
     password: decryptVal(cfg.Banco.senha),
   }
+}
+
+// Configuração do banco de PRODUÇÃO (usada só por "Importar Banco", dev-only)
+// — ao contrário de getDecryptedBancoConfig(), nunca hardcoda: sempre vem do
+// .ini, porque produção não tem o desvio especial que dev tem.
+export function getDecryptedBancoProducaoConfig() {
+  const cfg = getConfig()
+  const bp = cfg.BancoProducao || {}
+  return {
+    host:     bp.host || '',
+    port:     Number(bp.port) || 5432,
+    database: bp.database || '',
+    user:     bp.usuario || '',
+    password: decryptVal(bp.senha || ''),
+    iniPath:  bp.iniPath || '',
+  }
+}
+
+// Lê só a seção pedida de um arquivo .ini arbitrário (ex.: krontech.ini de
+// produção, acessado por caminho de pasta configurado pelo usuário). Reusa o
+// mesmo parser do .ini local — nunca duplicar essa lógica.
+export function lerSecaoDeArquivoIni(caminhoArquivo, secao) {
+  if (!caminhoArquivo || !existsSync(caminhoArquivo)) return null
+  const raw = readFileSync(caminhoArquivo, 'utf-8')
+  const parsed = parseIni(raw)
+  return parsed[secao] || null
 }
 
 export function getConfig() {
@@ -181,4 +215,4 @@ export function getConfigForFrontend() {
   return result
 }
 
-export { INI_PATH, BASE_DIR }
+export { INI_PATH, BASE_DIR, IS_DEV }

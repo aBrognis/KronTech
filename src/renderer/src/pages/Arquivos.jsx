@@ -599,7 +599,7 @@ export default function Arquivos({ newTrigger }) {
                           <button className="btn btn-ghost" style={{ flexShrink: 0 }} onClick={() => handlePreview(currentItem)} title="Abrir arquivo">
                             <ExternalLink size={13} /> Abrir
                           </button>
-                          <button className="btn btn-ghost" style={{ flexShrink: 0 }} onClick={() => handleCopiarLocal(currentItem)} title="Copia para C:\KronTech\temp">
+                          <button className="btn btn-ghost" style={{ flexShrink: 0 }} onClick={() => handleCopiarLocal(currentItem)} title="Copia para a pasta temp configurada">
                             <Download size={13} /> Copiar Local
                           </button>
                           <button className="btn btn-ghost" style={{ flexShrink: 0 }} onClick={() => handleCopiarClipboard(currentItem)} title="Copiar arquivo para área de transferência (Ctrl+C)">

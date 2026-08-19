@@ -6,11 +6,12 @@ import { checkStatusAutomatico } from './statusAutomatico'
 import { checkAgendamentos } from './agendamentoService'
 
 const notified = new Set()
-// Em dev, __dirname fica dentro de out/main — se out/ for uma junction
-// (movida pra fora do OneDrive), '../../resources' resolveria para o
-// destino físico da junction, não a raiz real do projeto. Em produção,
-// __dirname fica dentro do .asar e '../../resources' resolve certo.
-const iconBase = app.isPackaged ? join(__dirname, '../../resources') : join(app.getAppPath(), 'resources')
+// Em produção, os .ico são copiados via extraResources (package.json) pra
+// dentro de process.resourcesPath/resources. Em dev, __dirname fica dentro
+// de out/main — se out/ for uma junction (movida pra fora do OneDrive),
+// '../../resources' resolveria para o destino físico da junction, não a
+// raiz real do projeto; app.getAppPath() não tem esse problema.
+const iconBase = app.isPackaged ? join(process.resourcesPath, 'resources') : join(app.getAppPath(), 'resources')
 const icon = nativeImage.createFromPath(join(iconBase, 'icon.ico'))
 
 async function check() {

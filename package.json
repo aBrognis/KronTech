@@ -1,6 +1,6 @@
 {
   "name": "krontech",
-  "version": "1.2.25",
+  "version": "1.2.26",
   "description": "KronTech — Ordem no caos do dia a dia.",
   "main": "out/main/index.js",
   "scripts": {
@@ -58,6 +58,11 @@
       {
         "from": "migrations",
         "to": "migrations"
+      },
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": ["icon.ico", "icon-light.ico"]
       }
     ],
     "publish": [

@@ -1,6 +1,6 @@
 import { Pool, types } from 'pg'
 import bcrypt from 'bcrypt'
-import { getDecryptedBancoConfig } from './config'
+import { getDecryptedBancoConfig, IS_DEV } from './config'
 
 // Sem isso, o driver 'pg' devolve colunas DATE como objeto Date do JS (não
 // string), o que quebra qualquer formatação de data no frontend que espere
@@ -50,7 +50,7 @@ const SCHEMA_VERSION = 2
 
 // Sincroniza sequências de código com o max existente nas tabelas de sistema.
 // Roda em TODA inicialização para proteger contra restore de backup.
-async function syncSequencias() {
+export async function syncSequencias() {
   for (const tbl of ['arq_001', 'dash_001', 'despesa_001']) {
     await query(`
       DO $$
@@ -1063,6 +1063,53 @@ export async function initDb() {
     WHERE dash_001.id = sub.id
       AND NOT EXISTS (SELECT 1 FROM dash_001 d2 WHERE d2.posicao <> 0)
   `).catch(e => console.warn('[migration] backfill dash_001 posicao (startup):', e.message))
+
+  // Backfill de codigo do dash_001 — roda a cada startup (mesmo padrão de
+  // despesa_001), não só na migration1(), pra cobrir widgets que chegam sem
+  // código depois (ex: restore/importação de banco truncando a tabela).
+  await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) DEFAULT ''`)
+    .catch(e => console.warn('[migration] alter dash_001 codigo (startup):', e.message))
+  await query(`CREATE SEQUENCE IF NOT EXISTS dash_001_codigo_seq START 1`)
+    .catch(e => console.warn('[migration] create dash_001_codigo_seq (startup):', e.message))
+  await query(`
+    DO $$
+    DECLARE r RECORD; n INTEGER := 0;
+    BEGIN
+      IF (SELECT COUNT(*) FROM dash_001 WHERE codigo = '' OR codigo IS NULL) > 0 THEN
+        FOR r IN SELECT id FROM dash_001 WHERE codigo = '' OR codigo IS NULL ORDER BY id LOOP
+          n := nextval('dash_001_codigo_seq');
+          UPDATE dash_001 SET codigo = LPAD(n::text, 4, '0') WHERE id = r.id;
+        END LOOP;
+      END IF;
+    END $$;
+  `).catch(e => console.warn('[migration] backfill dash_001 codigo (startup):', e.message))
+
+  // Usuário fixo de desenvolvimento — só existe rodando em modo dev (nunca
+  // entra num banco de produção real, já que esse bloco nem roda lá). Serve
+  // pra sempre ter um login previsível ao trabalhar em cima de um espelho de
+  // produção importado via "Importar Banco", que pode não ter os usuários
+  // reais que você lembra de cor.
+  if (IS_DEV) {
+    await query(`
+      INSERT INTO kr_usuarios_001 (usuario, nome, senha_hash, perfil)
+      VALUES ('admin.dev', 'Admin (Dev)', $1, 'admin')
+      ON CONFLICT (usuario) DO UPDATE SET senha_hash = $1, perfil = 'admin', ativo = TRUE
+    `, [bcrypt.hashSync('admin.dev', 10)]).catch(e => console.warn('[migration] seed admin.dev (startup):', e.message))
+  }
+
+  // Tokens de autorização de "Importar Banco" — gerados manualmente em
+  // produção (tela Configurações) e colados em dev pra liberar a
+  // importação. Existe nos dois bancos por padrão de schema, mas só
+  // produção grava e só dev lê (via BancoProducao) na prática.
+  await query(`
+    CREATE TABLE IF NOT EXISTS kr_tokens_importacao_001 (
+      id         SERIAL PRIMARY KEY,
+      token      VARCHAR(64) NOT NULL UNIQUE,
+      criado_em  TIMESTAMP   NOT NULL DEFAULT NOW(),
+      expira_em  TIMESTAMP   NOT NULL,
+      usado_em   TIMESTAMP
+    )
+  `).catch(e => console.warn('[migration] criar kr_tokens_importacao_001 (startup):', e.message))
 
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()

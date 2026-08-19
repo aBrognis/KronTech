@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search } from 'lucide-react'
+import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound } from 'lucide-react'
 import { notificar } from '../components/Notificacao'
+import ImportarBancoModal from '../components/ImportarBancoModal'
 
 const CORES = [
   { nome: 'KronTech',  hex: '#D95218' },
@@ -133,6 +134,9 @@ export function aplicarCorSistema(hex) {
   `
 }
 
+const VAZIO_BANCO_PROD = { host: '', port: '5432', database: '', usuario: '', senha: '', iniPath: '' }
+const VAZIO_BANCO_DEV  = { host: '', port: '5432', database: '', usuario: '', senha: '' }
+
 export default function Configuracoes() {
   const pickerRef  = useRef(null)
   const [editando, setEditando] = useState(false)
@@ -140,6 +144,28 @@ export default function Configuracoes() {
   const [form,     setForm]     = useState(VAZIO)
   const [salvando, setSalvando] = useState(false)
   const [salvo,    setSalvo]    = useState(false)
+
+  const [isDev, setIsDev] = useState(false)
+  const [editandoBancoProd, setEditandoBancoProd] = useState(false)
+  const [savedBancoProd, setSavedBancoProd] = useState(VAZIO_BANCO_PROD)
+  const [bancoProd, setBancoProd] = useState(VAZIO_BANCO_PROD)
+  const [salvandoBancoProd, setSalvandoBancoProd] = useState(false)
+  const [salvoBancoProd, setSalvoBancoProd] = useState(false)
+  const [testandoConexao, setTestandoConexao] = useState(false)
+  const [resultadoTeste, setResultadoTeste] = useState(null) // { ok, mensagem }
+  const [importBancoOpen, setImportBancoOpen] = useState(false)
+
+  const [editandoBancoDev, setEditandoBancoDev] = useState(false)
+  const [savedBancoDev, setSavedBancoDev] = useState(VAZIO_BANCO_DEV)
+  const [bancoDev, setBancoDev] = useState(VAZIO_BANCO_DEV)
+  const [salvandoBancoDev, setSalvandoBancoDev] = useState(false)
+  const [salvoBancoDev, setSalvoBancoDev] = useState(false)
+  const [testandoConexaoDev, setTestandoConexaoDev] = useState(false)
+  const [resultadoTesteDev, setResultadoTesteDev] = useState(null)
+
+  const [gerandoToken, setGerandoToken] = useState(false)
+  const [tokenGerado, setTokenGerado]   = useState(null) // { token, expira_em }
+  const [tokenCopiado, setTokenCopiado] = useState(false)
 
   useEffect(() => {
     window.api.config.get().then(res => {
@@ -153,8 +179,164 @@ export default function Configuracoes() {
       }
       setSaved(loaded)
       setForm(loaded)
+
+      const bp = (res.ok ? res.data?.BancoProducao : null) || {}
+      const bpLoaded = {
+        host:     bp.host || '',
+        port:     bp.port || '5432',
+        database: bp.database || '',
+        usuario:  bp.usuario || '',
+        senha:    '', // nunca reexibida em claro
+        iniPath:  bp.iniPath || '',
+      }
+      setSavedBancoProd(bpLoaded)
+      setBancoProd(bpLoaded)
+
+      const b = (res.ok ? res.data?.Banco : null) || {}
+      const bLoaded = {
+        host:     b.host || '',
+        port:     b.port || '5432',
+        database: b.database || '',
+        usuario:  b.usuario || '',
+        senha:    '', // nunca reexibida em claro
+      }
+      setSavedBancoDev(bLoaded)
+      setBancoDev(bLoaded)
     }).catch(() => {})
+    window.api.importarBanco?.isDev().then(res => res.ok && setIsDev(res.data)).catch(() => {})
   }, [])
+
+  function setBP(key, val) {
+    setBancoProd(f => ({ ...f, [key]: val }))
+    setResultadoTeste(null)
+  }
+
+  async function selecionarPastaIniProducao() {
+    const res = await window.api.config.selecionarArquivoIni()
+    if (res.ok && res.data) setBP('iniPath', res.data)
+  }
+
+  function cancelarBancoProd() {
+    setBancoProd({ ...savedBancoProd, senha: '' })
+    setEditandoBancoProd(false)
+    setResultadoTeste(null)
+  }
+
+  async function salvarBancoProducao() {
+    setSalvandoBancoProd(true)
+    try {
+      // Só envia campos preenchidos — evita que clicar "Salvar" logo após só
+      // trocar a pasta do .ini (ou só um campo) apague os demais já salvos
+      // com string vazia. Senha segue a mesma regra (nunca reexibida em
+      // claro, só sobrescreve se o usuário digitou algo novo).
+      const payload = {}
+      if (bancoProd.host)     payload.host     = bancoProd.host
+      if (bancoProd.port)     payload.port     = bancoProd.port
+      if (bancoProd.database) payload.database = bancoProd.database
+      if (bancoProd.usuario)  payload.usuario  = bancoProd.usuario
+      if (bancoProd.senha)    payload.senha    = bancoProd.senha
+      if (bancoProd.iniPath)  payload.iniPath  = bancoProd.iniPath
+      await window.api.config.setSection('BancoProducao', payload)
+      const novoSaved = { ...bancoProd, senha: '' }
+      setSavedBancoProd(novoSaved)
+      setBancoProd(novoSaved)
+      setEditandoBancoProd(false)
+      setSalvoBancoProd(true)
+      setTimeout(() => setSalvoBancoProd(false), 2500)
+    } catch (e) {
+      notificar.erro('Erro ao salvar: ' + e.message)
+    } finally {
+      setSalvandoBancoProd(false)
+    }
+  }
+
+  async function testarConexaoBancoProducao() {
+    setTestandoConexao(true)
+    setResultadoTeste(null)
+    try {
+      // Testa contra o que está salvo — pede pra salvar primeiro se houve edição.
+      await salvarBancoProducao()
+      const res = await window.api.importarBanco.testarConexaoProducao()
+      setResultadoTeste(res.ok ? { ok: true, mensagem: 'Conexão bem-sucedida.' } : { ok: false, mensagem: res.erro })
+    } catch (e) {
+      setResultadoTeste({ ok: false, mensagem: e.message })
+    } finally {
+      setTestandoConexao(false)
+    }
+  }
+
+  function setBD(key, val) {
+    setBancoDev(f => ({ ...f, [key]: val }))
+    setResultadoTesteDev(null)
+  }
+
+  function cancelarBancoDev() {
+    setBancoDev({ ...savedBancoDev, senha: '' })
+    setEditandoBancoDev(false)
+    setResultadoTesteDev(null)
+  }
+
+  async function salvarBancoDev() {
+    setSalvandoBancoDev(true)
+    try {
+      // Mesma regra de BancoProducao: só envia campos preenchidos, pra não
+      // sobrescrever com vazio um valor já salvo (ex.: senha, que nunca é
+      // reexibida em claro).
+      const payload = {}
+      if (bancoDev.host)     payload.host     = bancoDev.host
+      if (bancoDev.port)     payload.port     = bancoDev.port
+      if (bancoDev.database) payload.database = bancoDev.database
+      if (bancoDev.usuario)  payload.usuario  = bancoDev.usuario
+      if (bancoDev.senha)    payload.senha    = bancoDev.senha
+      await window.api.config.setSection('Banco', payload)
+      const novoSaved = { ...bancoDev, senha: '' }
+      setSavedBancoDev(novoSaved)
+      setBancoDev(novoSaved)
+      setEditandoBancoDev(false)
+      setSalvoBancoDev(true)
+      setTimeout(() => setSalvoBancoDev(false), 2500)
+    } catch (e) {
+      notificar.erro('Erro ao salvar: ' + e.message)
+    } finally {
+      setSalvandoBancoDev(false)
+    }
+  }
+
+  async function testarConexaoBancoDev() {
+    setTestandoConexaoDev(true)
+    setResultadoTesteDev(null)
+    try {
+      await salvarBancoDev()
+      const res = await window.api.importarBanco.testarConexaoDev()
+      setResultadoTesteDev(res.ok ? { ok: true, mensagem: 'Conexão bem-sucedida.' } : { ok: false, mensagem: res.erro })
+    } catch (e) {
+      setResultadoTesteDev({ ok: false, mensagem: e.message })
+    } finally {
+      setTestandoConexaoDev(false)
+    }
+  }
+
+  async function gerarTokenImportacao() {
+    setGerandoToken(true)
+    setTokenGerado(null)
+    setTokenCopiado(false)
+    try {
+      const res = await window.api.tokenImportacao.gerar()
+      if (res.ok) setTokenGerado(res.data)
+      else notificar.erro('Erro ao gerar token: ' + res.erro)
+    } catch (e) {
+      notificar.erro('Erro ao gerar token: ' + e.message)
+    } finally {
+      setGerandoToken(false)
+    }
+  }
+
+  function copiarToken() {
+    if (!tokenGerado) return
+    window.api.clipboard.write(tokenGerado.token)
+    setTokenCopiado(true)
+    setTimeout(() => setTokenCopiado(false), 2000)
+  }
 
   // A cor só é aplicada ao sistema inteiro (sidebar, abas, badges) ao salvar
   // ou cancelar; enquanto em edição, só a pré-visualização à direita reflete
@@ -302,6 +484,173 @@ export default function Configuracoes() {
           <SecCard icon={<User size={14} />} title="Identidade" subtitle="Nome exibido no app">
             <Campo label="Nome do sistema" value={form.nomeSistema} onChange={v => set('nomeSistema', v)} placeholder="KronTech" disabled={!editando} />
           </SecCard>
+
+          {/* Token de Importação — só em PRODUÇÃO (oposto dos cards de banco,
+              que são dev-only). Gera a autorização de uso único que alguém
+              precisa colar no modal "Importar Banco" rodando em dev — sem
+              esse token válido, a importação não roda. */}
+          {!isDev && (
+            <SecCard icon={<KeyRound size={14} />} title="Token de Importação" subtitle="Autoriza 'Importar Banco' em ambiente de dev" collapsible>
+              <div style={{ fontSize: 11.5, color: 'var(--t3)', marginBottom: 12, lineHeight: 1.5 }}>
+                Gere um token aqui e cole no modal "Importar Banco" do ambiente de desenvolvimento. Vale por 10 minutos e só pode ser usado uma vez, mesmo se a importação falhar.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button className="btn btn-primary" onClick={gerarTokenImportacao} disabled={gerandoToken}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32, alignSelf: 'flex-start' }}>
+                  {gerandoToken ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <KeyRound size={12} />}
+                  {gerandoToken ? 'Gerando...' : 'Gerar token'}
+                </button>
+
+                {tokenGerado && (
+                  <div style={{
+                    background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 8,
+                    padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <code style={{
+                        flex: 1, fontSize: 12, fontFamily: 'monospace', color: 'var(--t1)',
+                        wordBreak: 'break-all',
+                      }}>
+                        {tokenGerado.token}
+                      </code>
+                      <button className="btn btn-ghost" onClick={copiarToken}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '0 10px', height: 26, flexShrink: 0 }}>
+                        {tokenCopiado ? <Check size={11} /> : null}
+                        {tokenCopiado ? 'Copiado!' : 'Copiar'}
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 10.5, color: 'var(--t3)' }}>
+                      Expira em {new Date(tokenGerado.expira_em).toLocaleTimeString('pt-BR')}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SecCard>
+          )}
+
+          {/* Banco de Desenvolvimento — só em dev, mesma conexão que o app usa
+              o tempo todo. Existe pra reconfigurar a senha aqui, sem precisar
+              editar o .ini na mão, quando a senha do Postgres muda no servidor. */}
+          {isDev && (
+            <SecCard icon={<DatabaseZap size={14} />} title="Banco de Desenvolvimento" badge="Ativa agora" collapsible>
+              <div style={{
+                fontSize: 11.5, color: 'var(--t3)', marginBottom: 12, lineHeight: 1.5,
+              }}>
+                É esta conexão que a tela que você está vendo agora usa pra ler e salvar tudo: dados, telas, configurações. Se a senha do Postgres mudar, atualize aqui.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                  <Campo label="Host" value={bancoDev.host} onChange={v => setBD('host', v)} placeholder="localhost" disabled={!editandoBancoDev} />
+                  <Campo label="Porta" value={bancoDev.port} onChange={v => setBD('port', v)} placeholder="5432" disabled={!editandoBancoDev} />
+                </div>
+                <Campo label="Banco de dados" value={bancoDev.database} onChange={v => setBD('database', v)} placeholder="krontech_dev" disabled={!editandoBancoDev} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <Campo label="Usuário" value={bancoDev.usuario} onChange={v => setBD('usuario', v)} placeholder="postgres" disabled={!editandoBancoDev} />
+                  <Campo label="Senha" type="password" value={bancoDev.senha} onChange={v => setBD('senha', v)} placeholder="••••••••" disabled={!editandoBancoDev} />
+                </div>
+
+                {resultadoTesteDev && (
+                  <div style={{ fontSize: 11.5, color: resultadoTesteDev.ok ? 'var(--green)' : 'var(--red)' }}>
+                    {resultadoTesteDev.mensagem}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                  {!editandoBancoDev ? (
+                    <button className="btn btn-primary" onClick={() => setEditandoBancoDev(true)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                      <Pencil size={12} /> Alterar
+                    </button>
+                  ) : (
+                    <>
+                      <button className="btn btn-ghost" onClick={cancelarBancoDev} disabled={salvandoBancoDev || testandoConexaoDev}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        <X size={12} /> Cancelar
+                      </button>
+                      <button className="btn btn-ghost" onClick={testarConexaoBancoDev} disabled={testandoConexaoDev || salvandoBancoDev}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        {testandoConexaoDev ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <DatabaseZap size={12} />}
+                        {testandoConexaoDev ? 'Testando...' : 'Testar conexão'}
+                      </button>
+                      <button className="btn btn-primary" onClick={salvarBancoDev} disabled={salvandoBancoDev || testandoConexaoDev}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        {salvoBancoDev ? <><Check size={12} /> Salvo!</> : <><Save size={12} /> {salvandoBancoDev ? 'Salvando...' : 'Salvar'}</>}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </SecCard>
+          )}
+
+          {/* Banco de Produção — só em dev, usado pela função "Importar Banco" do menu lateral */}
+          {isDev && (
+            <SecCard icon={<DatabaseZap size={14} />} title="Banco de Produção" muted collapsible>
+              <div style={{
+                fontSize: 11.5, color: 'var(--t3)', marginBottom: 12, lineHeight: 1.5,
+              }}>
+                Esta tela não usa esta conexão pra nada. É só uma credencial guardada para o botão <strong>Importar Banco</strong>, abaixo, que copia os dados de produção por cima do banco de desenvolvimento (acima).
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                  <Campo label="Host" value={bancoProd.host} onChange={v => setBP('host', v)} placeholder="192.168.0.10" disabled={!editandoBancoProd} />
+                  <Campo label="Porta" value={bancoProd.port} onChange={v => setBP('port', v)} placeholder="5432" disabled={!editandoBancoProd} />
+                </div>
+                <Campo label="Banco de dados" value={bancoProd.database} onChange={v => setBP('database', v)} placeholder="krontech" disabled={!editandoBancoProd} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <Campo label="Usuário" value={bancoProd.usuario} onChange={v => setBP('usuario', v)} placeholder="postgres" disabled={!editandoBancoProd} />
+                  <Campo label="Senha" type="password" value={bancoProd.senha} onChange={v => setBP('senha', v)} placeholder="••••••••" disabled={!editandoBancoProd} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Arquivo krontech.ini de produção</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input className="form-input" value={bancoProd.iniPath} readOnly placeholder="Nenhum arquivo selecionado" style={{ flex: 1 }} disabled={!editandoBancoProd} />
+                    <button className="btn btn-ghost" onClick={selecionarPastaIniProducao} disabled={!editandoBancoProd} style={{ height: 38, flexShrink: 0 }}>
+                      <FolderOpen size={13} /> Selecionar
+                    </button>
+                  </div>
+                </div>
+
+                {resultadoTeste && (
+                  <div style={{ fontSize: 11.5, color: resultadoTeste.ok ? 'var(--green)' : 'var(--red)' }}>
+                    {resultadoTeste.mensagem}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                  {!editandoBancoProd ? (
+                    <>
+                      <button className="btn btn-danger" onClick={() => setImportBancoOpen(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        <DatabaseZap size={12} /> Importar Banco
+                      </button>
+                      <button className="btn btn-primary" onClick={() => setEditandoBancoProd(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        <Pencil size={12} /> Alterar
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn btn-ghost" onClick={cancelarBancoProd} disabled={salvandoBancoProd || testandoConexao}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        <X size={12} /> Cancelar
+                      </button>
+                      <button className="btn btn-ghost" onClick={testarConexaoBancoProducao} disabled={testandoConexao || salvandoBancoProd}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        {testandoConexao ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <DatabaseZap size={12} />}
+                        {testandoConexao ? 'Testando...' : 'Testar conexão'}
+                      </button>
+                      <button className="btn btn-primary" onClick={salvarBancoProducao} disabled={salvandoBancoProd || testandoConexao}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        {salvoBancoProd ? <><Check size={12} /> Salvo!</> : <><Save size={12} /> {salvandoBancoProd ? 'Salvando...' : 'Salvar'}</>}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </SecCard>
+          )}
 
           {/* Ações */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -472,43 +821,74 @@ export default function Configuracoes() {
         </div>
 
       </div>
+
+      <ImportarBancoModal open={importBancoOpen} onClose={() => setImportBancoOpen(false)} />
     </div>
   )
 }
 
-function SecCard({ icon, title, subtitle, children }) {
+function SecCard({ icon, title, subtitle, badge, muted, collapsible, children }) {
+  const [aberto, setAberto] = useState(!collapsible)
+  const Header = collapsible ? 'button' : 'div'
+
   return (
     <div style={{
       background: 'var(--s1)', border: '1px solid var(--bd)',
       borderRadius: 12, overflow: 'hidden',
+      opacity: muted ? .82 : 1,
     }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '11px 16px', borderBottom: '1px solid var(--bd)',
-      }}>
-        <span style={{ color: 'var(--or)', display: 'flex' }}>{icon}</span>
+      <Header
+        onClick={collapsible ? () => setAberto(a => !a) : undefined}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          padding: '11px 16px', borderBottom: aberto ? '1px solid var(--bd)' : 'none',
+          background: 'none', border: 'none', borderBottomWidth: aberto ? 1 : 0,
+          borderBottomStyle: 'solid', borderBottomColor: 'var(--bd)',
+          cursor: collapsible ? 'pointer' : 'default', textAlign: 'left', font: 'inherit',
+        }}
+      >
+        <span style={{ color: muted ? 'var(--t3)' : 'var(--or)', display: 'flex' }}>{icon}</span>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)' }}>
           {title}
         </span>
+        {badge && (
+          <span style={{
+            fontSize: 9.5, fontWeight: 700, letterSpacing: .4, textTransform: 'uppercase',
+            color: 'var(--green)', background: 'rgba(52,199,89,.12)',
+            border: '1px solid rgba(52,199,89,.3)', borderRadius: 99, padding: '2px 8px',
+          }}>
+            {badge}
+          </span>
+        )}
         {subtitle && <span style={{ fontSize: 11, color: 'var(--t3)' }}>{subtitle}</span>}
-      </div>
-      <div style={{ padding: '14px 16px' }}>
-        {children}
-      </div>
+        {collapsible && (
+          <ChevronDown size={14} style={{
+            marginLeft: 'auto', color: 'var(--t3)', flexShrink: 0,
+            transform: aberto ? 'rotate(180deg)' : 'none', transition: 'transform .15s ease',
+          }} />
+        )}
+      </Header>
+      {aberto && (
+        <div style={{ padding: '14px 16px' }}>
+          {children}
+        </div>
+      )}
     </div>
   )
 }
 
-function Campo({ label, value, onChange, placeholder, disabled }) {
+function Campo({ label, value, onChange, placeholder, disabled, type = 'text' }) {
   return (
     <div className="form-group">
       <label className="form-label">{label}</label>
       <input
         className="form-input"
+        type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
+        autoComplete={type === 'password' ? 'new-password' : 'off'}
       />
     </div>
   )

@@ -130,6 +130,7 @@ const api = {
     setSection:      (section, kvs)           => ipcRenderer.invoke('config:setSection', { section, kvs }),
     getIniPath:      ()                       => ipcRenderer.invoke('config:getIniPath'),
     selecionarPasta: (opts)                   => ipcRenderer.invoke('config:selecionarPasta', opts),
+    selecionarArquivoIni: ()                  => ipcRenderer.invoke('config:selecionarArquivoIni'),
     onPersonalizacaoAlterada: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('config:personalizacaoAlterada', fn)
@@ -207,6 +208,20 @@ const api = {
     excluir:   (id)           => ipcRenderer.invoke('pesquisa:excluir', id),
     testarSql: (sql)          => ipcRenderer.invoke('pesquisa:testarSql', sql),
     executar:  (codigo, opts) => ipcRenderer.invoke('pesquisa:executar', codigo, opts),
+  },
+  importarBanco: {
+    isDev:    ()      => ipcRenderer.invoke('importarBanco:isDev'),
+    executar: (token) => ipcRenderer.invoke('importarBanco:executar', token),
+    testarConexaoProducao: () => ipcRenderer.invoke('importarBanco:testarConexaoProducao'),
+    testarConexaoDev:      () => ipcRenderer.invoke('importarBanco:testarConexaoDev'),
+    onProgresso: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('importarBanco:progresso', fn)
+      return () => ipcRenderer.removeListener('importarBanco:progresso', fn)
+    },
+  },
+  tokenImportacao: {
+    gerar: () => ipcRenderer.invoke('tokenImportacao:gerar'),
   },
   viagens: {
     listar:            (filtros) => ipcRenderer.invoke('viagens:listar', filtros),

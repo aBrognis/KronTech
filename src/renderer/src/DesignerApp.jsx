@@ -29,7 +29,7 @@ const PAGE_META = {
   agenda:              { title: 'Agenda',             sub: 'GESTÃO · COMPROMISSOS'},
   arquivos:            { title: 'Arquivos',           sub: 'FERRAMENTAS · ARQUIVOS'},
   sql:                 { title: 'Editor SQL',         sub: 'FERRAMENTAS · SQL'    },
-  configuracoes:       { title: 'Personalização',     sub: 'SISTEMA · CONFIGURAÇÕES'},
+  configuracoes:       { title: 'Configuração do Sistema', sub: 'SISTEMA · CONFIGURAÇÕES'},
   'dashboard-designer':{ title: 'Dashboard Config',  sub: 'DASHBOARD · WIDGETS'  },
 }
 
