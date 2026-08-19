@@ -167,6 +167,18 @@ export async function criarTela(payload) {
   finally { client.release() }
 }
 
+// Atualiza só nome/descrição/ícone de uma tela — usado pela tela Módulos,
+// que não tem acesso à lista de campos e não pode chamar editarTela()
+// completo (ele reescreve/inativa campos não enviados no payload).
+export async function atualizarMetaTela(telaId, { nomeTela, descricao, icone }) {
+  const row = await queryOne(
+    `UPDATE kr_telas_001 SET nome_tela=$1, descricao=$2, icone=$3 WHERE id=$4 RETURNING *`,
+    [nomeTela, descricao || null, icone || 'layout', telaId]
+  )
+  if (!row) throw new Error(`Tela ${telaId} não encontrada.`)
+  return row
+}
+
 export async function editarTela(telaId, payload) {
   const pool = getPool()
   const client = await pool.connect()

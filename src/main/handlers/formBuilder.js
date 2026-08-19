@@ -19,6 +19,7 @@ export function registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSe
   ipcMain.handle('fb:getTelaPorSlug', wrap((_, slug)        => fb.getTelaPorSlug(slug)))
   ipcMain.handle('fb:criarTela',      wrap((_, payload)     => fb.criarTela(payload)))
   ipcMain.handle('fb:editarTela',     wrap((_, id, payload) => fb.editarTela(id, payload)))
+  ipcMain.handle('fb:atualizarMetaTela', wrap((_, id, payload) => fb.atualizarMetaTela(id, payload)))
   ipcMain.handle('fb:excluirTela',    wrap((_, id)          => fb.excluirTela(id)))
   ipcMain.handle('fb:inativarTela',   wrap((_, id)          => fb.inativarTela(id)))
   ipcMain.handle('fb:reativarTela',   wrap((_, id)          => fb.reativarTela(id)))

@@ -21,6 +21,10 @@
   --s3:    #1c1c1c;
   --s4:    #232323;
 
+  /* ── Dashboard: fundo unificado com a sidebar (valores literais pedidos) ── */
+  --bg-base: #0B0B0D;
+  --bg-card: #18181C;
+
   /* ── Bordas DARK ── */
   --bd:    #242424;
   --bd2:   #303030;
@@ -101,6 +105,10 @@ html.light {
   --s2:    #F3F4F8;   /* cards secundários                      */
   --s3:    #EAECF2;   /* hover, inputs                          */
   --s4:    #DFE1EA;   /* bordas de hover, fundos terciários     */
+
+  /* ── Dashboard: fundo unificado com a sidebar (valores literais pedidos) ── */
+  --bg-base: #F7F7F8;
+  --bg-card: #FFFFFF;
 
   /* ── Bordas LIGHT ── */
   --bd:    #E0E2EA;

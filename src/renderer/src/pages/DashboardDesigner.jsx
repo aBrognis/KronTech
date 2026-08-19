@@ -2,13 +2,22 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import GridLayout from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { ArrowLeft, Plus, Trash2, Save, Play, ChevronDown, ChevronRight,
-         Check, X, Search, AlertCircle, Copy, RefreshCw, Database,
-         LayoutGrid, Sliders, Palette, Clock3, Table2, Move } from 'lucide-react'
-import { getAllIcons, LucideIcon, WidgetBody,
+import { Trash2, Play, ChevronDown, ChevronUp, ChevronRight,
+         Check, X, AlertCircle, Copy, RefreshCw, Database,
+         LayoutGrid, Palette, Clock3, RotateCcw, SlidersHorizontal, ExternalLink } from 'lucide-react'
+import { LucideIcon, WidgetBody,
          TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
+import FormToolbar from '../components/FormToolbar.jsx'
+import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
+import PaginacaoBar from '../pages/formBuilderView/PaginacaoBar.jsx'
+import { thS, tdS } from './formBuilderView/gridStyles.js'
+import { notificar } from '../components/Notificacao'
 
-const PALETA_FIXA = PALETA.slice(0, 11)
+const CAMPOS_BUSCA_DASH = [
+  { nome_campo: 'codigo', label: 'Código' },
+  { nome_campo: 'titulo', label: 'Título' },
+  { nome_campo: 'tipo',   label: 'Tipo'   },
+]
 
 function nextPos(widgets) {
   if (!widgets.length) return { x: 0, y: 0 }
@@ -17,13 +26,19 @@ function nextPos(widgets) {
 }
 
 function emptyForm() {
-  return { titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_x: 0, grid_y: 0, grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '', formato: 'numero' }
+  return { codigo: '', titulo: '', tipo: 'card', sql_query: '', cor: '#FF6B2B', intervalo: 0, icone_lucide: '', grid_x: 0, grid_y: 0, grid_w: 3, grid_h: 2, comparar_anterior: false, sql_query_anterior: '', formato: 'numero', cores_series: {} }
 }
+
+// Tipos onde cada linha (não coluna) vira uma série/fatia colorível — pizza,
+// funil, treemap etc. usam a 1ª coluna como o "nome" a mapear cor, diferente
+// dos gráficos cartesianos (barra/linha) que colorem por COLUNA numérica.
+const TIPOS_COR_POR_LINHA = new Set(['pie', 'funnel', 'treemap', 'sunburst', 'pictorial_bar', 'theme_river'])
 
 export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [widgets,       setWidgets]       = useState([])
   const [loading,       setLoading]       = useState(true)
   const [selected,      setSelected]      = useState(null)
+  const [mode,          setMode]          = useState('view') // 'view' | 'new' | 'edit'
   const [form,          setForm]          = useState(emptyForm())
   const [saving,        setSaving]        = useState(false)
   const [deleting,      setDeleting]      = useState(null)
@@ -35,22 +50,26 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [prevPreviewRows,   setPrevPreviewRows]   = useState(null)
   const [prevPreviewFields, setPrevPreviewFields] = useState([])
   const [prevPreviewErr,    setPrevPreviewErr]    = useState(null)
-  const [searchIcon,    setSearchIcon]    = useState('')
   const [showGuide,     setShowGuide]     = useState(false)
-  const [iconOpen,      setIconOpen]      = useState(false)
   const [typeOpen,      setTypeOpen]      = useState(false)
   const [seeding,       setSeeding]       = useState(false)
   const [clearingDemo,  setClearingDemo]  = useState(false)
   const [demoMsg,       setDemoMsg]       = useState(null)
-  const [searchWidget,  setSearchWidget]  = useState('')
-  const [openGroups,    setOpenGroups]    = useState(() => new Set())
-  const [tab,           setTab]           = useState('geral')
+  const [activeTab,     setActiveTab]     = useState('acesso')
   const [layoutW,       setLayoutW]       = useState(800)
-  const iconRef  = useRef(null)
+  // Filtros e paginação da aba Acesso — client-side, os widgets já vêm
+  // todos de dash.getAll() (lista tipicamente pequena, não precisa de
+  // paginação server-side como as telas com milhares de registros).
+  const [fTitulo,   setFTitulo]   = useState('')
+  const [fTipo,     setFTipo]     = useState('')
+  const [fPagina,   setFPagina]   = useState(1)
+  const [fPorPagina, setFPorPagina] = useState(25)
+  const [fPainelAberto, setFPainelAberto] = useState(true)
+  const [showConsulta, setShowConsulta] = useState(false)
+  const isRO = mode === 'view'
   const typeRef  = useRef(null)
   const colorPickerRef = useRef(null)
   const layoutContainerRef = useRef(null)
-  const allIcons = getAllIcons()
 
   async function handleSeedDemo() {
     setSeeding(true); setDemoMsg(null)
@@ -78,22 +97,26 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
 
   useEffect(() => {
     window.api.dash.getAll()
-      .then(res => { setWidgets(res.ok ? res.data : []); setLoading(false) })
+      .then(res => {
+        const lista = res.ok ? res.data : []
+        setWidgets(lista)
+        setLoading(false)
+        // Abre direto no último registro, em modo consulta — mesmo padrão
+        // pedido para Despesas de Viagem (viagens/index.jsx), evita cair
+        // sempre na aba Acesso vazia sem nada selecionado.
+        if (lista.length > 0) {
+          const ultimo = lista[lista.length - 1]
+          setSelected(ultimo.id)
+          setForm(formFromWidget(ultimo))
+          setActiveTab('geral')
+        }
+      })
       .catch(() => setLoading(false))
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (newTrigger > 0) openNew()
+    if (newTrigger > 0) handleIncluir()
   }, [newTrigger])
-
-  useEffect(() => {
-    if (!iconOpen) return
-    function handler(e) {
-      if (iconRef.current && !iconRef.current.contains(e.target)) setIconOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [iconOpen])
 
   useEffect(() => {
     if (!typeOpen) return
@@ -104,26 +127,9 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [typeOpen])
 
-  // abre automaticamente o grupo do tipo do widget selecionado
-  useEffect(() => {
-    if (selected && selected !== 'new') {
-      const w = widgets.find(x => x.id === selected)
-      if (w) setOpenGroups(prev => new Set(prev).add(w.tipo))
-    }
-  }, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function openNew() {
-    setSelected('new')
-    const pos = nextPos(widgets)
-    setForm({ ...emptyForm(), grid_x: pos.x, grid_y: pos.y })
-    resetPreview()
-    setShowGuide(false)
-    setTab('geral')
-  }
-
-  function openEdit(w) {
-    setSelected(w.id)
-    setForm({
+  function formFromWidget(w) {
+    return {
+      codigo:       w.codigo       || '',
       titulo:       w.titulo       || '',
       tipo:         w.tipo         || 'card',
       sql_query:    w.sql_query    || '',
@@ -137,10 +143,63 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       comparar_anterior:  w.comparar_anterior  || false,
       sql_query_anterior: w.sql_query_anterior || '',
       formato:            w.formato            || 'numero',
-    })
+      cores_series:       w.cores_series        || {},
+    }
+  }
+
+  // Consulta (view): clicar num widget da lista só abre pra visualização,
+  // campos bloqueados — padrão do resto do sistema (FormToolbar), não
+  // edição direta.
+  function openView(w) {
+    setSelected(w.id)
+    setMode('view')
+    setForm(formFromWidget(w))
     resetPreview()
     setShowGuide(false)
-    setTab('geral')
+    setActiveTab('geral')
+  }
+
+  // Navegação « ‹ N/total › » no rodapé — mesmo padrão de Arquivos.jsx/
+  // viagens/index.jsx — percorre a lista completa de widgets (não a
+  // filtrada da aba Acesso), ordem estável independente do filtro ativo.
+  function navTo(idx) {
+    if (idx < 0 || idx >= widgets.length) return
+    openView(widgets[idx])
+  }
+  const currentIdx = selected && selected !== 'new' ? widgets.findIndex(w => w.id === selected) : -1
+
+  // Modal Pesquisa Padrão — mesmo padrão de Arquivos.jsx: botão "Consultar"
+  // do FormToolbar abre busca rápida sobre a lista completa, em vez de só
+  // trocar para a aba Acesso.
+  function abrirConsulta() {
+    setShowConsulta(true)
+  }
+  function selecionarDaConsulta(w) {
+    openView(w)
+    setShowConsulta(false)
+  }
+
+  // Preview otimista do próximo código — mesmo padrão de Arquivos.jsx: só
+  // feedback visual imediato, o valor real vem do backend via nextval() no
+  // insert (dash:create).
+  function previewNextCodigo() {
+    const max = widgets.reduce((m, w) => Math.max(m, parseInt(w.codigo || '0', 10)), 0)
+    return String(max + 1).padStart(4, '0')
+  }
+
+  function handleIncluir() {
+    setSelected('new')
+    setMode('new')
+    const pos = nextPos(widgets)
+    setForm({ ...emptyForm(), codigo: previewNextCodigo(), grid_x: pos.x, grid_y: pos.y })
+    resetPreview()
+    setShowGuide(false)
+    setActiveTab('geral')
+  }
+
+  function handleAlterar() {
+    if (selected === 'new' || !selected) return
+    setMode('edit')
   }
 
   function resetPreview() {
@@ -151,18 +210,18 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   function f(key, val) {
     if (key === 'tipo') {
       const meta = TIPOS.find(t => t.value === val)
-      setForm(prev => ({ ...prev, tipo: val, grid_w: meta?.defW ?? prev.grid_w, grid_h: meta?.defH ?? prev.grid_h }))
+      setForm(prev => ({ ...prev, tipo: val, grid_w: meta?.defW ?? prev.grid_w, grid_h: meta?.defH ?? prev.grid_h, cores_series: {} }))
       resetPreview(); setShowGuide(false)
       return
     }
     setForm(prev => ({ ...prev, [key]: val }))
   }
 
-  async function handleSave() {
+  async function handleGravar() {
     if (!form.titulo.trim()) return
     setSaving(true)
     try {
-      if (selected === 'new') {
+      if (mode === 'new') {
         // form.grid_x/grid_y já refletem a posição escolhida pelo usuário na
         // aba "Layout" (ou a posição livre default, se ele nem abriu a aba).
         const res = await window.api.dash.create(form)
@@ -174,15 +233,29 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       const res = await window.api.dash.getAll()
       if (res.ok) setWidgets(res.data)
       window.dispatchEvent(new Event('dash:widgets-changed'))
+      setMode('view')
     } finally {
       setSaving(false)
     }
   }
 
+  function handleDesistir() {
+    if (mode === 'new') {
+      setSelected(null)
+      setForm(emptyForm())
+      setActiveTab('acesso')
+    } else {
+      const w = widgets.find(x => x.id === selected)
+      if (w) setForm(formFromWidget(w))
+    }
+    resetPreview()
+    setMode('view')
+  }
+
   // Grid de layout arrastável (aba "Layout") — mesmo padrão da aba Dashboard:
   // usuário arrasta/redimensiona livremente, sem botões de +1/-1 posição.
   useEffect(() => {
-    if (tab !== 'layout' || !layoutContainerRef.current) return
+    if (activeTab !== 'layout' || !layoutContainerRef.current) return
     const el = layoutContainerRef.current
     const ro = new ResizeObserver(entries => {
       const w = entries[0]?.contentRect?.width
@@ -191,7 +264,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     ro.observe(el)
     setLayoutW(el.getBoundingClientRect().width)
     return () => ro.disconnect()
-  }, [tab])
+  }, [activeTab])
 
   const layoutItems = useMemo(() => {
     const items = widgets
@@ -224,13 +297,38 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     }
   }
 
-  async function handleDelete(id) {
+  async function handleExcluir() {
+    if (selected === 'new' || !selected || deleting) return
+    const w = widgets.find(x => x.id === selected)
+    if (!w) return
+    if (!(await notificar.confirmar(`Excluir o widget "${w.titulo || '(sem título)'}"?`, { titulo: 'Excluir widget', confirmarLabel: 'Excluir', perigo: true }))) return
+    setDeleting(selected)
+    try {
+      await window.api.dash.delete(selected)
+      setWidgets(prev => prev.filter(x => x.id !== selected))
+      setSelected(null)
+      setMode('view')
+      setForm(emptyForm())
+      resetPreview()
+      setActiveTab('acesso')
+      window.dispatchEvent(new Event('dash:widgets-changed'))
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  // Excluir a partir do ícone de lixeira na lista lateral (não depende de
+  // estar selecionado/em consulta) — continua fora do fluxo do FormToolbar.
+  async function handleExcluirDaLista(id) {
     if (deleting) return
+    const w = widgets.find(x => x.id === id)
+    if (!w) return
+    if (!(await notificar.confirmar(`Excluir o widget "${w.titulo || '(sem título)'}"?`, { titulo: 'Excluir widget', confirmarLabel: 'Excluir', perigo: true }))) return
     setDeleting(id)
     try {
       await window.api.dash.delete(id)
-      setWidgets(prev => prev.filter(w => w.id !== id))
-      if (selected === id) { setSelected(null); setForm(emptyForm()); resetPreview() }
+      setWidgets(prev => prev.filter(x => x.id !== id))
+      if (selected === id) { setSelected(null); setMode('view'); setForm(emptyForm()); resetPreview() }
       window.dispatchEvent(new Event('dash:widgets-changed'))
     } finally {
       setDeleting(null)
@@ -247,7 +345,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
       if (!res.ok) { setPreviewErr(res.erro.split('\n')[0]) }
       else { setPreviewRows(res.data.rows || []); setPreviewFields(res.data.fields || []) }
     } catch(e) { setPreviewErr(String(e)) }
-    finally     { setTesting(false); setTab('resultado') }
+    finally     { setTesting(false); setActiveTab('resultado') }
   }
 
   async function handleTestSqlAnterior() {
@@ -263,331 +361,228 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
     finally     { setTestingPrev(false) }
   }
 
-  function toggleGroup(tipo) {
-    setOpenGroups(prev => {
-      const next = new Set(prev)
-      next.has(tipo) ? next.delete(tipo) : next.add(tipo)
-      return next
-    })
-  }
-
-  const iconFiltered = searchIcon
-    ? allIcons.filter(n => n.includes(searchIcon.toLowerCase().replace(/\s+/g, '-')))
-    : allIcons
 
   const guide     = SQL_GUIDE[form.tipo]
   const sqlHint    = SQL_HINTS[form.tipo]
   const tipoAtual  = TIPOS.find(t => t.value === form.tipo)
 
-  // agrupa widgets por tipo para a lista lateral
-  const widgetsFiltrados = searchWidget
-    ? widgets.filter(w => (w.titulo || '').toLowerCase().includes(searchWidget.toLowerCase()))
-    : widgets
-  const grupos = {}
-  for (const w of widgetsFiltrados) {
-    const key = w.tipo || 'card'
-    if (!grupos[key]) grupos[key] = []
-    grupos[key].push(w)
+  function limparFiltros() {
+    setFTitulo(''); setFTipo(''); setFPagina(1)
   }
-  const gruposOrdenados = Object.keys(grupos).sort((a, b) => grupos[b].length - grupos[a].length)
-  const tiposCount = gruposOrdenados.length
+
+  // Filtro/paginação client-side — widgets já vêm todos de dash.getAll(),
+  // lista tipicamente pequena (dezenas, não milhares de registros).
+  const widgetsFiltrados = widgets.filter(w => {
+    if (fTitulo && !(w.titulo || '').toLowerCase().includes(fTitulo.toLowerCase())) return false
+    if (fTipo && w.tipo !== fTipo) return false
+    return true
+  })
+  const totalPaginas = Math.max(1, Math.ceil(widgetsFiltrados.length / fPorPagina))
+  const paginaAtual = Math.min(fPagina, totalPaginas)
+  const widgetsPagina = widgetsFiltrados.slice((paginaAtual - 1) * fPorPagina, paginaAtual * fPorPagina)
 
   return (
-    <div className="dash-wrapper" style={{ display:'flex', flexDirection:'row' }}>
+    <div className="page-with-footer">
 
-      {/* LEFT RAIL ────────────────────────────────────────────────────── */}
-      <div style={{ width:280, flexShrink:0, display:'flex', flexDirection:'column', borderRight:'1px solid var(--bd)', overflow:'hidden', background:'var(--s1)' }}>
-
-        <div style={{ padding:16, display:'flex', flexDirection:'column', gap:10, borderBottom:'1px solid var(--bd)' }}>
-          <button
-            onClick={() => onNavigate?.('dashboard')}
-            style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, color:'var(--t3)', background:'none', border:'none', cursor:'pointer', padding:0, marginBottom:2, alignSelf:'flex-start' }}
-          >
-            <ArrowLeft size={12} />
-            Ir ao Dashboard
-          </button>
-          <button
-            className="btn btn-primary"
-            style={{ width:'100%', justifyContent:'center', gap:6, display:'flex', alignItems:'center' }}
-            onClick={openNew}
-          >
-            <Plus size={13} />
-            Novo Widget
-          </button>
-
-          <div style={{ display:'flex', gap:6 }}>
-            <button
-              onClick={handleSeedDemo}
-              disabled={seeding || clearingDemo}
-              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'6px 8px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s2)', color:'var(--t2)', cursor: seeding||clearingDemo ? 'not-allowed' : 'pointer', fontSize:10.5, fontWeight:500, opacity: clearingDemo ? .5 : 1 }}
-            >
-              {seeding
-                ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
-                : <Database size={11} />
-              }
-              Popular demo
-            </button>
-            <button
-              onClick={handleClearDemo}
-              disabled={seeding || clearingDemo}
-              style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'6px 8px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s2)', color:'var(--t2)', cursor: seeding||clearingDemo ? 'not-allowed' : 'pointer', fontSize:10.5, fontWeight:500, opacity: seeding ? .5 : 1 }}
-            >
-              {clearingDemo
-                ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
-                : <Trash2 size={11} />
-              }
-              Limpar demo
-            </button>
-          </div>
-          {demoMsg && (
-            <div style={{ fontSize:10, color: demoMsg.ok ? 'var(--t3)' : '#F87171' }}>
-              {demoMsg.texto}
-            </div>
-          )}
-        </div>
-
-        {widgets.length > 0 && (
-          <>
-            <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--s2)', border:'1px solid var(--bd2)', borderRadius:8, padding:'8px 10px', margin:'12px 16px 4px' }}>
-              <Search size={13} style={{ color:'var(--t3)', flexShrink:0 }} />
-              <input
-                value={searchWidget}
-                onChange={e => setSearchWidget(e.target.value)}
-                placeholder="Buscar widget..."
-                style={{ background:'none', border:'none', outline:'none', color:'var(--t1)', fontSize:12, width:'100%' }}
-              />
-            </div>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'2px 16px 10px', fontSize:11, color:'var(--t3)' }}>
-              <span>{widgets.length} widget{widgets.length !== 1 ? 's' : ''} no dashboard</span>
-              <b style={{ color:'var(--t2)' }}>{tiposCount} tipo{tiposCount !== 1 ? 's' : ''}</b>
-            </div>
-          </>
+      {/* Tab bar — mesmo padrão do resto do sistema, só que com mais abas:
+          Acesso (lista/filtro/paginação) + as 4 abas do formulário do
+          widget selecionado, todas irmãs (docs/PADRAO_TELAS.md). */}
+      <div className="page-tabs">
+        <button className={`page-tab${activeTab === 'acesso' ? ' active' : ''}`} onClick={() => setActiveTab('acesso')}>Acesso</button>
+        <button className={`page-tab${activeTab === 'geral' ? ' active' : ''}`} onClick={() => selected && setActiveTab('geral')} disabled={!selected}>Cadastro</button>
+        <button className={`page-tab${activeTab === 'resultado' ? ' active' : ''}`} onClick={() => selected && setActiveTab('resultado')} disabled={!selected}>Resultado</button>
+        <button className={`page-tab${activeTab === 'layout' ? ' active' : ''}`} onClick={() => selected && setActiveTab('layout')} disabled={!selected}>Layout</button>
+        {selected && selected !== 'new' && isRO && activeTab !== 'acesso' && (
+          <span className="page-tab-info">{form.codigo || '----'} · {form.titulo || '(sem título)'}</span>
         )}
-
-        <div style={{ flex:1, overflowY:'auto', padding:'4px 10px 12px' }}>
-          {loading ? (
-            [...Array(4)].map((_,i) => <div key={i} className="skel" style={{ height:44, borderRadius:7, marginBottom:6 }} />)
-          ) : widgets.length === 0 ? (
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, textAlign:'center', color:'var(--t3)', fontSize:11, padding:'32px 16px' }}>
-              <LayoutGrid size={26} style={{ opacity:.4 }} />
-              Nenhum widget ainda.<br/>Clique em "Novo Widget".
-            </div>
-          ) : widgetsFiltrados.length === 0 ? (
-            <div style={{ textAlign:'center', color:'var(--t3)', fontSize:11, padding:'24px 16px' }}>
-              Nenhum widget encontrado.
-            </div>
-          ) : gruposOrdenados.map(tipoKey => {
-            const meta = TIPOS.find(t => t.value === tipoKey)
-            const lista = grupos[tipoKey]
-            const open = openGroups.has(tipoKey)
-            return (
-              <div key={tipoKey} style={{ marginBottom:2 }}>
-                <div
-                  onClick={() => toggleGroup(tipoKey)}
-                  style={{
-                    display:'flex', alignItems:'center', gap:7, padding:'9px 8px', cursor:'pointer',
-                    color:'var(--t3)', fontSize:10.5, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase',
-                    borderRadius:6, userSelect:'none',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <ChevronRight size={11} style={{ flexShrink:0, color:'var(--t3)', transition:'transform .16s ease', transform: open ? 'rotate(90deg)' : 'none' }} />
-                  {meta?.label || tipoKey}
-                  <span style={{
-                    marginLeft:'auto', background: open ? 'var(--or4)' : 'var(--s3)', color: open ? 'var(--or)' : 'var(--t3)',
-                    fontSize:10, fontWeight:700, padding:'1.5px 7px', borderRadius:20,
-                  }}>
-                    {lista.length}
-                  </span>
-                </div>
-
-                {open && (
-                  <div style={{ display:'flex', flexDirection:'column', gap:2, padding:'2px 0 8px 4px', borderLeft:'1px solid var(--bd)', marginLeft:13 }}>
-                    {lista.map(w => {
-                      const isSel = selected === w.id
-                      return (
-                        <div
-                          key={w.id}
-                          onClick={() => openEdit(w)}
-                          style={{
-                            display:'flex', alignItems:'center', gap:9, padding:'8px 9px', borderRadius:8,
-                            cursor:'pointer', marginLeft:6, position:'relative',
-                            background: isSel ? 'var(--or4)' : 'transparent',
-                            border: isSel ? '1px solid rgba(217,82,24,.35)' : '1px solid transparent',
-                            boxShadow: isSel ? 'var(--sh-sm)' : 'none',
-                          }}
-                          onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'var(--s2)' }}
-                          onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}
-                        >
-                          <div style={{
-                            width:26, height:26, borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center',
-                            flexShrink:0, background: (w.cor || '#FF6B2B') + '26',
-                          }}>
-                            <LucideIcon name={w.icone_lucide || meta?.icon || 'bar-chart-2'} size={13} color={w.cor || '#FF6B2B'} />
-                          </div>
-                          <div style={{ minWidth:0, flex:1 }}>
-                            <div style={{
-                              fontSize:12.5, fontWeight:600, color: isSel ? 'var(--or)' : 'var(--t1)',
-                              whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', lineHeight:1.35,
-                            }}>
-                              {w.titulo || '(sem título)'}
-                            </div>
-                            <div style={{ fontSize:10.5, color:'var(--t3)', fontVariantNumeric:'tabular-nums' }}>
-                              {w.grid_w || 3}×{w.grid_h || 2}
-                            </div>
-                          </div>
-                          <button
-                            className="icon-btn"
-                            onClick={e => { e.stopPropagation(); handleDelete(w.id) }}
-                            disabled={deleting === w.id}
-                            title="Excluir"
-                            style={{ opacity: deleting===w.id ? .3 : .55, flexShrink:0 }}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        {selected && mode !== 'view' && (
+          <span className="page-tab-info" style={{ color:'var(--or)' }}>
+            {mode === 'new' ? '● Novo widget' : '● Editando'}
+          </span>
+        )}
+        <div style={{ marginLeft:'auto', display:'flex', gap:6, alignItems:'center' }}>
+          <button className="btn btn-ghost" onClick={handleSeedDemo} disabled={seeding || clearingDemo}
+            style={{ height:28, fontSize:11, padding:'0 10px' }}>
+            {seeding ? <RefreshCw size={12} style={{ animation:'spin .7s linear infinite' }} /> : <Database size={12} />}
+            Popular demo
+          </button>
+          <button className="btn btn-ghost" onClick={handleClearDemo} disabled={seeding || clearingDemo}
+            style={{ height:28, fontSize:11, padding:'0 10px' }}>
+            {clearingDemo ? <RefreshCw size={12} style={{ animation:'spin .7s linear infinite' }} /> : <Trash2 size={12} />}
+            Limpar demo
+          </button>
         </div>
       </div>
 
-      {/* RIGHT PANEL (editor) ─────────────────────────────────────────── */}
-      <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {!selected ? (
+      <div className="page-content">
+
+        {/* ════ ABA ACESSO ════ */}
+        {activeTab === 'acesso' && (
+          <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0, gap:10 }}>
+            {demoMsg && (
+              <div style={{ fontSize:11, color: demoMsg.ok ? 'var(--t3)' : '#F87171' }}>{demoMsg.texto}</div>
+            )}
+
+            {/* Painel de filtros, retrátil — mesmo padrão de Arquivos.jsx/
+                viagens/index.jsx (cabeçalho "Filtros" clicável + collapse). */}
+            <div style={{ border:'1px solid var(--bd)', borderRadius:10, background:'var(--s1)', boxShadow:'var(--sh-xs)', overflow:'hidden', flexShrink:0 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 14px', cursor:'pointer', userSelect:'none' }}
+                onClick={() => setFPainelAberto(a => !a)}>
+                <SlidersHorizontal size={13} color="var(--t2)" />
+                <span style={{ fontSize:12, fontWeight:600, color:'var(--t1)' }}>Filtros</span>
+                {(fTitulo || fTipo) && (
+                  <span style={{ fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:10, background:'var(--or3)', color:'var(--or)' }}>ativo</span>
+                )}
+                <div style={{ flex:1 }} />
+                {(fTitulo || fTipo) && (
+                  <button type="button" className="btn btn-ghost" style={{ height:24, padding:'0 8px', fontSize:11 }}
+                    onClick={e => { e.stopPropagation(); limparFiltros() }}>
+                    <RotateCcw size={11} /> Limpar
+                  </button>
+                )}
+                {fPainelAberto ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
+              </div>
+
+              {fPainelAberto && (
+                <div style={{ padding:'4px 14px 14px', borderTop:'1px solid var(--bd)', paddingTop:12 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:10 }}>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:600, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.4, display:'block', marginBottom:4 }}>Título</label>
+                      <input className="form-input" style={{ height:32, fontSize:12, padding:'0 8px', width:'100%' }}
+                        value={fTitulo} onChange={e => { setFTitulo(e.target.value); setFPagina(1) }} placeholder="filtrar por título..." autoFocus />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:600, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.4, display:'block', marginBottom:4 }}>Tipo</label>
+                      <select className="form-select" style={{ height:32, fontSize:12, padding:'0 8px', width:'100%' }}
+                        value={fTipo} onChange={e => { setFTipo(e.target.value); setFPagina(1) }}>
+                        <option value="">Todos</option>
+                        {TIPOS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {loading ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {[...Array(4)].map((_,i) => <div key={i} className="skel" style={{ height:44, borderRadius:7 }} />)}
+              </div>
+            ) : widgets.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 0', color:'var(--t3)', border:'1px solid var(--bd)', borderRadius:10, background:'var(--s1)' }}>
+                <LayoutGrid size={26} style={{ opacity:.4, marginBottom:8 }} />
+                <div style={{ fontSize:13 }}>Nenhum widget ainda. Clique em "Incluir" para criar o primeiro.</div>
+              </div>
+            ) : (
+              <div style={{ border:'1px solid var(--bd)', borderRadius:10, overflow:'hidden', background:'var(--s1)', display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
+                <div style={{ overflowX:'auto', overflowY:'auto', flex:1, minHeight:100 }}>
+                  <table style={{ width:'100%', borderCollapse:'collapse', background:'var(--s1)' }}>
+                    <thead style={{ position:'sticky', top:0, zIndex:1 }}>
+                      <tr>
+                        <th style={thS}>Widget</th>
+                        <th style={thS}>Tipo</th>
+                        <th style={{ ...thS, textAlign:'center' }}>Tamanho</th>
+                        <th style={{ ...thS, textAlign:'center' }}>Auto-atualização</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {widgetsPagina.map(w => {
+                        const meta = TIPOS.find(t => t.value === w.tipo)
+                        return (
+                          <tr key={w.id}
+                            onClick={() => openView(w)}
+                            style={{ cursor:'pointer', background: selected === w.id ? 'var(--or4)' : 'var(--s1)' }}
+                            onMouseEnter={e => { if (selected !== w.id) e.currentTarget.style.background = 'var(--s2)' }}
+                            onMouseLeave={e => { if (selected !== w.id) e.currentTarget.style.background = 'var(--s1)' }}
+                          >
+                            <td style={tdS}>
+                              <span style={{ display:'inline-flex', alignItems:'center', gap:8 }}>
+                                <span style={{ width:24, height:24, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:(w.cor||'#FF6B2B')+'26' }}>
+                                  <LucideIcon name={w.icone_lucide || meta?.icon || 'bar-chart-2'} size={12} color={w.cor || '#FF6B2B'} />
+                                </span>
+                                <span style={{ color: selected === w.id ? 'var(--or)' : 'var(--t1)', fontWeight:600 }}>{w.titulo || '(sem título)'}</span>
+                              </span>
+                            </td>
+                            <td style={tdS}>{meta?.label || w.tipo}</td>
+                            <td style={{ ...tdS, textAlign:'center', fontVariantNumeric:'tabular-nums' }}>{w.grid_w || 3}×{w.grid_h || 2}</td>
+                            <td style={{ ...tdS, textAlign:'center' }}>{w.intervalo > 0 ? `${w.intervalo}s` : '—'}</td>
+                          </tr>
+                        )
+                      })}
+                      {widgetsPagina.length === 0 && (
+                        <tr><td colSpan={4} style={{ textAlign:'center', padding:'32px', color:'var(--t3)', fontSize:11, fontStyle:'italic' }}>Nenhum widget encontrado.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginacaoBar pagina={paginaAtual} totalPaginas={totalPaginas} total={widgetsFiltrados.length} porPagina={fPorPagina}
+                  onPagina={setFPagina} onPorPagina={n => { setFPorPagina(n); setFPagina(1) }} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ════ ABAS DO FORMULÁRIO (Geral / Query SQL / Resultado / Layout) ════ */}
+        {activeTab !== 'acesso' && !selected && (
           <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:14, color:'var(--t3)' }}>
             <LucideIcon name="layout-dashboard" size={48} />
             <div style={{ fontSize:13, textAlign:'center', lineHeight:1.8 }}>
-              Selecione um widget para editar<br/>ou clique em <strong style={{ color:'var(--t2)' }}>Novo Widget</strong>
+              Selecione um widget na aba Acesso<br/>ou clique em <strong style={{ color:'var(--t2)' }}>Incluir</strong>
             </div>
           </div>
-        ) : (
+        )}
+        {activeTab !== 'acesso' && selected && (
           <>
-            {/* Header */}
-            <div style={{ padding:'18px 30px 0', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:20, flexShrink:0 }}>
-              <div style={{ minWidth:0, flex:1 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:10.5, fontWeight:700, letterSpacing:'.07em', textTransform:'uppercase', color:'var(--t3)', marginBottom:6 }}>
-                  <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:'var(--or4)', color:'var(--or)', padding:'2px 8px', borderRadius:20, fontWeight:700 }}>
-                    <LucideIcon name={tipoAtual?.icon || 'hash'} size={11} />
-                    {tipoAtual?.label || form.tipo}
-                  </span>
-                  {selected === 'new' ? 'novo widget' : 'editando widget'}
-                </div>
-                <input
-                  value={form.titulo}
-                  onChange={e => f('titulo', e.target.value)}
-                  placeholder="Título do widget"
-                  style={{
-                    fontSize:20, fontWeight:700, background:'transparent', border:'none', color:'var(--t1)',
-                    outline:'none', width:'100%', padding:'2px 0', borderBottom:'1px solid transparent', letterSpacing:'-.01em',
-                  }}
-                  onFocus={e => e.target.style.borderBottomColor = 'var(--or)'}
-                  onBlur={e => e.target.style.borderBottomColor = 'transparent'}
-                />
-              </div>
-              <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-                <button
-                  onClick={() => { setSelected(null); setForm(emptyForm()); resetPreview() }}
-                  className="btn btn-ghost"
-                  style={{ fontSize:12.5, padding:'8px 14px' }}
-                >
-                  Cancelar
-                </button>
-                {selected !== 'new' && (
-                  <button
-                    onClick={() => handleDelete(selected)}
-                    disabled={!!deleting}
-                    style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8, border:'1px solid rgba(248,113,113,.28)', background:'transparent', color:'#F87171', cursor:'pointer', fontSize:12.5, fontWeight:600 }}
-                  >
-                    <Trash2 size={13} />
-                    Excluir
-                  </button>
-                )}
-                <button
-                  className="btn btn-primary"
-                  onClick={handleSave}
-                  disabled={saving || !form.titulo.trim()}
-                  style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, padding:'8px 14px' }}
-                >
-                  {saving
-                    ? <RefreshCw size={13} style={{ animation:'spin .7s linear infinite' }} />
-                    : <Save size={13} />
-                  }
-                  {selected === 'new' ? 'Criar Widget' : 'Salvar'}
-                </button>
-              </div>
-            </div>
-
-            {/* Tab bar */}
-            <div style={{ display:'flex', padding:'0 30px', borderBottom:'1px solid var(--bd)', flexShrink:0, marginTop:16 }}>
-              {[
-                { id:'geral',     label:'Geral',      Icon: Sliders },
-                { id:'query',     label:'Query SQL',  Icon: Table2 },
-                { id:'resultado', label:'Resultado',  Icon: LayoutGrid, count: previewRows?.length },
-                { id:'layout',    label:'Layout',     Icon: Move },
-              ].map(({ id, label, Icon, count }) => (
-                <button
-                  key={id}
-                  onClick={() => setTab(id)}
-                  style={{
-                    display:'flex', alignItems:'center', gap:6, background:'none', border:'none', cursor:'pointer',
-                    padding:'10px 4px', marginRight:24, fontSize:12.5,
-                    color: tab === id ? 'var(--or)' : 'var(--t3)',
-                    borderBottom: `2px solid ${tab === id ? 'var(--or)' : 'transparent'}`,
-                    marginBottom:-1, fontWeight: tab === id ? 700 : 400,
-                  }}
-                >
-                  <Icon size={13} />
-                  {label}
-                  {count != null && (
-                    <span style={{
-                      background: tab === id ? 'var(--or4)' : 'var(--s3)', color: tab === id ? 'var(--or)' : 'var(--t3)',
-                      fontSize:10, fontWeight:700, padding:'1px 6px', borderRadius:20, fontVariantNumeric:'tabular-nums',
-                    }}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab panels */}
+            {/* Painel do formulário — a navegação entre Geral/Query/Resultado/
+                Layout já é feita pela page-tabs principal (activeTab); o
+                breadcrumb "#id · título" já fica na própria tab bar. */}
             <div style={{ flex:1, minHeight:0, overflowY:'auto' }}>
 
-              {/* GERAL */}
-              {tab === 'geral' && (
-                <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:22, maxWidth:1000 }}>
+              {/* GERAL (Cadastro) — grid de campos soltos, sem cards de seção,
+                  mesmo padrão de FormBuilderView.jsx: repeat(auto-fill,
+                  minmax(220px,1fr)), gap 14, label 10px, campo 36-38px. */}
+              {activeTab === 'geral' && (
+                <div style={{ paddingBottom:24, display:'flex', flexDirection:'column', gap:14 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:14 }}>
+                    <div>
+                      <FieldLabel>Código</FieldLabel>
+                      <div className="form-input" style={{ width:80, fontSize:13, fontWeight:700, letterSpacing:1.5, display:'flex', alignItems:'center', justifyContent:'center', height:37, cursor:'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily:'monospace' }}>
+                        {form.codigo || ''}
+                      </div>
+                    </div>
+                    <div>
+                      <FieldLabel>Título</FieldLabel>
+                      <input
+                        className="form-input"
+                        value={form.titulo}
+                        onChange={e => f('titulo', e.target.value)}
+                        placeholder="Título do widget"
+                        disabled={isRO}
+                      />
+                    </div>
+                  </div>
 
-                  <SecCard icon={<LayoutGrid size={14} />} title="Tipo de visualização">
-                    <div style={{ position:'relative' }} ref={typeRef}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:14 }}>
+                    <div style={{ position:'relative', gridColumn:'span 2' }} ref={typeRef}>
+                      <FieldLabel>Tipo de visualização</FieldLabel>
                       <div
-                        onClick={() => setTypeOpen(v => !v)}
+                        onClick={() => { if (!isRO) setTypeOpen(v => !v) }}
+                        className="form-input"
                         style={{
                           display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
-                          padding:'9px 12px', cursor:'pointer', userSelect:'none',
-                          background:'var(--s3)', border:'1px solid var(--bd2)',
-                          borderRadius: typeOpen ? '8px 8px 0 0' : 8,
+                          cursor: isRO ? 'default' : 'pointer', userSelect:'none',
+                          borderRadius: typeOpen ? '10px 10px 0 0' : undefined,
                         }}
                       >
-                        <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
-                          <span style={{ width:30, height:30, borderRadius:8, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:(form.cor||'#FF6B2B')+'26', color: form.cor || '#FF6B2B' }}>
-                            <LucideIcon name={tipoAtual?.icon || 'hash'} size={15} />
-                          </span>
-                          <div>
-                            <div style={{ fontSize:13.5, fontWeight:600, color:'var(--t1)', lineHeight:1.3 }}>{tipoAtual?.label}</div>
-                            <div style={{ fontSize:11, color:'var(--t3)', lineHeight:1.3 }}>{tipoAtual?.desc}</div>
-                          </div>
-                        </div>
-                        <ChevronDown size={15} style={{ color:'var(--t3)', flexShrink:0, transition:'transform .15s', transform: typeOpen ? 'rotate(180deg)' : 'none' }} />
+                        <span style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
+                          <LucideIcon name={tipoAtual?.icon || 'hash'} size={13} color={form.cor || '#FF6B2B'} />
+                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{tipoAtual?.label}</span>
+                        </span>
+                        {!isRO && <ChevronDown size={13} style={{ color:'var(--t3)', flexShrink:0, transition:'transform .15s', transform: typeOpen ? 'rotate(180deg)' : 'none' }} />}
                       </div>
 
-                      {typeOpen && (
-                        <div style={{ maxHeight:360, overflowY:'auto', padding:6, background:'var(--s1)', border:'1px solid var(--bd)', borderTop:'none', borderRadius:'0 0 8px 8px' }}>
+                      {!isRO && typeOpen && (
+                        <div style={{ position:'absolute', zIndex:300, left:0, right:0, maxHeight:320, overflowY:'auto', padding:6, background:'var(--s1)', border:'1px solid var(--bd)', borderTop:'none', borderRadius:'0 0 10px 10px', boxShadow:'0 8px 28px rgba(0,0,0,.35)' }}>
                           {TIPOS.map(t => {
                             const active = form.tipo === t.value
                             return (
@@ -595,198 +590,124 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                                 key={t.value}
                                 onClick={() => { f('tipo', t.value); setTypeOpen(false) }}
                                 style={{
-                                  display:'flex', alignItems:'center', gap:10, padding:'8px 9px', borderRadius:8, cursor:'pointer',
+                                  display:'flex', alignItems:'center', gap:9, padding:'7px 8px', borderRadius:7, cursor:'pointer',
                                   background: active ? 'var(--or4)' : 'transparent',
                                 }}
                                 onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--s3)' }}
                                 onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
                               >
-                                <span style={{ width:30, height:30, borderRadius:8, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background: active ? 'rgba(217,82,24,.18)' : 'var(--s3)', color: active ? 'var(--or)' : 'var(--t2)' }}>
-                                  <LucideIcon name={t.icon} size={15} />
-                                </span>
-                                <div style={{ flex:1 }}>
-                                  <div style={{ fontSize:13.5, fontWeight:600, color: active ? 'var(--or)' : 'var(--t1)', lineHeight:1.3 }}>{t.label}</div>
-                                  <div style={{ fontSize:11, color:'var(--t3)', lineHeight:1.3 }}>{t.desc}</div>
-                                </div>
-                                {active && <Check size={15} style={{ color:'var(--or)', flexShrink:0 }} />}
+                                <LucideIcon name={t.icon} size={13} color={active ? 'var(--or)' : 'var(--t2)'} />
+                                <span style={{ fontSize:12, fontWeight:500, color: active ? 'var(--or)' : 'var(--t1)', flex:1 }}>{t.label}</span>
+                                {active && <Check size={13} style={{ color:'var(--or)', flexShrink:0 }} />}
                               </div>
                             )
                           })}
                         </div>
                       )}
                     </div>
-                  </SecCard>
 
-                  <SecCard icon={<Clock3 size={14} />} title="Identidade e atualização">
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:18 }}>
-                      <div style={{ position:'relative' }} ref={iconRef}>
-                        <FieldLabel>Ícone</FieldLabel>
-                        <div
-                          onClick={() => setIconOpen(v => !v)}
-                          style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 11px', border:'1px solid var(--bd2)', borderRadius:8, cursor:'pointer', background:'var(--s3)', userSelect:'none' }}
-                        >
-                          <LucideIcon name={form.icone_lucide || 'image-off'} size={14} color={form.cor || '#FF6B2B'} />
-                          <span style={{ flex:1, fontSize:12.5, color: form.icone_lucide ? 'var(--t1)' : 'var(--t3)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                            {form.icone_lucide || 'Selecionar...'}
-                          </span>
-                          <ChevronDown size={12} style={{ color:'var(--t3)', transition:'transform .15s', transform: iconOpen ? 'rotate(180deg)' : 'none' }} />
+                    <div>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:2 }}>
+                        <FieldLabel style={{ marginBottom:0 }}>Ícone (Lucide)</FieldLabel>
+                        <a href="https://lucide.dev/icons/" target="_blank" rel="noreferrer"
+                          style={{ display:'flex', alignItems:'center', gap:3, fontSize:10, color:'var(--or)', textDecoration:'none', opacity:.8 }}>
+                          <ExternalLink size={10} /> ver todos
+                        </a>
+                      </div>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <div style={{ width:34, height:34, flexShrink:0, background:'var(--or3)', border:'1px solid rgba(255,107,43,.15)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          <LucideIcon name={form.icone_lucide || 'image-off'} size={15} color={form.cor || '#FF6B2B'} />
                         </div>
-
-                        {iconOpen && (
-                          <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:300, background:'var(--bg)', border:'1px solid var(--bd)', borderRadius:9, boxShadow:'0 8px 28px rgba(0,0,0,.35)', padding:8, minWidth:220 }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 8px', background:'var(--s2)', borderRadius:6, marginBottom:6 }}>
-                              <Search size={11} style={{ color:'var(--t3)', flexShrink:0 }} />
-                              <input
-                                autoFocus
-                                value={searchIcon}
-                                onChange={e => setSearchIcon(e.target.value)}
-                                placeholder="Buscar ícone..."
-                                style={{ background:'none', border:'none', outline:'none', fontSize:11, color:'var(--t1)', width:'100%' }}
-                              />
-                              {searchIcon && (
-                                <button onClick={() => setSearchIcon('')} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--t3)', padding:0, lineHeight:1 }}>
-                                  <X size={11} />
-                                </button>
-                              )}
-                            </div>
-                            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, maxHeight:200, overflowY:'auto' }}>
-                              {iconFiltered.slice(0, 210).map(name => (
-                                <button
-                                  key={name}
-                                  title={name}
-                                  onClick={() => { f('icone_lucide', name); setIconOpen(false); setSearchIcon('') }}
-                                  style={{
-                                    display:'flex', alignItems:'center', justifyContent:'center', padding:6,
-                                    borderRadius:5, border:'none', cursor:'pointer',
-                                    background: form.icone_lucide === name ? (form.cor || '#FF6B2B') + '25' : 'transparent',
-                                    transition:'background .1s',
-                                  }}
-                                  onMouseEnter={e => { if (form.icone_lucide !== name) e.currentTarget.style.background = 'var(--s3)' }}
-                                  onMouseLeave={e => { if (form.icone_lucide !== name) e.currentTarget.style.background = 'transparent' }}
-                                >
-                                  <LucideIcon name={name} size={14} color={form.icone_lucide === name ? (form.cor || '#FF6B2B') : undefined} />
-                                </button>
-                              ))}
-                            </div>
-                            {iconFiltered.length > 210 && (
-                              <div style={{ fontSize:9, color:'var(--t3)', textAlign:'center', marginTop:4, padding:2 }}>
-                                +{iconFiltered.length - 210} ícones · refine a busca
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <FieldLabel>Auto-atualização</FieldLabel>
-                        <select
-                          className="form-select"
-                          value={form.intervalo}
-                          onChange={e => f('intervalo', Number(e.target.value))}
-                          style={{ width:'100%', height:37, background:'var(--s3)', border:'1px solid var(--bd2)' }}
-                        >
-                          {INTERVALOS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </div>
-
-                      <div>
-                        <FieldLabel>Formato dos valores</FieldLabel>
-                        <select
-                          className="form-select"
-                          value={form.formato || 'numero'}
-                          onChange={e => f('formato', e.target.value)}
-                          style={{ width:'100%', height:37, background:'var(--s3)', border:'1px solid var(--bd2)' }}
-                        >
-                          <option value="numero">Número</option>
-                          <option value="moeda">Moeda (R$)</option>
-                          <option value="percentual">Percentual (%)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </SecCard>
-
-                  <SecCard icon={<Palette size={14} />} title="Aparência">
-                    <FieldLabel>Cor de destaque</FieldLabel>
-                    <div style={{ display:'grid', gridTemplateColumns:'repeat(12, 1fr)', gap:6 }}>
-                      {PALETA_FIXA.map(c => {
-                        const active = form.cor?.toLowerCase() === c.toLowerCase()
-                        return (
-                          <button
-                            key={c}
-                            onClick={() => f('cor', c)}
-                            style={{
-                              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6,
-                              padding:'10px 2px', borderRadius:8, cursor:'pointer',
-                              background: active ? `${c}1F` : 'var(--s3)',
-                              border: `1px solid ${active ? c : 'var(--bd2)'}`,
-                            }}
-                          >
-                            <span style={{
-                              width:17, height:17, borderRadius:5, background:c, flexShrink:0,
-                              boxShadow: active ? `0 0 0 2px ${c}4D` : '0 1px 2px rgba(0,0,0,.3)',
-                            }} />
-                          </button>
-                        )
-                      })}
-                      <div style={{ position:'relative' }}>
-                        <button
-                          onClick={() => colorPickerRef.current?.click()}
-                          title="Escolher cor personalizada"
-                          style={{
-                            width:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6,
-                            padding:'10px 2px', borderRadius:8, cursor:'pointer',
-                            background: !PALETA_FIXA.some(c => c.toLowerCase() === form.cor?.toLowerCase()) ? `${form.cor}1F` : 'var(--s3)',
-                            border: `1px solid ${!PALETA_FIXA.some(c => c.toLowerCase() === form.cor?.toLowerCase()) ? form.cor : 'var(--bd2)'}`,
-                          }}
-                        >
-                          <span style={{
-                            width:17, height:17, borderRadius:5, flexShrink:0,
-                            background: !PALETA_FIXA.some(c => c.toLowerCase() === form.cor?.toLowerCase())
-                              ? form.cor
-                              : 'conic-gradient(from 180deg, #FF6B2B, #FBD24C, #4ADE80, #22D3EE, #A78BFA, #F472B6, #FF6B2B)',
-                          }} />
-                        </button>
                         <input
-                          ref={colorPickerRef}
-                          type="color"
-                          value={form.cor}
-                          onChange={e => f('cor', e.target.value)}
-                          style={{ position:'absolute', opacity:0, width:0, height:0, pointerEvents:'none' }}
-                          tabIndex={-1}
+                          className="form-input"
+                          value={form.icone_lucide || ''}
+                          onChange={e => f('icone_lucide', e.target.value)}
+                          placeholder="layout, bar-chart-2..."
+                          disabled={isRO}
+                          autoComplete="off"
                         />
                       </div>
                     </div>
-                  </SecCard>
 
-
-                  <label style={{
-                    display:'flex', alignItems:'center', gap:10, color:'var(--t2)', fontSize:13, cursor:'pointer',
-                    background:'var(--s2)', border:'1px solid var(--bd)', borderRadius:8, padding:'12px 14px',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={form.comparar_anterior}
-                      onChange={e => f('comparar_anterior', e.target.checked)}
-                      style={{ width:16, height:16, cursor:'pointer', flexShrink:0, accentColor:'var(--or)' }}
-                    />
                     <div>
-                      <div>Comparar com período anterior</div>
-                      <div style={{ fontSize:11, color:'var(--t3)', marginTop:2 }}>
-                        Mostra a variação percentual em relação ao período anterior equivalente
+                      <FieldLabel>Auto-atualização</FieldLabel>
+                      <select
+                        className="form-select"
+                        value={form.intervalo}
+                        onChange={e => f('intervalo', Number(e.target.value))}
+                        disabled={isRO}
+                      >
+                        {INTERVALOS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <FieldLabel>Formato dos valores</FieldLabel>
+                      <select
+                        className="form-select"
+                        value={form.formato || 'numero'}
+                        onChange={e => f('formato', e.target.value)}
+                        disabled={isRO}
+                      >
+                        <option value="numero">Número</option>
+                        <option value="moeda">Moeda (R$)</option>
+                        <option value="percentual">Percentual (%)</option>
+                      </select>
+                    </div>
+
+                    <div style={{ gridColumn:'1 / -1' }}>
+                      <FieldLabel>Cor de destaque</FieldLabel>
+                      <div style={{ display:'flex', gap:6 }}>
+                        {PALETA.slice(0, 35).map(c => {
+                          const active = form.cor?.toLowerCase() === c.toLowerCase()
+                          return (
+                            <button
+                              key={c}
+                              onClick={() => f('cor', c)}
+                              disabled={isRO}
+                              title={c}
+                              style={{
+                                width:28, height:28, borderRadius:7, cursor: isRO ? 'default' : 'pointer',
+                                background:c, flexShrink:0,
+                                border: `2px solid ${active ? 'var(--t1)' : 'transparent'}`,
+                                opacity: isRO && !active ? .5 : 1,
+                              }}
+                            />
+                          )
+                        })}
+                        <div style={{ position:'relative' }}>
+                          <button
+                            onClick={() => { if (!isRO) colorPickerRef.current?.click() }}
+                            disabled={isRO}
+                            title="Escolher cor personalizada"
+                            style={{
+                              width:28, height:28, borderRadius:7, cursor: isRO ? 'default' : 'pointer', flexShrink:0,
+                              border: `2px solid ${!PALETA.slice(0, 35).some(c => c.toLowerCase() === form.cor?.toLowerCase()) ? 'var(--t1)' : 'transparent'}`,
+                              background: !PALETA.slice(0, 35).some(c => c.toLowerCase() === form.cor?.toLowerCase())
+                                ? form.cor
+                                : 'conic-gradient(from 180deg, #FF6B2B, #FBD24C, #4ADE80, #22D3EE, #A78BFA, #F472B6, #FF6B2B)',
+                            }}
+                          />
+                          <input
+                            ref={colorPickerRef}
+                            type="color"
+                            value={form.cor}
+                            onChange={e => f('cor', e.target.value)}
+                            style={{ position:'absolute', opacity:0, width:0, height:0, pointerEvents:'none' }}
+                            tabIndex={-1}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </label>
-                </div>
-              )}
+                  </div>
 
-              {/* QUERY SQL */}
-              {tab === 'query' && (
-                <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:22, maxWidth:1000 }}>
+                  {/* Query SQL — migrada pra dentro de Cadastro (item pedido:
+                      "aba ficou vazia demais separada"). */}
                   <div>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:9 }}>
                       <FieldLabel style={{ marginBottom:0 }}>Query SQL</FieldLabel>
                       <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-                        {!form.sql_query && sqlHint && (
+                        {!isRO && !form.sql_query && sqlHint && (
                           <button
                             onClick={() => f('sql_query', sqlHint)}
                             style={{ fontSize:11, color:'var(--or)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
@@ -811,12 +732,14 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                           <div key={i} style={{ marginBottom: i < guide.exemplos.length-1 ? 10 : 0 }}>
                             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
                               <span style={{ fontSize:10, fontWeight:600, color:'var(--t3)', textTransform:'uppercase', letterSpacing:.5 }}>{ex.label}</span>
-                              <button
-                                onClick={() => { f('sql_query', ex.sql); setShowGuide(false) }}
-                                style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:'var(--or)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
-                              >
-                                <Copy size={9} />Usar este
-                              </button>
+                              {!isRO && (
+                                <button
+                                  onClick={() => { f('sql_query', ex.sql); setShowGuide(false) }}
+                                  style={{ display:'flex', alignItems:'center', gap:4, fontSize:10, color:'var(--or)', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}
+                                >
+                                  <Copy size={9} />Usar este
+                                </button>
+                              )}
                             </div>
                             <pre style={{ margin:0, padding:'7px 10px', background:'var(--s3)', borderRadius:5, fontSize:10, color:'var(--t2)', overflowX:'auto', whiteSpace:'pre-wrap', wordBreak:'break-all', fontFamily:'monospace', lineHeight:1.6 }}>{ex.sql}</pre>
                           </div>
@@ -837,7 +760,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                         onChange={e => { f('sql_query', e.target.value); setPreviewRows(null); setPreviewFields([]); setPreviewErr(null) }}
                         placeholder={sqlHint || 'SELECT ...'}
                         spellCheck={false}
-                        style={{ width:'100%', minHeight:320, fontFamily:'Cascadia Code, Consolas, monospace', fontSize:13, resize:'vertical', lineHeight:1.7, background:'transparent', border:'none', padding:18 }}
+                        disabled={isRO}
+                        style={{ width:'100%', height:'clamp(180px, calc(100vh - 620px), 320px)', fontFamily:'Cascadia Code, Consolas, monospace', fontSize:13, resize:'vertical', lineHeight:1.7, background:'transparent', border:'none', padding:18 }}
                       />
                       <div style={{ display:'flex', gap:12, alignItems:'center', padding:'12px 14px', borderTop:'1px solid var(--bd)', background:'var(--s2)' }}>
                         <button
@@ -863,65 +787,67 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                     </div>
                   </div>
 
-                  {/* Comparação com período anterior */}
-                  <div style={{ padding:'12px 14px', border:'1px solid var(--bd)', borderRadius:10, background:'var(--s2)' }}>
-                    <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--t1)' }}>
-                      <input
-                        type="checkbox"
-                        checked={form.comparar_anterior}
-                        onChange={e => f('comparar_anterior', e.target.checked)}
-                        style={{ width:14, height:14, cursor:'pointer', accentColor:'var(--or)' }}
-                      />
-                      Comparar com período anterior
-                    </label>
-                    {form.comparar_anterior && (
-                      <div style={{ marginTop:10 }}>
-                        <div style={{ fontSize:10, color:'var(--t3)', marginBottom:6, lineHeight:1.5 }}>
-                          Escreva uma query que retorne o mesmo formato de colunas, referente ao período anterior.
-                          Para gráficos, as categorias devem estar na mesma ordem da query principal.
-                        </div>
-                        <textarea
-                          className="form-textarea"
-                          value={form.sql_query_anterior}
-                          onChange={e => { f('sql_query_anterior', e.target.value); setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null) }}
-                          placeholder="SELECT ... (mesmo formato, período anterior)"
-                          spellCheck={false}
-                          style={{ width:'100%', height:90, fontFamily:'monospace', fontSize:11, resize:'vertical', lineHeight:1.65 }}
-                        />
-                        <div style={{ display:'flex', gap:8, marginTop:7, alignItems:'center' }}>
-                          <button
-                            type="button"
-                            onClick={handleTestSqlAnterior}
-                            disabled={testingPrev || !form.sql_query_anterior.trim()}
-                            style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s3)', color:'var(--t1)', cursor: testingPrev||!form.sql_query_anterior.trim() ? 'not-allowed' : 'pointer', fontSize:11, fontWeight:500, opacity: !form.sql_query_anterior.trim() ? .5 : 1 }}
-                          >
-                            {testingPrev
-                              ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
-                              : <Play size={11} />
-                            }
-                            Testar SQL
-                          </button>
-                          {prevPreviewRows && (
-                            <span style={{ fontSize:10, color:'var(--t3)' }}>
-                              {prevPreviewRows.length} linha{prevPreviewRows.length!==1?'s':''} · {prevPreviewFields.length} coluna{prevPreviewFields.length!==1?'s':''}
-                            </span>
-                          )}
-                          {prevPreviewErr && (
-                            <div style={{ display:'flex', alignItems:'center', gap:4, color:'#F87171', fontSize:10, flex:1, overflow:'hidden' }}>
-                              <AlertCircle size={11} style={{ flexShrink:0 }} />
-                              <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{prevPreviewErr}</span>
-                            </div>
-                          )}
-                        </div>
+                  <label style={{
+                    display:'flex', alignItems:'center', gap:10, color:'var(--t2)', fontSize:12, cursor: isRO ? 'default' : 'pointer',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={form.comparar_anterior}
+                      onChange={e => f('comparar_anterior', e.target.checked)}
+                      disabled={isRO}
+                      style={{ width:15, height:15, cursor: isRO ? 'default' : 'pointer', flexShrink:0, accentColor:'var(--or)' }}
+                    />
+                    Comparar com período anterior
+                  </label>
+
+                  {form.comparar_anterior && (
+                    <div>
+                      <FieldLabel>Query SQL — período anterior</FieldLabel>
+                      <div style={{ fontSize:10, color:'var(--t3)', marginBottom:6, lineHeight:1.5 }}>
+                        Mesmo formato de colunas da query principal, referente ao período anterior.
                       </div>
-                    )}
-                  </div>
+                      <textarea
+                        className="form-textarea"
+                        value={form.sql_query_anterior}
+                        onChange={e => { f('sql_query_anterior', e.target.value); setPrevPreviewRows(null); setPrevPreviewFields([]); setPrevPreviewErr(null) }}
+                        placeholder="SELECT ... (mesmo formato, período anterior)"
+                        spellCheck={false}
+                        disabled={isRO}
+                        style={{ width:'100%', height:90, fontFamily:'monospace', fontSize:11, resize:'vertical', lineHeight:1.65 }}
+                      />
+                      <div style={{ display:'flex', gap:8, marginTop:7, alignItems:'center' }}>
+                        <button
+                          type="button"
+                          onClick={handleTestSqlAnterior}
+                          disabled={testingPrev || !form.sql_query_anterior.trim()}
+                          style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 13px', borderRadius:7, border:'1px solid var(--bd)', background:'var(--s3)', color:'var(--t1)', cursor: testingPrev||!form.sql_query_anterior.trim() ? 'not-allowed' : 'pointer', fontSize:11, fontWeight:500, opacity: !form.sql_query_anterior.trim() ? .5 : 1 }}
+                        >
+                          {testingPrev
+                            ? <RefreshCw size={11} style={{ animation:'spin .7s linear infinite' }} />
+                            : <Play size={11} />
+                          }
+                          Testar SQL
+                        </button>
+                        {prevPreviewRows && (
+                          <span style={{ fontSize:10, color:'var(--t3)' }}>
+                            {prevPreviewRows.length} linha{prevPreviewRows.length!==1?'s':''} · {prevPreviewFields.length} coluna{prevPreviewFields.length!==1?'s':''}
+                          </span>
+                        )}
+                        {prevPreviewErr && (
+                          <div style={{ display:'flex', alignItems:'center', gap:4, color:'#F87171', fontSize:10, flex:1, overflow:'hidden' }}>
+                            <AlertCircle size={11} style={{ flexShrink:0 }} />
+                            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{prevPreviewErr}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* RESULTADO */}
-              {tab === 'resultado' && (
-                <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:22, maxWidth:1000 }}>
+              {activeTab === 'resultado' && (
+                <div style={{ paddingBottom:24, display:'flex', flexDirection:'column', gap:16 }}>
                   {!previewRows ? (
                     <div style={{
                       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12,
@@ -986,13 +912,63 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                         )}
                       </div>
 
+                      {(() => {
+                        // Barra/linha/etc: cada COLUNA (exceto a 1ª, que é o label do
+                        // eixo) vira uma série. Pizza/funil/treemap: cada LINHA vira
+                        // uma fatia, usando o valor da 1ª coluna como nome/chave — exceto
+                        // "Rio temático", cuja categoria/série é a 2ª coluna, não a 1ª.
+                        const porLinha = TIPOS_COR_POR_LINHA.has(form.tipo)
+                        const colChave = form.tipo === 'theme_river' ? previewFields[1] : previewFields[0]
+                        const chaves = porLinha
+                          ? [...new Set(previewRows.map(r => String(r[colChave] ?? '')))]
+                          : previewFields.slice(1)
+                        if (chaves.length < 2) return null
+                        return (
+                          <SecCard icon={<Palette size={14} />} title="Cor por série">
+                            <div style={{ fontSize:11, color:'var(--t3)', marginBottom:12 }}>
+                              {porLinha
+                                ? 'Cada valor vira uma fatia/item — escolha a cor de cada um.'
+                                : 'Cada coluna extra vira uma série — a 1ª cor é a de "Aparência" acima; as demais podem ser personalizadas aqui.'}
+                            </div>
+                            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                              {chaves.map((k, i) => {
+                                const atual = form.cores_series?.[k] || (i === 0 && !porLinha ? form.cor : PALETA[i % PALETA.length])
+                                return (
+                                  <div key={k} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                                    <label style={{ position:'relative', width:24, height:24, borderRadius:6, flexShrink:0, cursor: isRO ? 'default' : 'pointer', background:atual, border:'1px solid var(--bd2)' }}>
+                                      <input
+                                        type="color"
+                                        value={atual}
+                                        onChange={e => f('cores_series', { ...form.cores_series, [k]: e.target.value })}
+                                        disabled={isRO}
+                                        style={{ position:'absolute', opacity:0, width:'100%', height:'100%', cursor: isRO ? 'default' : 'pointer' }}
+                                      />
+                                    </label>
+                                    <span style={{ fontSize:12.5, color:'var(--t1)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{k.replace(/_/g,' ')}</span>
+                                    {!isRO && form.cores_series?.[k] && (
+                                      <button
+                                        onClick={() => { const n = { ...form.cores_series }; delete n[k]; f('cores_series', n) }}
+                                        title="Restaurar cor padrão"
+                                        style={{ background:'none', border:'none', color:'var(--t3)', cursor:'pointer', padding:2, display:'flex' }}
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </SecCard>
+                        )
+                      })()}
+
                       <div>
                         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, fontSize:12, color:'var(--t2)', fontWeight:700 }}>
                           <Check size={14} />
                           Assim vai aparecer no card do Dashboard
                         </div>
-                        <div className="dash-hud dash-widget-card" style={{ border:'1px solid var(--bd)', borderRadius:10, overflow:'hidden', background:'var(--s1)', boxShadow:'var(--sh-md)', maxWidth:460 }}>
-                          <div style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 14px', borderBottom:'1px solid var(--bd)', background:'var(--s2)' }}>
+                        <div className="dash-hud dash-widget-card" style={{ borderRadius:10, overflow:'hidden', maxWidth:460, '--wc': form.cor || '#FF6B2B' }}>
+                          <div className="dash-widget-header" style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 14px' }}>
                             <span style={{ width:24, height:24, borderRadius:6, background:(form.cor||'#FF6B2B')+'26', color:form.cor||'#FF6B2B', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                               <LucideIcon name={form.icone_lucide || tipoAtual?.icon || 'hash'} size={13} />
                             </span>
@@ -1016,8 +992,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
               )}
 
               {/* LAYOUT */}
-              {tab === 'layout' && (
-                <div style={{ padding:'24px 30px 48px', display:'flex', flexDirection:'column', gap:14 }}>
+              {activeTab === 'layout' && (
+                <div style={{ paddingBottom:24, display:'flex', flexDirection:'column', gap:14 }}>
                   <div style={{ fontSize:12, color:'var(--t3)', lineHeight:1.6 }}>
                     Arraste pelo cabeçalho e redimensione pelo canto inferior direito — igual à aba Dashboard.
                     O card em destaque é o widget {selected === 'new' ? 'que está sendo criado' : 'selecionado'}.
@@ -1030,6 +1006,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                       width={layoutW}
                       draggableHandle=".layout-drag-handle"
                       resizeHandles={['se']}
+                      isDraggable={!isRO}
+                      isResizable={!isRO}
                       onLayoutChange={handleLayoutChange}
                       margin={[10, 10]}
                       containerPadding={[0, 0]}
@@ -1067,9 +1045,9 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                       })}
                     </GridLayout>
                   </div>
-                  {selected === 'new' && (
+                  {mode !== 'view' && (
                     <div style={{ fontSize:11, color:'var(--t3)' }}>
-                      Posição escolhida é aplicada ao clicar em "Criar Widget".
+                      Posição escolhida é aplicada ao clicar em "Gravar".
                     </div>
                   )}
                 </div>
@@ -1079,6 +1057,42 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         )}
       </div>
 
+      {activeTab !== 'acesso' && (
+        <FormToolbar
+          mode={mode}
+          nav={{ currentIdx, total: widgets.length, onNav: navTo }}
+          temRegistros={!!selected && selected !== 'new'}
+          saving={saving}
+          onIncluir={handleIncluir}
+          onAlterar={selected && selected !== 'new' ? handleAlterar : undefined}
+          onExcluir={selected && selected !== 'new' ? handleExcluir : undefined}
+          onConsultar={abrirConsulta}
+          onGravar={handleGravar}
+          onDesistir={handleDesistir}
+        />
+      )}
+
+      {/* Modal Pesquisa Padrão */}
+      {showConsulta && (
+        <PesquisaPadraoModal
+          titulo="Pesquisa Padrão · dash_001"
+          campos={CAMPOS_BUSCA_DASH}
+          colunasExibidas={CAMPOS_BUSCA_DASH}
+          campoInicial="titulo"
+          onBuscar={async (campo, modo, busca) => {
+            const q = (busca || '').toLowerCase().trim()
+            const filtrar = v => !q || String(v ?? '').toLowerCase().includes(q)
+            const registros = widgets.filter(w => filtrar(w.codigo) || filtrar(w.titulo) || filtrar(w.tipo))
+            return { registros, total: registros.length }
+          }}
+          onSelecionar={selecionarDaConsulta}
+          onFechar={() => setShowConsulta(false)}
+          renderCelula={(r, c) => {
+            if (c.nome_campo === 'tipo') return TIPOS.find(t => t.value === r.tipo)?.label || r.tipo
+            return String(r[c.nome_campo] ?? '')
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -1095,10 +1109,12 @@ function SecCard({ icon, title, children }) {
   )
 }
 
+// Mesmo padrão de renderLabel() em FormBuilderView.jsx — fonte pequena,
+// pouco espaço abaixo, sem letterSpacing/uppercase agressivos.
 function FieldLabel({ children, style }) {
   return (
-    <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.05em', color:'var(--t3)', textTransform:'uppercase', marginBottom:9, ...style }}>
+    <label className="form-label" style={{ display:'block', marginBottom:2, fontSize:10, ...style }}>
       {children}
-    </div>
+    </label>
   )
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap, Receipt,
-  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, LogOut
+  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -16,7 +16,8 @@ export const MENU_BASE = [
     id: 'inicio',
     baseLabel: 'Início',
     items: [
-      { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard }
+      { id: 'dashboard',          label: 'Dashboard',           Icon: LayoutDashboard },
+      { id: 'dashboard-designer', label: 'Configurar Dashboard', Icon: Settings2       },
     ]
   },
   {
@@ -75,6 +76,15 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
   const [labelsItens,      setLabelsItens]      = useState({})
   const [ordemSecoes,      setOrdemSecoes]      = useState(['inicio', 'gestao', 'ferramentas'])
   const [ordemGlobal,      setOrdemGlobal]      = useState([])
+  // Override de grupo/módulo por item nativo — mesma ideia do grupo_fixo das
+  // telas do FormBuilder, só que persistido em config (telas nativas não têm
+  // linha em kr_telas_001). Ex: { dashboard: 'ferramentas', arquivos: 'din_Soluções' }.
+  const [itensGrupoOverride, setItensGrupoOverride] = useState({})
+  // Ordem manual dos itens dentro de cada grupo (nativos + telas do
+  // FormBuilder misturados) — mapa id_do_item -> posição. Itens sem entrada
+  // aqui mantêm a ordem natural (MENU_BASE / ordem_menu do banco).
+  const [ordemItensPorId, setOrdemItensPorId] = useState({})
+  const [itensIconeOverride, setItensIconeOverride] = useState({})
 
   useEffect(() => {
     window.api.update?.version().then(res => res.ok && setVersion(res.data)).catch(() => {})
@@ -101,6 +111,15 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       }
       if (d.labelsItens != null) {
         try { setLabelsItens(JSON.parse(d.labelsItens || '{}')) } catch { /* ignora ini corrompido */ }
+      }
+      if (d.itensGrupoOverride != null) {
+        try { setItensGrupoOverride(JSON.parse(d.itensGrupoOverride || '{}')) } catch { /* ignora ini corrompido */ }
+      }
+      if (d.ordemItensPorId != null) {
+        try { setOrdemItensPorId(JSON.parse(d.ordemItensPorId || '{}')) } catch { /* ignora ini corrompido */ }
+      }
+      if (d.itensIconeOverride != null) {
+        try { setItensIconeOverride(JSON.parse(d.itensIconeOverride || '{}')) } catch { /* ignora ini corrompido */ }
       }
     }
     function onTelasUpdated() { setAutoReload(v => v + 1) }
@@ -141,6 +160,15 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       if (p.labels_itens) {
         try { setLabelsItens(JSON.parse(p.labels_itens)) } catch { /* ignora ini corrompido */ }
       }
+      if (p.itens_grupo_override) {
+        try { setItensGrupoOverride(JSON.parse(p.itens_grupo_override)) } catch { /* ignora ini corrompido */ }
+      }
+      if (p.ordem_itens_por_id) {
+        try { setOrdemItensPorId(JSON.parse(p.ordem_itens_por_id)) } catch { /* ignora ini corrompido */ }
+      }
+      if (p.itens_icone_override) {
+        try { setItensIconeOverride(JSON.parse(p.itens_icone_override)) } catch { /* ignora ini corrompido */ }
+      }
     } catch { /* banco/config pode não estar pronto */ }
   }
 
@@ -176,17 +204,62 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     }
   })
 
-  function buildFixoGroup(base, labelOverride) {
-    const extras = (telasPorGrupoFixo[base.id] || []).map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) }))
-    const itensComOverride = filterItems(base.items).map(it => ({ ...it, label: labelsItens[it.id] || it.label }))
-    return { ...base, items: [...itensComOverride, ...extras], label: labelOverride || base.baseLabel }
+  // Itens nativos com destino customizado (Módulos → "Nomes das telas nativas")
+  // saem do grupo MENU_BASE original e entram no grupo de destino escolhido.
+  const itensNativosMovidos = {} // destino -> [item]
+  Object.entries(itensGrupoOverride).forEach(([itemId, destino]) => {
+    if (!destino) return
+    const item = MENU_BASE.flatMap(g => g.items).find(it => it.id === itemId)
+    if (!item) return
+    if (!itensNativosMovidos[destino]) itensNativosMovidos[destino] = []
+    itensNativosMovidos[destino].push({
+      ...item,
+      label: labelsItens[item.id] || item.label,
+      Icon: itensIconeOverride[item.id] ? telaIcon(itensIconeOverride[item.id]) : item.Icon,
+    })
+  })
+  const itemTemOverride = id => Object.prototype.hasOwnProperty.call(itensGrupoOverride, id) && itensGrupoOverride[id]
+
+  // Ordem manual dentro do grupo: itens com posição salva vêm primeiro (na
+  // ordem salva), os demais mantêm a ordem natural, depois deles.
+  function ordenarItens(items) {
+    const comOrdem = []
+    const semOrdem = []
+    items.forEach(it => {
+      if (Object.prototype.hasOwnProperty.call(ordemItensPorId, it.id)) comOrdem.push(it)
+      else semOrdem.push(it)
+    })
+    comOrdem.sort((a, b) => ordemItensPorId[a.id] - ordemItensPorId[b.id])
+    return [...comOrdem, ...semOrdem]
   }
 
-  const buildDynGroup = (nome, telas) => ({
+  function buildFixoGroup(base, labelOverride) {
+    const extras = (telasPorGrupoFixo[base.id] || []).map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) }))
+    const nativosMovidosAqui = itensNativosMovidos[base.id] || []
+    const itensComOverride = filterItems(base.items)
+      .filter(it => !itemTemOverride(it.id))
+      .map(it => ({
+        ...it,
+        label: labelsItens[it.id] || it.label,
+        Icon: itensIconeOverride[it.id] ? telaIcon(itensIconeOverride[it.id]) : it.Icon,
+      }))
+    return { ...base, items: ordenarItens([...itensComOverride, ...extras, ...nativosMovidosAqui]), label: labelOverride || base.baseLabel }
+  }
+
+  const buildDynGroup = (nome, telas = []) => ({
     id: `din_${nome}`,
     label: nome,
-    items: telas.map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) }))
+    items: ordenarItens([
+      ...telas.map(t => ({ id: `fb__${t.nome_tabela}`, label: t.nome_tela, Icon: telaIcon(t.icone) })),
+      ...(itensNativosMovidos[`din_${nome}`] || []),
+    ])
   })
+  // Módulos que só existem porque um item nativo foi movido pra lá (nenhuma
+  // tela do FormBuilder ainda) — precisam aparecer mesmo fora de gruposDin.
+  const nomesModulosSoNativos = Object.keys(itensNativosMovidos)
+    .filter(d => d.startsWith('din_'))
+    .map(d => d.slice(4))
+    .filter(nome => !gruposDin[nome])
 
   // Remove o item formbuilder se solicitado (ex: quando já estamos dentro do Designer)
   const filterItems = items => hideFormbuilder ? items.filter(i => i.id !== 'formbuilder') : items
@@ -214,6 +287,9 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     Object.entries(gruposDin).forEach(([nome, tls]) => {
       if (!usedDin.has(nome)) result.push(buildDynGroup(nome, tls))
     })
+    nomesModulosSoNativos.forEach(nome => {
+      if (!usedDin.has(nome)) result.push(buildDynGroup(nome))
+    })
     menu = result
   } else {
     const menuFixo = ordemSecoes
@@ -222,7 +298,8 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       .map(g => buildFixoGroup(g, labelsMenu[g.id]))
     menu = [
       ...menuFixo,
-      ...Object.entries(gruposDin).map(([nome, tls]) => buildDynGroup(nome, tls))
+      ...Object.entries(gruposDin).map(([nome, tls]) => buildDynGroup(nome, tls)),
+      ...nomesModulosSoNativos.map(nome => buildDynGroup(nome))
     ]
   }
 
@@ -413,7 +490,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
                 {group.items.map(({ id, label, Icon, badge }) => (
                   <button
                     key={id}
-                    className={`ni${activePage === id || (id === 'dashboard' && activePage === 'dashboard-designer') ? ' active' : ''}`}
+                    className={`ni${activePage === id ? ' active' : ''}`}
                     data-tip={label}
                     onClick={() => id === 'formbuilder'
                       ? setDesignerConfirm(true)

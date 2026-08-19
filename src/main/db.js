@@ -51,7 +51,7 @@ const SCHEMA_VERSION = 2
 // Sincroniza sequências de código com o max existente nas tabelas de sistema.
 // Roda em TODA inicialização para proteger contra restore de backup.
 async function syncSequencias() {
-  for (const tbl of ['arq_001']) {
+  for (const tbl of ['arq_001', 'dash_001', 'despesa_001']) {
     await query(`
       DO $$
       DECLARE cur_max INTEGER;
@@ -150,6 +150,7 @@ async function migration1() {
   await query(`
     CREATE TABLE IF NOT EXISTS dash_001 (
       id           SERIAL PRIMARY KEY,
+      codigo       VARCHAR(10)  DEFAULT '',
       titulo       VARCHAR(200) NOT NULL,
       tipo         VARCHAR(50)  NOT NULL,
       sql_query    TEXT         NOT NULL,
@@ -172,7 +173,28 @@ async function migration1() {
     `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS grid_w       INTEGER      DEFAULT 3`,
     `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS grid_h       INTEGER      DEFAULT 4`,
     `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS icone_lucide VARCHAR(100)`,
+    `ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS codigo       VARCHAR(10)  DEFAULT ''`,
   ]) { await query(col).catch(e => console.warn('[migration] alter dash_001:', e.message)) }
+
+  // Código sequencial (padrão das tabelas nativas — ver arq_001): sequência
+  // dedicada + 4 dígitos de zero-padding (01..9999), gerado no insert via
+  // nextval(), nunca digitado pelo usuário.
+  await query(`CREATE SEQUENCE IF NOT EXISTS dash_001_codigo_seq START 1`)
+    .catch(e => console.warn('[migration] create dash_001_codigo_seq:', e.message))
+  // Backfill: widgets já existentes (criados antes desta coluna existir)
+  // ganham código na ordem de id, e a sequência é avançada até acompanhar.
+  await query(`
+    DO $$
+    DECLARE r RECORD; n INTEGER := 0;
+    BEGIN
+      IF (SELECT COUNT(*) FROM dash_001 WHERE codigo = '' OR codigo IS NULL) > 0 THEN
+        FOR r IN SELECT id FROM dash_001 WHERE codigo = '' OR codigo IS NULL ORDER BY id LOOP
+          n := nextval('dash_001_codigo_seq');
+          UPDATE dash_001 SET codigo = LPAD(n::text, 4, '0') WHERE id = r.id;
+        END LOOP;
+      END IF;
+    END $$;
+  `).catch(e => console.warn('[migration] backfill dash_001 codigo:', e.message))
 
   // ── Criador de Telas ──────────────────────────────────────────────────────
 
@@ -880,10 +902,34 @@ export async function initDb() {
       meio_transporte   VARCHAR(100) DEFAULT '',
       status            VARCHAR(20)  NOT NULL DEFAULT 'rascunho',
       observacoes       TEXT         DEFAULT '',
+      codigo            VARCHAR(10)  DEFAULT '',
       criado_em         TIMESTAMP    DEFAULT NOW(),
       alterado_em       TIMESTAMP    DEFAULT NOW()
     )
   `).catch(e => console.warn('[migration] create despesa_001 (startup):', e.message))
+
+  await query(`ALTER TABLE despesa_001 ADD COLUMN IF NOT EXISTS codigo VARCHAR(10) DEFAULT ''`)
+    .catch(e => console.warn('[migration] alter despesa_001:', e.message))
+
+  // Código sequencial (padrão das tabelas nativas — ver arq_001/dash_001):
+  // sequência dedicada + 4 dígitos de zero-padding (0001..9999), gerado no
+  // insert via nextval(), nunca digitado pelo usuário.
+  await query(`CREATE SEQUENCE IF NOT EXISTS despesa_001_codigo_seq START 1`)
+    .catch(e => console.warn('[migration] create despesa_001_codigo_seq:', e.message))
+  // Backfill: despesas já existentes (criadas antes desta coluna existir)
+  // ganham código na ordem de id, e a sequência é avançada até acompanhar.
+  await query(`
+    DO $$
+    DECLARE r RECORD; n INTEGER := 0;
+    BEGIN
+      IF (SELECT COUNT(*) FROM despesa_001 WHERE codigo = '' OR codigo IS NULL) > 0 THEN
+        FOR r IN SELECT id FROM despesa_001 WHERE codigo = '' OR codigo IS NULL ORDER BY id LOOP
+          n := nextval('despesa_001_codigo_seq');
+          UPDATE despesa_001 SET codigo = LPAD(n::text, 4, '0') WHERE id = r.id;
+        END LOOP;
+      END IF;
+    END $$;
+  `).catch(e => console.warn('[migration] backfill despesa_001 codigo:', e.message))
 
   await query(`
     CREATE TABLE IF NOT EXISTS despesa_item_001 (
@@ -1003,6 +1049,10 @@ export async function initDb() {
 
   // Formato de exibição dos valores numéricos do widget: numero | moeda | percentual
   await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS formato VARCHAR(20) DEFAULT 'numero'`).catch(e => console.warn('[migration] alter dash_001 formato (startup):', e.message))
+
+  // Cor individual por coluna/série do resultado do SQL (ex: {"reembolsado":"#FBD24C"})
+  // — sobrepõe a cor automática da paleta quando o widget tem múltiplas séries.
+  await query(`ALTER TABLE dash_001 ADD COLUMN IF NOT EXISTS cores_series JSONB DEFAULT '{}'::jsonb`).catch(e => console.warn('[migration] alter dash_001 cores_series (startup):', e.message))
 
   // "posicao" vira a ordem explícita dos dashboards (campo Ordem + setinhas).
   // Preenche uma vez a partir da ordem visual atual (grid_y/grid_x/id), só

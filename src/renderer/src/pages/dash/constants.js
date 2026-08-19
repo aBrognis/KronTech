@@ -28,7 +28,12 @@ export const TIPOS = [
   { value: 'mapa_br',          icon: 'map',                label: 'Mapa do Brasil',       desc: 'Distribuição geográfica por UF/município', defW: 6, defH: 6 },
 ]
 
-export const PALETA = ['#FF6B2B','#60A5FA','#4ADE80','#FBD24C','#A78BFA','#F472B6','#34D399','#FB923C','#E879F9','#22D3EE','#F43F5E','#84CC16']
+export const PALETA = [
+  '#FF6B2B','#60A5FA','#4ADE80','#FBD24C','#A78BFA','#F472B6','#34D399','#FB923C','#E879F9','#22D3EE','#F43F5E','#84CC16',
+  '#EF4444','#F97316','#EAB308','#84CC16','#22C55E','#10B981','#14B8A6','#06B6D4','#0EA5E9','#3B82F6','#6366F1','#8B5CF6',
+  '#A855F7','#D946EF','#EC4899','#F43F5E','#78716C','#64748B','#DC2626','#EA580C','#CA8A04','#16A34A','#0891B2','#2563EB',
+  '#7C3AED','#C026D3','#DB2777','#B91C1C','#9A3412','#854D0E','#166534','#155E75','#1D4ED8','#5B21B6','#9D174D','#374151',
+]
 
 export const INTERVALOS = [
   { label: 'Sem auto-atualização', value: 0    },

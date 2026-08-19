@@ -1,4 +1,4 @@
-import { nativeImage, nativeTheme } from 'electron'
+import { nativeImage, nativeTheme, app } from 'electron'
 import { join } from 'path'
 
 // Compartilhado entre a janela principal e a janela do Designer, para que
@@ -13,5 +13,12 @@ import { join } from 'path'
 // combina com qualquer cor de personalização escolhida, sem essa limitação.
 export function getIcon() {
   const name = nativeTheme.shouldUseDarkColors ? 'icon.ico' : 'icon-light.ico'
-  return nativeImage.createFromPath(join(__dirname, '../../resources', name))
+  // Em produção, __dirname fica dentro do .asar e '../../resources' resolve
+  // certo (electron-builder empacota resources/ da raiz do projeto ali).
+  // Em dev, __dirname fica dentro de out/main — se out/ for uma junction
+  // (movida pra fora do OneDrive), subir pastas relativas resolveria para o
+  // destino físico da junction, não a raiz real do projeto. app.getAppPath()
+  // não tem esse problema.
+  const base = app.isPackaged ? join(__dirname, '../../resources') : join(app.getAppPath(), 'resources')
+  return nativeImage.createFromPath(join(base, name))
 }

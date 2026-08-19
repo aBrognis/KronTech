@@ -1,47 +1,188 @@
 /* ============================================================
-   KRONTECH — Dashboard "control-room / HUD"
-   Referência: dashboards ROQT (fundo sólido escuro, sem textura, borda
-   fina, tipografia grande e nítida, UMA cor de acento aplicada em tudo —
-   KPIs, gráficos, mapa, badges). Nada de animação decorativa contínua:
-   com 2+ widgets, várias `animation: infinite` por card (box-shadow,
-   filter, e principalmente top/left animados) empilhavam custo de
-   repaint/reflow e travavam o app inteiro. O visual "tech" vem de
-   layout, cor e tipografia — não de movimento de fundo.
+   KRONTECH — Dashboard "control-room" (spec de upgrade visual)
+   Referência: dashboards ROQT — fundo quase-preto absoluto (dark) / branco
+   real (light), UMA cor de destaque (accent) por widget aplicada com força
+   total em números, gráficos, mapa e badges, tipografia condensada em caixa
+   alta pra rótulos, números grandes com peso pesado, glow sutil na accent
+   em vez de sombra genérica. A accent nunca é fixa — vem de --wc (widget.cor,
+   escolhida no Designer), nunca hardcoded aqui.
+
+   Fundação de cor por modo — tokens dedicados do Dashboard (tokens.css):
+   dark  → --bg-base:#0B0B0D --bg-card:#18181C --t1:#F0F0F0
+   light → --bg-base:#F7F7F8 --bg-card:#FFFFFF --t1:#0D0E14
+   Fundo do conteúdo do Dashboard (.dash-grid-area, App.css) usa --bg-base —
+   valor literal calculado a partir do preto/branco real da sidebar
+   (Sidebar.css: .sb { background: var(--s1) }), garantindo que as duas
+   áreas nunca fiquem "descoladas" visualmente. Card usa --bg-card, +6-8%
+   de luminosidade sobre --bg-base no dark. Este arquivo só define a CAMADA
+   do Dashboard por cima desses tokens — nunca declara uma cor de fundo/
+   texto própria fora deles, pra nunca quebrar ao trocar de tema em runtime.
+
+   Nada de `animation: infinite`: com 2+ widgets, várias dessas por card
+   (box-shadow, filter, top/left animados) empilhavam custo de repaint/
+   reflow e travavam o app inteiro (ver histórico). O "futurista" vem de
+   contraste, peso tipográfico e uma entrada de dados animada uma vez só —
+   não de movimento contínuo de fundo.
    Escopado sob .dash-hud — não vaza pro resto do app.
    ============================================================ */
 
 .dash-hud {
   --hud-ac:  var(--or);
   --hud-ac2: var(--or2);
+  /* Fonte técnica/condensada só pra números e títulos de destaque — o corpo
+     do app continua em Inter (--ft), sem trocar a identidade geral. */
+  --hud-num-font: 'Rajdhani', var(--ft);
 }
 
-/* Card: borda fina discreta, sem glow/sombra animada. */
+/* ── Card ──────────────────────────────────────────────────────────────── */
+/* Sem fundo/borda próprios — o card usa o mesmo fundo da página
+   (dash-grid-area, App.css), sem caixa visível. Só a faixa colorida do
+   topo (::before, abaixo) marca o contorno de cada widget. */
 .dash-hud .dash-widget-card {
   position: relative;
-  border-radius: 8px !important;
-  border: 1px solid var(--bd);
+  transition: transform .2s ease, box-shadow .2s ease;
 }
 
-/* Dot de status — estático, só indica "ativo". */
+/* Hover: leve elevação + glow na cor do widget, sem depender de borda
+   (não há mais borda no card). */
+:root:not(.light) .dash-hud .dash-widget-card:hover {
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--wc, var(--hud-ac)) 30%, transparent);
+  transform: translateY(-2px);
+}
+.light .dash-hud .dash-widget-card:hover {
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--wc, var(--hud-ac)) 20%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Item 5: linha do topo do card — 2px → 3px, com box-shadow (glow) na
+   própria cor da faixa, sempre visível (não só no hover). */
+.dash-hud .dash-widget-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--wc, var(--hud-ac));
+  border-radius: 10px 10px 0 0;
+  opacity: .85;
+  box-shadow: 0 0 8px var(--wc, var(--hud-ac));
+}
+
+.dash-hud .dash-widget-header {
+  background: transparent;
+  border-bottom: 1px solid var(--bd);
+}
+
+/* Título do widget: caixa alta condensada, técnica, peso pesado — precisa
+   ter "impacto" (feedback: peso leve demais, sem destaque). Item 4 (valor
+   literal): font-weight 800, letter-spacing 0.05em, tamanho mantido. */
+.dash-hud .dash-widget-title {
+  font-family: var(--hud-num-font);
+  font-weight: 800;
+  letter-spacing: .05em;
+  color: var(--t1);
+}
+
+/* Item 5: dot de status ativo — box-shadow: 0 0 6px 1px accent, valor
+   literal, aplicado nos dois temas (não só dark). */
 .dash-hud .dash-hud-live {
   display: inline-block;
   width: 5px; height: 5px; border-radius: 50%;
-  background: var(--hud-ac);
+  background: var(--wc, var(--hud-ac));
   flex-shrink: 0;
+  box-shadow: 0 0 6px 1px var(--wc, var(--hud-ac));
 }
 
-/* Sincronização (auto-refresh): feedback barato — flash de borda com
-   transição rápida (.2s, sem animation:infinite rodando). */
-.dash-hud .dash-widget-card {
-  transition: border-color .2s ease;
-}
+/* Sincronização (auto-refresh): flash de borda com transição rápida — sem
+   animation:infinite rodando. */
 .dash-hud .dash-widget-card.dash-hud-syncing-frame {
-  border-color: var(--hud-ac) !important;
+  border-color: var(--wc, var(--hud-ac)) !important;
 }
 
-/* Números tabulares (KPIs, tabela) — alinhamento correto de dígitos,
-   sem trocar a fonte do app por uma monoespaçada. */
-.dash-hud .dash-num,
+/* ── Tipografia de dado ───────────────────────────────────────────────── */
+/* Números (KPIs, total do donut, valores de tabela): fonte técnica,
+   tabular, peso pesado — carregam a identidade "control room". */
+.dash-hud .dash-num {
+  font-family: var(--hud-num-font);
+  font-variant-numeric: tabular-nums;
+}
 .dash-hud .dash-table td.num {
   font-variant-numeric: tabular-nums;
+}
+
+/* Glow no KPI principal — usa currentColor (a cor do widget já é setada via
+   style={color} no elemento), então funciona pra qualquer accent sem
+   precisar de --wc aqui. Mais forte no dark, bem mais discreto no light. */
+:root:not(.light) .dash-hud .dash-kpi-glow {
+  text-shadow: 0 0 18px currentColor;
+}
+.light .dash-hud .dash-kpi-glow {
+  text-shadow: 0 0 8px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* Rótulos: caixa alta, letter-spacing aumentado, cinza secundário do modo
+   ativo (--t3, já correto nos dois temas via tokens.css). */
+.dash-hud .dash-widget-label {
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 600;
+  color: var(--t3);
+}
+
+/* Tabela (.dash-table é global — usada fora do Dashboard também; aqui
+   sobrepomos só dentro de um card, na cor do próprio widget). */
+.dash-hud .dash-widget-card .dash-table {
+  background: transparent;
+}
+.dash-hud .dash-widget-card .dash-table thead th {
+  border-bottom-color: var(--wc, var(--hud-ac));
+  background: transparent;
+}
+.dash-hud .dash-widget-card .dash-table td.num {
+  color: var(--wc, var(--hud-ac));
+  font-weight: 700;
+}
+.dash-hud .dash-widget-card .dash-table td {
+  border-bottom-color: color-mix(in srgb, var(--bd) 70%, transparent);
+}
+
+/* Barra de progresso (% contribuição etc.) — preenchimento sólido na
+   accent, sem borda, cantos arredondados. */
+.dash-hud .dash-progress-track {
+  background: var(--s3);
+  border-radius: 20px;
+  overflow: hidden;
+  height: 6px;
+}
+.dash-hud .dash-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: var(--wc, var(--hud-ac));
+  transition: width .5s cubic-bezier(.22,1,.36,1);
+}
+
+/* ── Mapa: entrada "acendendo" ────────────────────────────────────────── */
+/* Item 6 (valores literais): duration 600ms, delay 100ms entre estados
+   (setado inline por índice, ver map.jsx). UMA execução por mount, nunca em
+   loop, então não compete com o custo de reflow que travava o app antes. */
+@keyframes dashHudMapAcender {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.dash-hud .dash-hud-map-acender {
+  animation: dashHudMapAcender .6s ease-out both;
+  /* GPU em vez de recalculo em CPU a cada frame — reforço barato agora que
+     a animação de fato só roda 1x por mount real (fix do re-render em
+     cascata a cada auto-refresh, ver Dashboard.jsx: Widget memoizado). */
+  will-change: opacity;
+}
+
+/* ── Redução de movimento ─────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .dash-hud .dash-hud-map-acender {
+    animation: none !important;
+  }
+  .dash-hud .dash-widget-card,
+  .dash-hud .dash-progress-fill {
+    transition: none !important;
+  }
 }

@@ -94,12 +94,14 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     const client = await getPool().connect()
     try {
       await client.query('BEGIN')
+      const codRow = await client.query(`SELECT nextval('despesa_001_codigo_seq') AS next`)
+      const codigo = String(codRow.rows[0].next).padStart(4, '0')
       const ins = await client.query(`
         INSERT INTO despesa_001
-          (consultor_id, consultor_nome, cliente_id, cliente_nome, data_inicio, data_fim,
+          (codigo, consultor_id, consultor_nome, cliente_id, cliente_nome, data_inicio, data_fim,
            local_partida, local_destino, meio_transporte, status, observacoes)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *
-      `, [d.consultor_id, d.consultor_nome || '', d.cliente_id || null, d.cliente_nome || '',
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *
+      `, [codigo, d.consultor_id, d.consultor_nome || '', d.cliente_id || null, d.cliente_nome || '',
           d.data_inicio, d.data_fim, d.local_partida || '', d.local_destino || '',
           d.meio_transporte || '', 'rascunho', d.observacoes || ''])
       const parent = ins.rows[0]

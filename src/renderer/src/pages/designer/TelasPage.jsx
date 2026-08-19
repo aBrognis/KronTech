@@ -96,7 +96,14 @@ export default function TelasPage() {
   )
 
   return (
-    <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16, height: '100%', overflow: 'auto' }}>
+    <div className="page-with-footer">
+
+      <div className="page-tabs">
+        <span className="page-tab active" style={{ cursor: 'default' }}>Telas</span>
+        <span className="page-tab-info">{telasFiltradas.length} tela{telasFiltradas.length !== 1 ? 's' : ''} cadastrada{telasFiltradas.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      <div className="page-content">
 
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -275,6 +282,7 @@ export default function TelasPage() {
         </div>
       )}
 
+      </div>
     </div>
   )
 }

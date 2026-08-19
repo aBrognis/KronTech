@@ -3,6 +3,7 @@ import { Plus, Trash2, FileDown, FileX, SlidersHorizontal, ChevronDown, ChevronU
 import '../../App.css'
 import FormToolbar from '../../components/FormToolbar'
 import SeletorBusca from '../../components/SeletorBusca'
+import PesquisaPadraoModal from '../../components/PesquisaPadraoModal.jsx'
 import InputData from '../../components/InputData'
 import { notificar } from '../../components/Notificacao'
 import PaginacaoBar from '../formBuilderView/PaginacaoBar.jsx'
@@ -11,6 +12,12 @@ import { EMPTY_FORM, STATUS_ORDEM, STATUS_META, MEIOS_TRANSPORTE, diaDaSemana, f
 const CAMPOS_CLIENTE = [{ nome_campo: 'nome', label: 'Nome' }]
 const CAMPOS_CONSULTOR = [{ nome_campo: 'nome', label: 'Nome' }]
 const FILTROS_VAZIOS = { clienteId: '', clienteNome: '', consultorId: '', consultorNome: '', status: '', dataIni: '', dataFim: '' }
+const CAMPOS_BUSCA_DESPESA = [
+  { nome_campo: 'codigo',         label: 'Código'    },
+  { nome_campo: 'consultor_nome', label: 'Consultor' },
+  { nome_campo: 'cliente_nome',   label: 'Cliente'   },
+  { nome_campo: 'status',         label: 'Status'    },
+]
 
 export default function Viagens({ sessao, newTrigger }) {
   const [activeTab, setActiveTab] = useState('acesso')
@@ -25,6 +32,7 @@ export default function Viagens({ sessao, newTrigger }) {
   const [saving, setSaving] = useState(false)
   const [erro, setErro]     = useState(null)
   const [confirmExcluir, setConfirmExcluir] = useState(false)
+  const [showConsulta, setShowConsulta] = useState(false)
 
   // Filtros da aba Acesso
   const [filtrosAbertos, setFiltrosAbertos] = useState(true)
@@ -64,6 +72,25 @@ export default function Viagens({ sessao, newTrigger }) {
     window.api.config.get().then(res => setPastaExportacoes((res.ok ? res.data?.Caminhos?.exportacoes : '') || ''))
   }, [])
 
+  // Abre direto no último registro, em Cadastro — evita cair sempre na aba
+  // Acesso vazia esperando o usuário clicar em "Buscar".
+  useEffect(() => {
+    (async () => {
+      const res = await window.api.viagens.listar({})
+      const lista = res.ok ? res.data || [] : []
+      setRegistros(lista)
+      setTotal(lista.length)
+      setJaConsultou(true)
+      if (lista.length > 0) {
+        const idx = lista.length - 1
+        setCurrentIdx(idx)
+        await carregarForm(lista[idx])
+        setActiveTab('cadastro')
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function handleConfigurarPastaExportacoes() {
     const res = await window.api.config.selecionarPasta({ chave: 'exportacoes', titulo: 'Selecionar pasta de exportações' })
     const nova = res.ok ? res.data : null
@@ -88,7 +115,7 @@ export default function Viagens({ sessao, newTrigger }) {
     if (!res.ok) { setErro(res.erro); return }
     const d = res.data
     setForm({
-      id: d.id, status: d.status,
+      id: d.id, codigo: d.codigo || '', status: d.status,
       consultor_id: d.consultor_id, consultor_nome: d.consultor_nome,
       cliente_id: d.cliente_id ? String(d.cliente_id) : '', cliente_nome: d.cliente_nome || '',
       data_inicio: String(d.data_inicio).slice(0, 10), data_fim: String(d.data_fim).slice(0, 10),
@@ -116,9 +143,18 @@ export default function Viagens({ sessao, newTrigger }) {
     carregarForm(registros[idx])
   }
 
+  // Preview otimista do próximo código — mesmo padrão de Arquivos.jsx: só
+  // feedback visual imediato, o valor real vem do backend via nextval() no
+  // insert (viagens:criar).
+  function previewNextCodigo() {
+    const max = registros.reduce((m, r) => Math.max(m, parseInt(r.codigo || '0', 10)), 0)
+    return String(max + 1).padStart(4, '0')
+  }
+
   function openNew() {
     setForm({
       ...EMPTY_FORM,
+      codigo: previewNextCodigo(),
       consultor_id: sessao?.registro?.id ?? sessao?.id ?? null,
       consultor_nome: sessao?.registro?.nome ?? sessao?.nome ?? '',
       itens: [novoItem()],
@@ -126,6 +162,18 @@ export default function Viagens({ sessao, newTrigger }) {
     setErro(null)
     setMode('new')
     setActiveTab('cadastro')
+  }
+
+  // Modal Pesquisa Padrão — mesmo padrão de Arquivos.jsx: botão "Consultar"
+  // do FormToolbar abre busca rápida sobre a lista completa, em vez de só
+  // trocar para a aba Acesso.
+  function selecionarDaConsulta(item) {
+    const idx = registros.findIndex(r => r.id === item.id)
+    if (idx >= 0) { setCurrentIdx(idx); carregarForm(item); setActiveTab('cadastro') }
+    setShowConsulta(false)
+  }
+  function abrirConsulta() {
+    setShowConsulta(true)
   }
 
   function handleDesistir() {
@@ -237,7 +285,7 @@ export default function Viagens({ sessao, newTrigger }) {
       <div className="page-tabs">
         <button className={`page-tab${activeTab === 'acesso' ? ' active' : ''}`} onClick={() => setActiveTab('acesso')}>Acesso</button>
         <button className={`page-tab${activeTab === 'cadastro' ? ' active' : ''}`} onClick={() => setActiveTab('cadastro')}>Cadastro</button>
-        {form.id && <span className="page-tab-info">#{form.id} · {form.cliente_nome || form.consultor_nome}</span>}
+        {form.id && <span className="page-tab-info">{form.codigo || '----'} · {form.cliente_nome || form.consultor_nome}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           <button className="btn btn-ghost" onClick={handleConfigurarPastaExportacoes}
             title={pastaExportacoes ? `Pasta de exportações: ${pastaExportacoes}` : 'Nenhuma pasta configurada — exportações abrem "Salvar como"'}
@@ -398,7 +446,13 @@ export default function Viagens({ sessao, newTrigger }) {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={LBL}>Código</label>
+                <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
+                  {form.codigo || ''}
+                </div>
+              </div>
               <SeletorBusca
                 label="Cliente"
                 placeholder="Nenhum"
@@ -563,10 +617,31 @@ export default function Viagens({ sessao, newTrigger }) {
           onIncluir={openNew}
           onAlterar={form.id ? () => setMode('edit') : undefined}
           onExcluir={form.id ? () => setConfirmExcluir(true) : undefined}
-          onConsultar={() => setActiveTab('acesso')}
+          onConsultar={abrirConsulta}
           onExportar={mode === 'view' && form.id ? handleExportar : undefined}
           onGravar={handleGravar}
           onDesistir={handleDesistir}
+        />
+      )}
+
+      {/* Modal Pesquisa Padrão */}
+      {showConsulta && (
+        <PesquisaPadraoModal
+          titulo="Pesquisa Padrão · despesa_001"
+          campos={CAMPOS_BUSCA_DESPESA}
+          colunasExibidas={CAMPOS_BUSCA_DESPESA}
+          campoInicial="codigo"
+          onBuscar={async (campo, modo, busca) => {
+            const res = await window.api.viagens.listar({ busca })
+            if (!res.ok) throw new Error(res.erro)
+            return { registros: res.data, total: res.data.length }
+          }}
+          onSelecionar={selecionarDaConsulta}
+          onFechar={() => setShowConsulta(false)}
+          renderCelula={(r, c) => {
+            if (c.nome_campo === 'status') return <span className={`badge ${STATUS_META[r.status]?.classe}`}>{STATUS_META[r.status]?.label}</span>
+            return String(r[c.nome_campo] ?? '')
+          }}
         />
       )}
 

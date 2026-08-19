@@ -88,6 +88,7 @@ const api = {
     getTelaPorSlug:    (slug)          => ipcRenderer.invoke('fb:getTelaPorSlug', slug),
     criarTela:         (payload)       => ipcRenderer.invoke('fb:criarTela', payload),
     editarTela:        (id, payload)   => ipcRenderer.invoke('fb:editarTela', id, payload),
+    atualizarMetaTela: (id, payload)   => ipcRenderer.invoke('fb:atualizarMetaTela', id, payload),
     excluirTela:       (id)            => ipcRenderer.invoke('fb:excluirTela', id),
     inativarTela:      (id)            => ipcRenderer.invoke('fb:inativarTela', id),
     reativarTela:      (id)            => ipcRenderer.invoke('fb:reativarTela', id),

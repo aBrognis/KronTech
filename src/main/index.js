@@ -117,18 +117,21 @@ if (process.platform === 'win32') {
 // como se fosse o caminho do app a carregar. Em produção (app empacotado) o
 // executável já é o app inteiro, então não precisa desses argumentos extras.
 if (!app.isPackaged) {
-  // __dirname aqui é <raiz do projeto>/out/main — subir duas pastas dá a
-  // raiz do projeto (onde está o package.json com "main"), que é o
-  // argumento que "electron <caminho>" espera. process.cwd() foi tentado
-  // antes mas não é confiável: o diretório de trabalho no momento em que
-  // o Windows relança o processo pode não ser a raiz do projeto (por isso
-  // o registro anterior apontou para C:\windows\system32).
+  // app.getAppPath() dá a raiz do projeto (onde está o package.json com
+  // "main"), que é o argumento que "electron <caminho>" espera. Preferido a
+  // join(__dirname, '../..') porque __dirname fica dentro de out/main — se
+  // out/ for uma junction (ex.: movida pra fora do OneDrive), subir pastas
+  // relativas resolve para o destino físico da junction, não a raiz real do
+  // projeto. process.cwd() também foi tentado antes mas não é confiável: o
+  // diretório de trabalho no momento em que o Windows relança o processo
+  // pode não ser a raiz do projeto (por isso o registro anterior apontou
+  // para C:\windows\system32).
   // Sem barra final: o Windows monta o comando registrado como "<execPath>"
   // "<arg>" "%1" — uma barra invertida logo antes da aspa de fechamento
   // escapa essa aspa (regra de parsing de linha de comando do Windows),
   // corrompendo o comando inteiro (visto no erro real: caminho terminando
   // em `KronTech" krontech:\...` em vez de dois argumentos separados).
-  const projectRoot = join(__dirname, '../..')
+  const projectRoot = app.getAppPath()
   app.setAsDefaultProtocolClient('krontech', process.execPath, [projectRoot])
 } else {
   app.setAsDefaultProtocolClient('krontech')

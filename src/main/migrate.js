@@ -11,9 +11,14 @@ import { getDecryptedBancoConfig } from './config'
 // app segue normalmente), aqui a falha é logada bem alto e propagada: o
 // objetivo explícito desta trilha é nunca esconder um erro de schema.
 function migrationsDir() {
+  // Em dev, __dirname aponta pra dentro de out/main/ — se out/ for uma
+  // junction (ex.: movida pra fora do OneDrive), '../../migrations' resolve
+  // relativo ao destino físico da junction, não à raiz real do projeto.
+  // app.getAppPath() sempre retorna a raiz do projeto (onde está o
+  // package.json), imune a esse problema.
   return app.isPackaged
     ? join(process.resourcesPath, 'migrations')
-    : join(__dirname, '../../migrations')
+    : join(app.getAppPath(), 'migrations')
 }
 
 export async function runMigrations() {

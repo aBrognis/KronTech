@@ -33,38 +33,23 @@ export default function FuncoesTab({ telas = [] }) {
   const sec = SECOES.find(s => s.id === secao)
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 0, gap: 0 }}>
+    <div className="page-with-footer">
 
-      {/* Nav lateral ──────────────────────────────────────────────────── */}
-      <div style={{ width: 196, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 8px', borderRight: '1px solid var(--bd)', overflowY: 'auto' }}>
-        {SECOES.map((s, i) => {
-          const ativo = secao === s.id
-          const isDivider = i === 1 || i === 8
-          return (
-            <div key={s.id}>
-              {isDivider && <div style={{ height: 1, background: 'var(--bd)', margin: '4px 4px' }} />}
-              <button onClick={() => setSecao(s.id)} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 11px', borderRadius: 9, cursor: 'pointer',
-                background: ativo ? 'var(--or4)' : 'transparent',
-                border: `1.5px solid ${ativo ? 'rgba(255,107,43,.25)' : 'transparent'}`,
-                textAlign: 'left', width: '100%', transition: 'var(--tr)',
-              }}>
-                <s.Icon size={15} color={ativo ? 'var(--or)' : s.cor} />
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: ativo ? 700 : 500, color: ativo ? 'var(--or)' : 'var(--t1)', lineHeight: 1.2 }}>{s.label}</div>
-                  <div style={{ fontSize: 9.5, color: 'var(--t3)', lineHeight: 1.2, marginTop: 1 }}>{s.desc}</div>
-                </div>
-              </button>
-            </div>
-          )
-        })}
+      <div className="page-tabs" style={{ overflowX: 'auto' }}>
+        {SECOES.map(s => (
+          <button
+            key={s.id}
+            className={`page-tab${secao === s.id ? ' active' : ''}`}
+            onClick={() => setSecao(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
 
-      {/* Conteúdo da seção ────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <div className="page-content" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* Header da seção */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--s2)', border: '1px solid var(--bd)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {sec && <sec.Icon size={17} color={sec.cor} />}
           </div>

@@ -138,6 +138,7 @@ function formatarStatus(v) {
 }
 
 export function mapa_br({ widget, rows, fields, color, fillHeight, formato }) {
+  const isLight = document.documentElement.classList.contains('light')
   const [brasilUf, setBrasilUf] = useState(null)
   const [ufAtiva, setUfAtiva] = useState(null) // null = visão nacional, 'SC' = drill-down
   const [municipiosGeo, setMunicipiosGeo] = useState(null)
@@ -218,6 +219,28 @@ export function mapa_br({ widget, rows, fields, color, fillHeight, formato }) {
     if (!municipiosGeo) return null
     return computeBounds(municipiosGeo.features)
   }, [municipiosGeo])
+
+  // Path SVG (string) de cada feature é o cálculo caro daqui (O(pontos) —
+  // ~20 mil pontos no total pro mapa nacional, mais nos municípios).
+  // Sem memoização, isso recalculava a CADA render do componente — inclusive
+  // por hover/tooltip, ou pelo Dashboard inteiro re-renderizando a cada tick
+  // de auto-refresh de QUALQUER OUTRO widget na tela — travando a UI.
+  // Só depende de features+bounds (nunca dos dados do SQL/cor/hover), então
+  // fica isolado num useMemo próprio e só recalcula quando o mapa em si
+  // muda (carregamento inicial ou troca de UF).
+  const pathsNacional = useMemo(() => {
+    if (!boundsNacional) return new Map()
+    const m = new Map()
+    for (const f of featuresNacional) m.set(f.properties.codarea, geometryToPath(f.geometry, boundsNacional, W, H, PAD))
+    return m
+  }, [featuresNacional, boundsNacional])
+
+  const pathsEstado = useMemo(() => {
+    if (!municipiosGeo || !boundsEstado) return new Map()
+    const m = new Map()
+    for (const f of municipiosGeo.features) m.set(f.properties.codarea, geometryToPath(f.geometry, boundsEstado, W, H, PAD))
+    return m
+  }, [municipiosGeo, boundsEstado])
 
   const viewBox = vb ? `${vb.x} ${vb.y} ${vb.w} ${vb.h}` : `0 0 ${W} ${H}`
 
@@ -380,19 +403,19 @@ export function mapa_br({ widget, rows, fields, color, fillHeight, formato }) {
     <div style={{ display:'flex', flexDirection:'column', width:'100%', height: fillHeight ? '100%' : 340, overflow:'hidden' }}>
     <div style={{ display:'flex', flex:1, minHeight:0, overflow:'hidden' }}>
     <div style={{ position:'relative', flex:1, minWidth:0, overflow:'hidden' }}>
-      <div className="dash-num" style={{ position:'absolute', top:8, left:8, zIndex:3, display:'flex', alignItems:'center', gap:8, fontSize:10.5, color:'var(--t3)' }}>
+      <div className="dash-num" style={{ position:'absolute', top:10, left:10, zIndex:3, display:'flex', alignItems:'center', gap:8, fontSize:12.5, color:'var(--t3)' }}>
         {modoEstado ? (
           <button
             onClick={fecharDrill}
             style={{ background:'none', border:'none', padding:0, cursor:'pointer',
-              color:'var(--or, var(--t1))', fontSize:10.5, fontFamily:'inherit', fontWeight:700 }}
+              color, fontSize:12.5, fontFamily:'inherit', fontWeight:800, letterSpacing:'.02em' }}
           >
             BRASIL / {ufAtiva}
           </button>
         ) : (
-          <span style={{ color:'var(--or, var(--t1))', fontWeight:700 }}>BRASIL</span>
+          <span style={{ color, fontWeight:800, letterSpacing:'.02em' }}>BRASIL</span>
         )}
-        <span className="dash-hud-live" style={{ width:4, height:4 }} />
+        <span className="dash-hud-live" style={{ width:5, height:5 }} />
       </div>
       {naoIdentificados > 0 && !modoEstado && (
         <div style={{ position:'absolute', bottom:8, left:8, zIndex:3, fontSize:9.5, color:'var(--t3)',
@@ -407,22 +430,31 @@ export function mapa_br({ widget, rows, fields, color, fillHeight, formato }) {
         width="100%" height="100%"
         style={{ display:'block', cursor: dragRef.current.dragging ? 'grabbing' : 'grab' }}
       >
-        {!modoEstado && featuresNacional.map(f => {
+        {!modoEstado && featuresNacional.map((f, idx) => {
           const sigla = UF_POR_CODAREA[f.properties.codarea]
           const info = dataByUf.get(sigla)
-          const intensidade = info ? 0.45 + 0.55 * (info.valor / maxValorUf) : 0
-          const d = geometryToPath(f.geometry, boundsNacional, W, H, PAD)
+          // Item 2 (valores literais): opacidade escalada 0.4–1.0 proporcional
+          // ao valor entre os estados com dado — não todos na mesma
+          // intensidade. drop-shadow fixo de 8px na accent.
+          const intensidade = info ? 0.4 + 0.6 * (info.valor / maxValorUf) : 0
+          const d = pathsNacional.get(f.properties.codarea)
           return (
             <path
               key={f.properties.codarea}
-              className={info ? 'dash-hud-map-active' : undefined}
+              className={info ? 'dash-hud-map-active dash-hud-map-acender' : undefined}
               d={d}
-              fill={info ? color : cssVar('--s1')}
+              fill={info ? color : 'transparent'}
               fillOpacity={info ? intensidade : 1}
-              stroke={info ? color : cssVar('--bd2')}
-              strokeOpacity={info ? 0.8 : 1}
+              stroke={info ? color : (isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)')}
+              strokeOpacity={1}
               strokeWidth={0.8}
-              style={{ cursor:'pointer', transition:'fill-opacity .15s, stroke-opacity .15s' }}
+              style={{
+                cursor:'pointer', transition:'fill-opacity .15s, stroke-opacity .15s, filter .15s',
+                filter: info ? `drop-shadow(0 0 8px ${color})` : 'none',
+                // Entrada "acendendo": estados com dado aparecem em sequência
+                // (delay escalonado pelo índice), não todos de uma vez.
+                animationDelay: info ? `${(idx % 12) * 100}ms` : undefined,
+              }}
               onMouseMove={e => showTooltip(e, `${NOME_ESTADO_POR_UF[sigla] || sigla} (${sigla})`, info)}
               onMouseLeave={hideTooltip}
               onClick={() => { if (wasRealClick()) abrirEstado(sigla) }}
@@ -430,25 +462,29 @@ export function mapa_br({ widget, rows, fields, color, fillHeight, formato }) {
           )
         })}
 
-        {modoEstado && municipiosGeo && boundsEstado && municipiosGeo.features.map(f => {
+        {modoEstado && municipiosGeo && boundsEstado && municipiosGeo.features.map((f, idx) => {
           // Casa a feição (nome oficial IBGE, embutido no asset) com o dado
           // do SQL por nome normalizado (sem acento/caixa) — o "municipio"
           // digitado livremente no SQL não precisa bater byte-a-byte.
           const nomeOficial = f.properties.nome
           const info = nomeOficial ? dataByMunicipioNaUf.get(normMun(nomeOficial)) : null
-          const intensidade = info ? 0.5 + 0.5 * (info.valor / maxValorMun) : 0
-          const d = geometryToPath(f.geometry, boundsEstado, W, H, PAD)
+          const intensidade = info ? 0.4 + 0.6 * (info.valor / maxValorMun) : 0
+          const d = pathsEstado.get(f.properties.codarea)
           return (
             <path
               key={f.properties.codarea}
-              className={info ? 'dash-hud-map-active' : undefined}
+              className={info ? 'dash-hud-map-active dash-hud-map-acender' : undefined}
               d={d}
-              fill={info ? color : cssVar('--s1')}
+              fill={info ? color : 'transparent'}
               fillOpacity={info ? intensidade : 1}
-              stroke={info ? color : cssVar('--bd2')}
-              strokeOpacity={info ? 0.85 : 1}
+              stroke={info ? color : (isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)')}
+              strokeOpacity={1}
               strokeWidth={0.6}
-              style={{ transition:'fill-opacity .15s, stroke-opacity .15s' }}
+              style={{
+                transition:'fill-opacity .15s, stroke-opacity .15s, filter .15s',
+                filter: info ? `drop-shadow(0 0 8px ${color})` : 'none',
+                animationDelay: info ? `${(idx % 12) * 100}ms` : undefined,
+              }}
               onMouseMove={e => showTooltip(e, nomeOficial || '(sem nome)', info)}
               onMouseLeave={hideTooltip}
             />

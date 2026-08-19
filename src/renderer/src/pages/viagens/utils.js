@@ -34,6 +34,7 @@ export function novoItem() {
 }
 
 export const EMPTY_FORM = {
+  codigo: '',
   consultor_id: null, consultor_nome: '',
   cliente_id: '', cliente_nome: '',
   data_inicio: '', data_fim: '',

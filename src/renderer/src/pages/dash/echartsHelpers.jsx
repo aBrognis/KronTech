@@ -1,5 +1,38 @@
 // Helpers de estilo compartilhados entre os renderers ECharts + estados vazio/erro
+import { useEffect, useRef, useState } from 'react'
 import { AlertCircle, ArrowUp, ArrowDown, Sparkles } from 'lucide-react'
+
+// Anima um número de 0 até `value` uma única vez quando o valor muda (troca
+// de dado real, não decorativo em loop) — easing suave, ~700ms. Usado nos
+// KPIs/totais pra dar a sensação de "carregamento" que a referência tem.
+// Respeita prefers-reduced-motion pulando direto pro valor final.
+export function useCountUp(value, duration = 700) {
+  const [display, setDisplay] = useState(value)
+  const rafRef = useRef(null)
+  const fromRef = useRef(value)
+
+  useEffect(() => {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduce || !Number.isFinite(value)) { setDisplay(value); fromRef.current = value; return }
+    const from = fromRef.current
+    const to = value
+    if (from === to) return
+    const start = performance.now()
+    cancelAnimationFrame(rafRef.current)
+    function tick(now) {
+      const t = Math.min(1, (now - start) / duration)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setDisplay(from + (to - from) * eased)
+      if (t < 1) rafRef.current = requestAnimationFrame(tick)
+      else fromRef.current = to
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  return display
+}
 
 // ECharts desenha em <canvas>, que não entende var(--token) — precisa da cor
 // já resolvida em hex/rgb. Lê o valor real computado no <html> (onde os temas
@@ -20,27 +53,29 @@ export function grad(color, op = '55') {
   return { type:'linear', x:0, y:0, x2:0, y2:1, colorStops:[{ offset:0, color }, { offset:1, color: color + op }] }
 }
 
-function isLightTheme() {
-  return document.documentElement.classList.contains('light')
+// Cor de uma série pelo nome da coluna: usa a cor escolhida no Designer
+// (widget.cores_series) quando existe; senão cai pra cor principal (1ª
+// série) ou pra paleta padrão em ordem, como já era.
+export function corSerie(key, i, color, coresSeries, paleta) {
+  return coresSeries?.[key] || (i === 0 ? color : paleta[i % paleta.length])
 }
 
 export function TT() {
   return {
     backgroundColor: cssVar('--s2'), borderColor: cssVar('--bd2'), borderWidth:1,
-    textStyle:{ color: cssVar('--t1'), fontSize:11, fontFamily: cssVar('--hud-mono') },
-    padding:[8,12],
+    textStyle:{ color: cssVar('--t1'), fontSize:12, fontFamily: cssVar('--hud-mono') },
+    padding:[9,13],
     extraCssText:'box-shadow:0 8px 24px rgba(0,0,0,.35);border-radius:8px;',
   }
 }
 export function AX() {
   return {
-    axisLine:  { lineStyle:{ color: cssVar('--bd') } },
+    axisLine:  { lineStyle:{ color: cssVar('--bd2') } },
     axisTick:  { show:false },
-    axisLabel: { color: cssVar('--t3'), fontSize:10, fontFamily: cssVar('--hud-mono') },
-    // Grid mais discreto no tema claro — linha tracejada padrão do ECharts
-    // (1px sólido antialiased) já lê "pesada" sobre fundo branco mesmo com
-    // opacidade reduzida; no escuro pode ficar um pouco mais presente.
-    splitLine: { lineStyle:{ color: cssVar('--bd'), type:'dashed', opacity: isLightTheme() ? 0.5 : 0.6 } },
+    axisLabel: { color: cssVar('--t2'), fontSize:11.5, fontWeight:600, fontFamily: cssVar('--hud-mono') },
+    // Item 3 (valor literal): stroke-opacity 0.08 — quase invisível, só
+    // o suficiente pra guiar a leitura sem competir com os dados.
+    splitLine: { lineStyle:{ color: cssVar('--bd'), type:'dashed', opacity: 0.08 } },
   }
 }
 

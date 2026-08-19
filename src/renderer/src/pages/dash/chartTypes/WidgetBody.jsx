@@ -17,7 +17,8 @@ const NO_OVERLAY_TYPES = new Set([
 ])
 
 export function WidgetBody({ widget, rows, fields, prevRows, prevFields, fillHeight = false }) {
-  const color   = widget.cor || '#FF6B2B'
+  const color       = widget.cor || '#FF6B2B'
+  const coresSeries = widget.cores_series || {}
   const labels  = rows.map(r => String(r[fields?.[0]] ?? ''))
   const valKeys = fields?.slice(1) ?? []
 
@@ -25,7 +26,9 @@ export function WidgetBody({ widget, rows, fields, prevRows, prevFields, fillHei
     ? { position:'absolute', top:0, left:0, right:0, bottom:0 }
     : { width:'100%', height: 220 }
 
-  const anim = { animation:true, animationDuration:700, animationEasing:'cubicOut' }
+  // Item 6 (valor literal): duration 800ms, easing ease-out (cubicOut é o
+  // equivalente nomeado do ECharts pra "ease-out").
+  const anim = { animation:true, animationDuration:800, animationEasing:'cubicOut' }
 
   const hasComparison = !!(widget.comparar_anterior && prevRows?.length)
 
@@ -40,7 +43,7 @@ export function WidgetBody({ widget, rows, fields, prevRows, prevFields, fillHei
   // silenciosamente efeitos/refs entre re-renders quando os dados do
   // widget atualizam (ex. auto-refresh).
   const body = <Fn widget={widget} rows={rows} fields={fields} labels={labels} valKeys={valKeys}
-    color={color} chartStyle={chartStyle} anim={anim} fillHeight={fillHeight}
+    color={color} coresSeries={coresSeries} chartStyle={chartStyle} anim={anim} fillHeight={fillHeight}
     prevRows={prevRows} prevFields={prevFields} hasComparison={hasComparison} formato={formato} />
 
   if (hasComparison && NO_OVERLAY_TYPES.has(widget.tipo)) {

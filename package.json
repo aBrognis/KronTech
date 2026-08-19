@@ -1,6 +1,6 @@
 {
   "name": "krontech",
-  "version": "1.2.24",
+  "version": "1.2.25",
   "description": "KronTech — Ordem no caos do dia a dia.",
   "main": "out/main/index.js",
   "scripts": {
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/rajdhani": "^5.3.0",
     "bcrypt": "^6.0.0",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
@@ -54,7 +55,10 @@
       "uninstallerIcon": "resources/icon.ico"
     },
     "extraResources": [
-      { "from": "migrations", "to": "migrations" }
+      {
+        "from": "migrations",
+        "to": "migrations"
+      }
     ],
     "publish": [
       {

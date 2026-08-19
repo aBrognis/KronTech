@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import DesignerApp from './DesignerApp'
 import '@fontsource-variable/inter'
+import '@fontsource/rajdhani/600.css'
+import '@fontsource/rajdhani/700.css'
 import './styles/tokens.css'
 import './styles/global.css'
 

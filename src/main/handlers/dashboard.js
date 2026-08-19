@@ -5,19 +5,26 @@ export function registerDashboardHandlers({ ipcMain, wrap, query, queryOne }) {
   }))
 
   ipcMain.handle('dash:create', wrap(async (_, d) => {
+    // Código sequencial (padrão nativo do sistema — ver arq_001): gerado
+    // via nextval() no momento do insert, nunca digitado pelo usuário —
+    // é a fonte de verdade final, mesmo que o frontend mostre um preview
+    // otimista antes de salvar.
+    const codRow = await queryOne(`SELECT nextval('dash_001_codigo_seq') AS next`)
+    const codigo = String(codRow.next).padStart(4, '0')
     // Posição é o que o usuário escolheu arrastando no grid livre (aba
     // "Layout" do Designer, ou já direto na aba Dashboard) — grid_x/grid_y
     // são a única fonte de verdade de posição, sem recálculo automático
     // por cima que descartaria o que foi arrastado.
     const criado = await queryOne(
       `INSERT INTO dash_001
-         (titulo, tipo, sql_query, icone, icone_lucide, cor, tamanho, intervalo,
-          grid_x, grid_y, grid_w, grid_h, comparar_anterior, sql_query_anterior, formato)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [d.titulo, d.tipo, d.sql_query, d.icone ?? 'bar-chart', d.icone_lucide ?? null,
+         (codigo, titulo, tipo, sql_query, icone, icone_lucide, cor, tamanho, intervalo,
+          grid_x, grid_y, grid_w, grid_h, comparar_anterior, sql_query_anterior, formato, cores_series)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
+      [codigo, d.titulo, d.tipo, d.sql_query, d.icone ?? 'bar-chart', d.icone_lucide ?? null,
        d.cor ?? '#FF6B2B', d.tamanho ?? 'pequeno', d.intervalo ?? 0,
        d.grid_x ?? 0, d.grid_y ?? 0, d.grid_w ?? 3, d.grid_h ?? 4,
-       d.comparar_anterior ?? false, d.sql_query_anterior ?? null, d.formato ?? 'numero']
+       d.comparar_anterior ?? false, d.sql_query_anterior ?? null, d.formato ?? 'numero',
+       JSON.stringify(d.cores_series ?? {})]
     )
     return criado
   }))
@@ -26,12 +33,13 @@ export function registerDashboardHandlers({ ipcMain, wrap, query, queryOne }) {
     return queryOne(
       `UPDATE dash_001 SET titulo=$1, tipo=$2, sql_query=$3, icone=$4, icone_lucide=$5, cor=$6,
          tamanho=$7, intervalo=$8, grid_x=$9, grid_y=$10, grid_w=$11, grid_h=$12,
-         comparar_anterior=$13, sql_query_anterior=$14, formato=$15
-       WHERE id=$16 RETURNING *`,
+         comparar_anterior=$13, sql_query_anterior=$14, formato=$15, cores_series=$16
+       WHERE id=$17 RETURNING *`,
       [d.titulo, d.tipo, d.sql_query, d.icone ?? 'bar-chart', d.icone_lucide ?? null,
        d.cor ?? '#FF6B2B', d.tamanho ?? 'pequeno', d.intervalo ?? 0,
        d.grid_x ?? 0, d.grid_y ?? 0, d.grid_w ?? 3, d.grid_h ?? 4,
-       d.comparar_anterior ?? false, d.sql_query_anterior ?? null, d.formato ?? 'numero', d.id]
+       d.comparar_anterior ?? false, d.sql_query_anterior ?? null, d.formato ?? 'numero',
+       JSON.stringify(d.cores_series ?? {}), d.id]
     )
   }))
 

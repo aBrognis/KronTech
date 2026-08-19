@@ -805,18 +805,22 @@ html.light .sql-guide-pre      { color: #2a6e3c; }
 @keyframes toastPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* Dashboard BI — Grid livre + Painel lateral */
-.dash-wrapper    { display: flex; height: 100%; overflow: hidden; }
-.dash-grid-area  { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 24px 40px; }
+/* --bg-base (tokens.css): mesmo fundo da sidebar. Card sem fundo/borda
+   próprios — usa o mesmo --bg-base da página, sem caixa visível ao redor
+   (só a faixa colorida do topo, dashHud.css, marca cada widget). */
+.dash-wrapper    { display: flex; height: 100%; overflow: hidden; background: var(--bg-base); }
+.dash-grid-area  { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 24px 40px; background: var(--bg-base); }
 .dash-grid-area::-webkit-scrollbar { width: 5px; }
 .dash-grid-area::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 99px; }
-.dash-widget-card      { width: 100%; height: 100%; background: var(--s1); display: flex; flex-direction: column; overflow: hidden; }
+.dash-widget-card      { width: 100%; height: 100%; background: var(--bg-base); display: flex; flex-direction: column; overflow: hidden; }
 .dash-widget-card-body { flex: 1; overflow-y: auto; padding: 0 18px 24px; }
 .dash-widget-card-body::-webkit-scrollbar { width: 5px; }
 .dash-widget-card-body::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 99px; }
 
-/* react-grid-layout overrides */
-.react-grid-item { background: var(--s2); border: 1px solid var(--bd); border-radius: 12px; transition: border-color .2s, box-shadow .2s !important; }
-.react-grid-item:hover { border-color: var(--bd2); box-shadow: 0 4px 24px rgba(0,0,0,.12); }
+/* react-grid-layout overrides — só usado no Dashboard/Designer. Sem fundo/
+   borda própria: o card por dentro (.dash-widget-card) já não tem caixa
+   visível, então o wrapper do grid também não pode ter. */
+.react-grid-item { border-radius: 12px; transition: box-shadow .2s !important; }
 .react-grid-item.react-draggable-dragging { box-shadow: 0 16px 48px rgba(0,0,0,.35) !important; z-index: 100; opacity: .93; transition: none !important; }
 .react-grid-item > .react-resizable-handle {
   opacity: 0;
@@ -1134,7 +1138,8 @@ html.light .main        { background: var(--bg); }
 html.light .content     { background: var(--bg); }
 html.light .page-content { background: var(--bg); }
 html.light .page-with-footer { background: var(--bg); }
-html.light .dash-grid-area  { background: var(--bg); }
+/* Dashboard fica de fora dessa regra geral — usa --s1 (mesma variável da
+   sidebar) tanto no dark quanto no light, ver App.css:.dash-grid-area. */
 
 /* Topbar light */
 html.light .topbar::before {

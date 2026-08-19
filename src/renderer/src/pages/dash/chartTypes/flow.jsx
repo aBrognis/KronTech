@@ -1,10 +1,10 @@
 // Diagramas de fluxo/relação: funil, sankey, grafo, árvore, rio temático
 import EChart from '../EChart'
-import { cssVar, TT } from '../echartsHelpers'
+import { cssVar, TT, corSerie } from '../echartsHelpers'
 import { PALETA } from '../constants'
 import { SqlErr } from '../echartsHelpers'
 
-export function funnel({ rows, fields, color, chartStyle }) {
+export function funnel({ rows, fields, color, coresSeries, chartStyle }) {
   if (fields.length < 2) return <SqlErr msg="SQL precisa de: etapa, valor." />
   const values = rows.map(r => Number(r[fields[1]]) || 0)
   return (
@@ -16,8 +16,8 @@ export function funnel({ rows, fields, color, chartStyle }) {
         sort:'descending', gap:2,
         label:{ show:true, position:'inside', color:'#fff', fontSize:11, formatter:'{b}\n{c}' },
         itemStyle:{ borderColor:cssVar('--bg'), borderWidth:1 },
-        data: rows.map((r,i)=>{ const c = i===0?color:PALETA[i%PALETA.length]; return { name:String(r[fields[0]]), value:Number(r[fields[1]])||0,
-          itemStyle:{ color:c } } }),
+        data: rows.map((r,i)=>{ const nome = String(r[fields[0]]); return { name:nome, value:Number(r[fields[1]])||0,
+          itemStyle:{ color:corSerie(nome, i, color, coresSeries, PALETA) } } }),
       }],
     }} />
   )
@@ -98,7 +98,7 @@ export function sankey({ rows, fields, color, chartStyle }) {
   )
 }
 
-export function theme_river({ rows, fields, color, chartStyle }) {
+export function theme_river({ rows, fields, color, coresSeries, chartStyle }) {
   if (fields.length < 3) return <SqlErr msg="SQL precisa de: data, categoria/série, valor." />
   const data = rows.map(r => [String(r[fields[0]]).slice(0,10), Number(r[fields[2]])||0, String(r[fields[1]])])
   const cats = [...new Set(rows.map(r => String(r[fields[1]])))]
@@ -110,7 +110,7 @@ export function theme_river({ rows, fields, color, chartStyle }) {
       singleAxis:{ top:36, bottom:20, left:8, right:16, type:'time',
         axisLabel:{ color:cssVar('--t3'), fontSize:9 }, axisLine:{ lineStyle:{ color:cssVar('--bd') } } },
       series:[{ type:'themeRiver', data,
-        color: cats.map((_,i)=>i===0?color:PALETA[i%PALETA.length]),
+        color: cats.map((c,i)=>corSerie(c, i, color, coresSeries, PALETA)),
         label:{ color:cssVar('--t2'), fontSize:9 },
         emphasis:{ itemStyle:{ shadowBlur:20 } } }],
     }} />
