@@ -38,26 +38,13 @@ const DEFAULTS = {
     usuario:  'postgres',
     senha:    'postgres',
   },
-  // Usada só pela feature "Importar Banco" (dev-only, ver
-  // src/main/services/importarBanco.js) — credenciais de leitura do banco de
-  // produção + caminho da pasta onde fica o krontech.ini de produção (pra
-  // trazer também a seção [Personalizacao], que não vem do banco).
-  BancoProducao: {
-    host:     '',
-    port:     '5432',
-    database: '',
-    usuario:  '',
-    senha:    '',
-    iniPath:  '',
-  },
   Caminhos: {
     arquivos: join(BASE_DIR, 'arquivos'),
     backup:   join(BASE_DIR, 'backup'),
     temp:     join(BASE_DIR, 'temp'),
   },
   Sistema: {
-    nome:   'KronTech',
-    versao: '1.1.0',
+    nome: 'KronTech',
   },
   // Chave mestra AES do app — ao contrário do safeStorage (DPAPI, atado à
   // máquina/usuário Windows), essa chave vive no .ini e viaja com o banco:
@@ -126,6 +113,14 @@ export function loadConfig() {
 
   if (!_cfg.Seguranca.chaveMestra) {
     _cfg.Seguranca.chaveMestra = randomBytes(32).toString('hex')
+    writeFileSync(INI_PATH, stringifyIni(_cfg), 'utf-8')
+  }
+
+  // Versão real do app a cada boot — nunca vem de DEFAULTS (senão ficaria
+  // congelada no valor gravado na primeira instalação, já que mergeDefaults
+  // sempre prioriza o que já está salvo no .ini).
+  if (_cfg.Sistema.versao !== app.getVersion()) {
+    _cfg.Sistema.versao = app.getVersion()
     writeFileSync(INI_PATH, stringifyIni(_cfg), 'utf-8')
   }
 
