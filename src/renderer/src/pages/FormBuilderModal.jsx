@@ -84,7 +84,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar }) 
   const [canvasW,       setCanvasW]       = useState(tela?.canvas_w       || 780)
   const [canvasH,       setCanvasH]       = useState(tela?.canvas_h       || 480)
 
-  const { campos, setCampos, addCampo: addCampoBase, atualizarCampo } = useFormBuilderCampos(tela, editando)
+  const { campos, setCampos, addCampo: addCampoBase, atualizarCampo } = useFormBuilderCampos(tela)
   function addCampo(factory) {
     addCampoBase(factory, (novoKey) => setExpandedKeys(prev => new Set([...prev, novoKey])))
   }
@@ -579,7 +579,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar }) 
               placeholder="Ex: Cadastro de Fornecedores" disabled={salvando} />
           </div>
           <div className="form-group">
-            <label className="form-label">Nome no Banco (tabela) *</label>
+            <label className="form-label">Tabela Banco *</label>
             <input className="form-input" style={{ ...(h ? { height: h } : {}), fontFamily: 'monospace', fontSize: 12, opacity: editando ? .6 : 1 }} value={nomeTabela}
               onChange={e => !editando && setNomeTabela(slugify(e.target.value))}
               placeholder="cad_fornecedores_001" disabled={editando || salvando} />

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, Loader2, CheckCircle2, XCircle, X, KeyRound } from 'lucide-react'
+import { AlertTriangle, Loader2, CheckCircle2, XCircle, X, KeyRound, Clipboard } from 'lucide-react'
 
 const TITULOS_FASE = {
   conectando_producao: 'Conectando ao banco de produção',
@@ -101,15 +101,30 @@ export default function ImportarBancoModal({ open, onClose }) {
                 }}>
                   <KeyRound size={11} /> Token de autorização (gerado em produção)
                 </label>
-                <input
-                  className="form-input"
-                  value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="Cole o token gerado em Configurações no ambiente de produção"
-                  autoFocus
-                  autoComplete="off"
-                  style={{ width: '100%', fontFamily: 'monospace' }}
-                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    className="form-input"
+                    value={token}
+                    onChange={e => setToken(e.target.value)}
+                    placeholder="Cole o token gerado em Configurações no ambiente de produção"
+                    autoFocus
+                    autoComplete="off"
+                    style={{ flex: 1, fontFamily: 'monospace' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    title="Colar da área de transferência"
+                    onClick={async () => {
+                      const res = await window.api.clipboard.read()
+                      const texto = res?.ok ? res.data : res
+                      if (texto) setToken(String(texto).trim())
+                    }}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <Clipboard size={14} /> Colar
+                  </button>
+                </div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '18px 24px' }}>

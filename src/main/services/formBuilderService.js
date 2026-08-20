@@ -179,12 +179,21 @@ export async function atualizarMetaTela(telaId, { nomeTela, descricao, icone }) 
   return row
 }
 
+// Tipos cujo nome_campo é derivado internamente (não vem de c.nomeCampo) —
+// mesma lista de exceções usada em inserirCampos, nunca renomeiam via
+// digitação do usuário.
+const TIPOS_NOME_DERIVADO = ['divisor', 'botao', 'favorito', 'timestamps', 'copiar']
+
 export async function editarTela(telaId, payload) {
   const pool = getPool()
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const editCampos = payload.campos || []
+    // Nome da tabela física — necessário para o RENAME COLUMN abaixo, se
+    // algum campo existente teve o "Nome no Banco" alterado no editor.
+    const telaRow = await client.query('SELECT nome_tabela FROM kr_telas_001 WHERE id=$1', [telaId])
+    const nomeTabela = telaRow.rows[0]?.nome_tabela
     const editTemFav = editCampos.some(c => c.tipo === 'favorito')
     const editTemTs  = editCampos.some(c => c.tipo === 'timestamps')
     const editColFav = editTemFav ? true : (payload.colFavorito !== false)
@@ -212,6 +221,26 @@ export async function editarTela(telaId, payload) {
     for (const [idx, c] of (payload.campos||[]).entries()) {
       c.ordem = idx + 1
       if (c.id) {
+        // Detecta rename: se o campo tem um novo "nome no banco" digitado
+        // no editor, compara com o nome_campo atual em metadados. Se
+        // mudou, renomeia a COLUNA FÍSICA antes de persistir o novo nome
+        // — sem isso, o Postgres continuava com a coluna antiga e o app
+        // procurava por uma coluna que nunca existiu (ver PR original:
+        // usuário reportou tela "não encontra o campo" após renomear).
+        let novoNomeCampo = null
+        if (!TIPOS_NOME_DERIVADO.includes(c.tipo) && c.nomeCampo && nomeTabela) {
+          const nomeCalculado = c.tipo === 'lookup'
+            ? normalizarNome(c.nomeCampo).replace(/_id$/, '') + '_id'
+            : normalizarNome(c.nomeCampo)
+          const atual = await client.query('SELECT nome_campo FROM kr_tela_campos_001 WHERE id=$1', [c.id])
+          const nomeAntigo = atual.rows[0]?.nome_campo
+          if (nomeCalculado && nomeAntigo && nomeCalculado !== nomeAntigo) {
+            await client.query(
+              `ALTER TABLE ${tbl(nomeTabela)} RENAME COLUMN ${col(nomeAntigo)} TO ${col(nomeCalculado)}`
+            )
+            novoNomeCampo = nomeCalculado
+          }
+        }
         await client.query(
           `UPDATE kr_tela_campos_001 SET label=$1,tipo=$2,tamanho=$3,obrigatorio=$4,
            campo_busca=$5,valor_padrao=$6,ordem=$7,largura=$8,
@@ -219,7 +248,8 @@ export async function editarTela(telaId, payload) {
            sem_negrito=$15,font_size=$16,input_negrito=$17,input_font_size=$18,
            label_cor=$19,input_align=$20,input_cor=$21,input_bg=$22,
            border_radius=$23,border_width=$24,border_color=$25,opcoes_layout=$26,
-           ativo=TRUE WHERE id=$27 AND tela_id=$28`,
+           nome_campo=COALESCE($27,nome_campo),
+           ativo=TRUE WHERE id=$28 AND tela_id=$29`,
           [c.label,c.tipo,c.tamanho||100,c.obrigatorio||false,
            c.campoBusca||false,c.valorPadrao||null,c.ordem,Math.max(10, c.largura||50),
            c.x_pos||0,c.y_pos||0,c.w_px||280,c.h_px||60,
@@ -229,6 +259,7 @@ export async function editarTela(telaId, payload) {
            c.labelCor||null, c.inputAlign||null, c.inputCor||null, c.inputBg||null,
            c.borderRadius??null, c.borderWidth??null, c.borderColor||null,
            c.opcoesLayout||null,
+           novoNomeCampo,
            c.id,telaId]
         )
       } else {

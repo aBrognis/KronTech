@@ -37,7 +37,7 @@ export function CampoPainelPadrao({ campo, campos, atualizarCampo, salvando, edi
               placeholder="Ex: Razao Social" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 12 }} />
           </div>
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Nome banco *</label>
+            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }}>Coluna Tabela *</label>
             <input className="form-input" value={campo.nomeCampo} onChange={e => upC('nomeCampo', e.target.value)}
               placeholder="razao_social" disabled={salvando} style={{ width: '100%', height: 30, fontSize: 11, fontFamily: 'monospace' }} />
           </div>

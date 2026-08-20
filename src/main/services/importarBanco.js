@@ -46,6 +46,101 @@ async function listarFKs(client) {
   return rows
 }
 
+// ── Captura de DDL (colunas + PK + FKs) para recriar a tabela de dev ──────
+// Postgres não tem "SHOW CREATE TABLE" — monta o DDL a partir de
+// information_schema, coluna a coluna, incluindo tipo formatado (com
+// precisão/escala/length), DEFAULT e NOT NULL. FKs vêm à parte porque só
+// podem ser criadas depois que TODAS as tabelas já existem (senão a ordem
+// topológica não seria suficiente sozinha para referências cruzadas).
+async function capturarColunasDDL(client, nomeTabela) {
+  const { rows } = await client.query(`
+    SELECT
+      c.column_name, c.is_nullable, c.column_default,
+      c.data_type, c.character_maximum_length, c.numeric_precision, c.numeric_scale,
+      c.udt_name
+    FROM information_schema.columns c
+    WHERE c.table_schema = 'public' AND c.table_name = $1
+    ORDER BY c.ordinal_position
+  `, [nomeTabela])
+
+  return rows.map(r => {
+    let tipo
+    if (r.data_type === 'character varying') tipo = r.character_maximum_length ? `VARCHAR(${r.character_maximum_length})` : 'VARCHAR'
+    else if (r.data_type === 'numeric') tipo = (r.numeric_precision != null) ? `NUMERIC(${r.numeric_precision},${r.numeric_scale ?? 0})` : 'NUMERIC'
+    else if (r.data_type === 'USER-DEFINED') tipo = r.udt_name
+    else if (r.data_type === 'ARRAY') tipo = r.udt_name.replace(/^_/, '') + '[]'
+    else tipo = r.data_type.toUpperCase()
+
+    let coluna = `"${r.column_name}" ${tipo}`
+    if (r.is_nullable === 'NO') coluna += ' NOT NULL'
+    // column_default já vem pronto pro Postgres (ex: nextval(...), 'x'::text,
+    // CURRENT_TIMESTAMP) — repassa como está, exceto sequences seriais
+    // (identity implícita via SERIAL), tratadas à parte para não colidir
+    // com uma sequence de mesmo nome já existente em dev.
+    if (r.column_default != null && !r.column_default.startsWith('nextval(')) {
+      coluna += ` DEFAULT ${r.column_default}`
+    }
+    return { nome: r.column_name, ddl: coluna, serial: r.column_default?.startsWith('nextval(') || false, tipoBase: tipo }
+  })
+}
+
+async function capturarPK(client, nomeTabela) {
+  const { rows } = await client.query(`
+    SELECT kcu.column_name
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu
+      ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+    WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_schema = 'public' AND tc.table_name = $1
+    ORDER BY kcu.ordinal_position
+  `, [nomeTabela])
+  return rows.map(r => r.column_name)
+}
+
+async function capturarFKsDetalhado(client) {
+  const { rows } = await client.query(`
+    SELECT
+      tc.table_name AS tabela, kcu.column_name AS coluna,
+      ccu.table_name AS tabela_ref, ccu.column_name AS coluna_ref,
+      tc.constraint_name
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu
+      ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+    JOIN information_schema.constraint_column_usage ccu
+      ON tc.constraint_name = ccu.constraint_name AND tc.table_schema = ccu.table_schema
+    WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
+  `)
+  return rows
+}
+
+// Recria a tabela em dev exatamente como está em produção: DROP CASCADE (se
+// existir) + CREATE TABLE com as colunas/tipos/PK capturados, e uma sequence
+// própria para cada coluna serial (id SERIAL vira id INTEGER + sequence +
+// DEFAULT nextval + OWNED BY, replicando o que o Postgres faz internamente
+// para SERIAL). FKs são adicionadas depois, numa passada separada, quando
+// todas as tabelas já existem.
+async function recriarTabela(client, nomeTabela, colunas, pk) {
+  await client.query(`DROP TABLE IF EXISTS "${nomeTabela}" CASCADE`)
+  const defsColunas = colunas.map(c => c.ddl)
+  if (pk.length) defsColunas.push(`PRIMARY KEY (${pk.map(c => `"${c}"`).join(',')})`)
+  await client.query(`CREATE TABLE "${nomeTabela}" (${defsColunas.join(', ')})`)
+
+  for (const c of colunas.filter(x => x.serial)) {
+    const seqName = `${nomeTabela}_${c.nome}_seq`
+    await client.query(`CREATE SEQUENCE IF NOT EXISTS "${seqName}"`)
+    await client.query(`ALTER TABLE "${nomeTabela}" ALTER COLUMN "${c.nome}" SET DEFAULT nextval('${seqName}')`)
+    await client.query(`ALTER SEQUENCE "${seqName}" OWNED BY "${nomeTabela}"."${c.nome}"`)
+  }
+}
+
+async function aplicarFKs(client, fks, tabelasRecriadas) {
+  for (const fk of fks) {
+    if (!tabelasRecriadas.includes(fk.tabela) || !tabelasRecriadas.includes(fk.tabela_ref)) continue
+    await client.query(
+      `ALTER TABLE "${fk.tabela}" ADD CONSTRAINT "${fk.constraint_name}" FOREIGN KEY ("${fk.coluna}") REFERENCES "${fk.tabela_ref}" ("${fk.coluna_ref}")`
+    ).catch(() => {}) // FK duplicada (mesmo nome usado por >1 coluna composta) — melhor esforço
+  }
+}
+
 // Ordena tabelas topologicamente (Kahn) a partir das FKs — pais antes de
 // filhos. Cobre tabelas fixas E dinâmicas do FormBuilder sem hardcode de
 // ordem. Ciclos (não esperados no schema atual) abortam com erro claro.
@@ -121,18 +216,24 @@ function salvarBackupJson(dump, destino) {
 }
 
 // ── Restauração em dev, dentro de uma transação já aberta ──────────────────
-// TRUNCATE + INSERT das tabelas de produção, na ordem topológica (pais antes
-// de filhos). Se qualquer INSERT falhar, o chamador faz ROLLBACK e o
-// Postgres desfaz tudo — nenhuma tabela fica truncada sem dados.
+// DROP + CREATE (schema exatamente igual a produção, coluna a coluna) +
+// INSERT, na ordem topológica (pais antes de filhos). FKs são recriadas
+// numa passada final, depois que todas as tabelas já existem. Se qualquer
+// etapa falhar, o chamador faz ROLLBACK e o Postgres desfaz tudo — nenhuma
+// tabela fica pela metade.
 
 const LOTE = 500
 
-async function restaurarNaTransacao(client, tabelasOrdenadas, dumpProducao, onTabela) {
-  // TRUNCATE de todas de uma vez, na ordem inversa (filhos antes de pais) —
-  // RESTART IDENTITY reseta as sequences de id; CASCADE cobre FKs entre elas
-  // mesmo que a ordem não seja perfeita.
-  const listaAspas = tabelasOrdenadas.map(t => `"${t}"`).join(', ')
-  await client.query(`TRUNCATE TABLE ${listaAspas} RESTART IDENTITY CASCADE`)
+async function restaurarNaTransacao(client, tabelasOrdenadas, dumpProducao, schemaProducao, onTabela) {
+  // Recria cada tabela do zero com o schema capturado de produção — resolve
+  // de raiz o caso de colunas renomeadas/adicionadas/removidas em dev
+  // divergindo de produção (ex.: um campo do FormBuilder renomeado só num
+  // dos dois ambientes), que antes quebrava o INSERT com "coluna não existe".
+  for (const tabela of tabelasOrdenadas) {
+    const { colunas, pk } = schemaProducao[tabela]
+    await recriarTabela(client, tabela, colunas, pk)
+  }
+  await aplicarFKs(client, schemaProducao.__fks, tabelasOrdenadas)
 
   for (let i = 0; i < tabelasOrdenadas.length; i++) {
     const tabela = tabelasOrdenadas[i]
@@ -283,6 +384,16 @@ export async function importarBancoDeProducao({ onProgresso, BrowserWindow, toke
     emitir('descobrindo_schema')
     const tabelas = await listarTabelasEOrdem(clientProd)
 
+    // Captura o schema real de cada tabela (colunas/tipos/PK) — usado
+    // depois para recriar em dev exatamente como está em produção, em vez
+    // de assumir que o schema de dev já bate (ver restaurarNaTransacao).
+    const schemaProducao = { __fks: await capturarFKsDetalhado(clientProd) }
+    for (const tabela of tabelas) {
+      const colunas = await capturarColunasDDL(clientProd, tabela)
+      const pk = await capturarPK(clientProd, tabela)
+      schemaProducao[tabela] = { colunas, pk }
+    }
+
     // ── exportando_producao ──────────────────────────────────────────────
     emitir('exportando_producao', { atual: 0, total: tabelas.length })
     const dumpProducao = await dumpBanco(clientProd, tabelas, (tabela, atual, total) => {
@@ -322,12 +433,10 @@ export async function importarBancoDeProducao({ onProgresso, BrowserWindow, toke
     clientDev = await poolDev.connect()
     await clientDev.query('BEGIN')
     try {
-      // Só truncar/inserir tabelas que existem em dev — uma tabela nova de
-      // produção sem migration correspondente em dev ainda não pode ser
-      // restaurada (schema não existe localmente).
-      const tabelasDevExistentes = await listarTabelasCandidatas(clientDev)
-      const tabelasParaRestaurar = tabelas.filter(t => tabelasDevExistentes.includes(t))
-      await restaurarNaTransacao(clientDev, tabelasParaRestaurar, dumpProducao, (tabela, atual, total) => {
+      // Recria TODAS as tabelas de produção em dev (schema + dados) — não
+      // depende mais de a tabela já existir em dev com estrutura compatível,
+      // resolve de raiz divergências de schema entre os dois ambientes.
+      await restaurarNaTransacao(clientDev, tabelas, dumpProducao, schemaProducao, (tabela, atual, total) => {
         emitir('restaurando_dev', { atual, total, tabela })
       })
       await clientDev.query('COMMIT')

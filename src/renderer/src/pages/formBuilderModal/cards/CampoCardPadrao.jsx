@@ -35,7 +35,7 @@ export function CampoCardPadrao({ campo, idx, setCampos, atualizarCampo, isExp, 
                 onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Razão Social" disabled={salvando} />
             </div>
             <div className="form-group">
-              <label className="form-label">Nome no Banco *</label>
+              <label className="form-label">Coluna Tabela *</label>
               <input className="form-input" style={{ height: 32, fontFamily: 'monospace', fontSize: 11 }} value={campo.nomeCampo}
                 onChange={e => atualizarCampo(campo._key, 'nomeCampo', e.target.value)} placeholder="razao_social" disabled={salvando} />
             </div>

@@ -11,16 +11,18 @@
 ; Move o .ini pra fora da pasta antes da limpeza, e customInstall (que roda
 ; DEPOIS que os novos arquivos da versão são copiados) devolve ele pro lugar.
 !macro customRemoveFiles
-  IfFileExists "$INSTDIR\krontech.ini" 0 +4
+  IfFileExists "$INSTDIR\krontech.ini" 0 iniAusente
     CreateDirectory "$TEMP\krontech-ini-backup"
     Delete "$TEMP\krontech-ini-backup\krontech.ini"
     CopyFiles /SILENT "$INSTDIR\krontech.ini" "$TEMP\krontech-ini-backup\krontech.ini"
+  iniAusente:
   RMDir /r $INSTDIR
 !macroend
 
 !macro customInstall
-  IfFileExists "$TEMP\krontech-ini-backup\krontech.ini" 0 +4
+  IfFileExists "$TEMP\krontech-ini-backup\krontech.ini" 0 backupAusente
     CopyFiles /SILENT "$TEMP\krontech-ini-backup\krontech.ini" "$INSTDIR\krontech.ini"
     Delete "$TEMP\krontech-ini-backup\krontech.ini"
     RMDir "$TEMP\krontech-ini-backup"
+  backupAusente:
 !macroend

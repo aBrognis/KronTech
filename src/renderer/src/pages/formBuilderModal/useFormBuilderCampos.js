@@ -8,7 +8,7 @@ import { opcoesVazias, slugify } from './camposDefaults.js'
 // handleSalvar/aplicarTemplate nem renderPreviewCampo; essas funções
 // dependem de vários outros states do componente (nomeTela, tela, onSalvar,
 // etc.) e não têm fronteira clara com o estado de campos isoladamente.
-export function useFormBuilderCampos(telaInicial, editando) {
+export function useFormBuilderCampos(telaInicial) {
   const [campos, setCampos] = useState(
     telaInicial?.campos?.length
       ? telaInicial.campos.map(c => ({
@@ -39,7 +39,13 @@ export function useFormBuilderCampos(telaInicial, editando) {
     setCampos(prev => prev.map(c => {
       if (c._key !== key) return c
       const up = { ...c, [field]: value }
-      if (field === 'label' && !editando && !c._nomeManual) up.nomeCampo = slugify(value)
+      // Sincroniza label→nomeCampo mesmo em tela já existente: o backend
+      // (editarTela, formBuilderService.js) detecta quando nomeCampo mudou
+      // e faz ALTER TABLE ... RENAME COLUMN, preservando os dados já
+      // gravados. _nomeManual (setado quando o usuário edita "Nome no
+      // Banco" diretamente) continua sendo o freio — depois disso o label
+      // não sobrescreve mais o nome da coluna.
+      if (field === 'label' && !c._nomeManual) up.nomeCampo = slugify(value)
       if (field === 'nomeCampo') { up._nomeManual = true; up.nomeCampo = slugify(value) }
       if (field === 'tipo') {
         const hDefault = { texto_longo: 120, booleano: 44, radio: 56, tags: 56, codigo_auto: 56, imagem: 180, avaliacao: 56, progresso: 56, calculo: 56, cor: 56, url: 56 }

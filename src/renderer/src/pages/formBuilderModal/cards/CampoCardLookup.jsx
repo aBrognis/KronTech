@@ -37,7 +37,7 @@ export function CampoCardLookup({ campo, idx, setCampos, atualizarCampo, isExp, 
                 onChange={e => atualizarCampo(campo._key, 'label', e.target.value)} placeholder="Ex: Banco" disabled={salvando} />
             </div>
             <div className="form-group">
-              <label className="form-label">Nome no Banco (sem _id) *</label>
+              <label className="form-label">Coluna Tabela (sem _id) *</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <input className="form-input" style={{ height: 32, flex: 1, fontFamily: 'monospace', fontSize: 11 }} value={campo.nomeCampo.replace(/_id$/, '')}
                   onChange={e => atualizarCampo(campo._key, 'nomeCampo', e.target.value.replace(/_id$/, ''))}
