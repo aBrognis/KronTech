@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react'
 import { TIPOS, TIPOS_COM_OPCOES, COR_PALETTE } from '../constants.js'
-import { TipoCampoInfo, Sec, Row } from '../_shared.jsx'
+import { TipoCampoInfo, Sec, Row, ColorField } from '../_shared.jsx'
 import OpcoesList from '../OpcoesList.jsx'
 
 // Painel do designer para o campo genérico (mesma cobertura do
@@ -129,10 +129,10 @@ export function CampoPainelPadrao({ campo, campos, atualizarCampo, salvando, edi
 
       {/* POSICAO & TAMANHO */}
       <Sec title="Posição &amp; Tamanho">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
           {[['X', 'x_pos', 0, 2000], ['Y', 'y_pos', 0, 2000], ['Larg.', 'w_px', 20, 2000], ['Alt.', 'h_px', 16, 400]].map(([lbl2, key, min, max]) => (
-            <div key={key}>
-              <div style={{ fontSize: 9, color: 'var(--t3)', marginBottom: 2 }}>{lbl2}</div>
+            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 10, color: 'var(--t3)' }}>{lbl2}</span>
               <input type="number" className="form-input" min={min} max={max}
                 value={campo[key] ?? ''} disabled={salvando}
                 onChange={e => upC(key, e.target.value === '' ? null : Number(e.target.value))}
@@ -147,86 +147,66 @@ export function CampoPainelPadrao({ campo, campos, atualizarCampo, salvando, edi
           ))}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <Row label="Largura % lista">
-            {numInput('largura', campo.largura, 10, 100, 56)}
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>%</span>
-          </Row>
-          <Row label="Tamanho BD">
-            {numInput('tamanho', campo.tamanho, 1, 5000, 56)}
-            <span style={{ fontSize: 10, color: 'var(--t3)' }}>ch</span>
-          </Row>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Largura % lista</span>
+            {numInput('largura', campo.largura, 10, 100, 64)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>%</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Tamanho BD</span>
+            {numInput('tamanho', campo.tamanho, 1, 5000, 64)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>ch</span>
+          </div>
         </div>
       </Sec>
 
-      {/* ESTILO */}
-      <Sec title="Estilo">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, borderBottom: '1px solid var(--bd)', paddingBottom: 4, marginBottom: 2 }}>Label</div>
-            <Row label="Fonte">{numInput('fontSize', campo.fontSize, 7, 48, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-            <Row label="Negrito">{chk('semNegrito', 'Sem negrito', campo.semNegrito)}</Row>
-            <div>
-              <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="color" value={campo.labelCor || '#888888'} disabled={salvando}
-                  onChange={e => upC('labelCor', e.target.value)}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                <input className="form-input" value={campo.labelCor || ''} onChange={e => upC('labelCor', e.target.value)}
-                  placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-              </div>
-            </div>
+      {/* ESTILO — LABEL */}
+      <Sec title="Estilo do label">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Fonte</span>
+            {numInput('fontSize', campo.fontSize, 7, 48, 64)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, borderBottom: '1px solid var(--bd)', paddingBottom: 4, marginBottom: 2 }}>Conteúdo</div>
-            <Row label="Fonte">{numInput('inputFontSize', campo.inputFontSize, 7, 48, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-            <Row label="Negrito">{chk('inputNegrito', 'Negrito', campo.inputNegrito)}</Row>
-            <Row label="Alinhamento">
-              <div style={{ display: 'flex', gap: 2 }}>
-                {[['left','←'],['center','↔'],['right','→']].map(([v, ico]) => (
-                  <button key={v} className={`btn ${(campo.inputAlign || 'left') === v ? 'btn-primary' : 'btn-ghost'}`}
-                    style={{ height: 24, width: 28, fontSize: 12, padding: 0 }} disabled={salvando}
-                    onClick={() => upC('inputAlign', v)}>{ico}</button>
-                ))}
-              </div>
-            </Row>
-            <div>
-              <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor texto</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="color" value={campo.inputCor || '#000000'} disabled={salvando}
-                  onChange={e => upC('inputCor', e.target.value)}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                <input className="form-input" value={campo.inputCor || ''} onChange={e => upC('inputCor', e.target.value)}
-                  placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor fundo</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="color" value={campo.inputBg || '#ffffff'} disabled={salvando}
-                  onChange={e => upC('inputBg', e.target.value)}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-                <input className="form-input" value={campo.inputBg || ''} onChange={e => upC('inputBg', e.target.value)}
-                  placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-              </div>
+          {chk('semNegrito', 'Sem negrito', campo.semNegrito)}
+          <ColorField label="Cor" value={campo.labelCor} pickerFallback="#888888" disabled={salvando} onChange={v => upC('labelCor', v)} />
+        </div>
+      </Sec>
+
+      {/* ESTILO — CONTEÚDO */}
+      <Sec title="Estilo do conteúdo">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Fonte</span>
+            {numInput('inputFontSize', campo.inputFontSize, 7, 48, 64)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span>
+          </div>
+          {chk('inputNegrito', 'Negrito', campo.inputNegrito)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Alinhar</span>
+            <div style={{ display: 'flex', gap: 2 }}>
+              {[['left','←'],['center','↔'],['right','→']].map(([v, ico]) => (
+                <button key={v} className={`btn ${(campo.inputAlign || 'left') === v ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ height: 24, width: 28, fontSize: 12, padding: 0 }} disabled={salvando}
+                  onClick={() => upC('inputAlign', v)}>{ico}</button>
+              ))}
             </div>
           </div>
         </div>
-        <div style={{ borderTop: '1px solid var(--bd)', paddingTop: 10, marginTop: 2 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6, marginBottom: 8 }}>Borda</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <Row label="Raio">{numInput('borderRadius', campo.borderRadius, 0, 40, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
-            <Row label="Espessura">{numInput('borderWidth', campo.borderWidth, 0, 10, 50)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span></Row>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <ColorField label="Cor texto" value={campo.inputCor} pickerFallback="#000000" disabled={salvando} onChange={v => upC('inputCor', v)} />
+          <ColorField label="Cor fundo" value={campo.inputBg} pickerFallback="#ffffff" disabled={salvando} onChange={v => upC('inputBg', v)} />
+        </div>
+      </Sec>
+
+      {/* ESTILO — BORDA */}
+      <Sec title="Borda">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Raio</span>
+            {numInput('borderRadius', campo.borderRadius, 0, 40, 64)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span>
           </div>
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 4 }}>Cor</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input type="color" value={campo.borderColor || '#cccccc'} disabled={salvando}
-                onChange={e => upC('borderColor', e.target.value)}
-                style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
-              <input className="form-input" value={campo.borderColor || ''} onChange={e => upC('borderColor', e.target.value)}
-                placeholder="padrão" disabled={salvando} style={{ flex: 1, height: 28, fontSize: 11, fontFamily: 'monospace' }} />
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>Espessura</span>
+            {numInput('borderWidth', campo.borderWidth, 0, 10, 64)}<span style={{ fontSize: 10, color: 'var(--t3)' }}>px</span>
           </div>
+          <ColorField label="Cor" value={campo.borderColor} pickerFallback="#cccccc" disabled={salvando} onChange={v => upC('borderColor', v)} />
         </div>
       </Sec>
 

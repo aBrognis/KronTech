@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  LayoutDashboard, CalendarDays, Package, Zap, Receipt,
+  LayoutDashboard, CalendarDays, Package, Zap, Receipt, Lock,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
@@ -24,8 +24,9 @@ export const MENU_BASE = [
     id: 'gestao',
     baseLabel: 'Gestão',
     items: [
-      { id: 'agenda',  label: 'Agenda',              Icon: CalendarDays },
-      { id: 'viagens', label: 'Despesas de Viagem',  Icon: Receipt      },
+      { id: 'agenda',       label: 'Agenda',              Icon: CalendarDays },
+      { id: 'viagens',      label: 'Despesas de Viagem',  Icon: Receipt      },
+      { id: 'cofre-senhas', label: 'Cofre de Senhas',     Icon: Lock         },
     ]
   },
   {
@@ -463,14 +464,17 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
         <div className="sb-logo">
           <LogoIcon />
           <div className="sb-wordmark">
-            <div className="sb-logo-name">
-              {nomeSistema.length > 8
-                ? nomeSistema
-                : <>
-                    {nomeSistema.slice(0, Math.ceil(nomeSistema.length / 2))}
-                    <em>{nomeSistema.slice(Math.ceil(nomeSistema.length / 2))}</em>
-                  </>
-              }
+            <div className="sb-logo-name-row">
+              <div className="sb-logo-name">
+                {nomeSistema.length > 8
+                  ? nomeSistema
+                  : <>
+                      {nomeSistema.slice(0, Math.ceil(nomeSistema.length / 2))}
+                      <em>{nomeSistema.slice(Math.ceil(nomeSistema.length / 2))}</em>
+                    </>
+                }
+              </div>
+              {designerMode && <span className="sb-badge-designer">Designer</span>}
             </div>
             <div className="sb-logo-tag">v{version} · {__BUILD_DATE__} · {__BUILD_TIME__}</div>
           </div>

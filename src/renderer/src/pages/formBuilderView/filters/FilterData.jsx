@@ -13,9 +13,9 @@ export default function FilterData({ campo, value, onChange }) {
 
   return (
     <div style={{ display: 'flex', gap: 6 }}>
-      <input type={tipoInput} className="form-input" style={{ height: 32, fontSize: 11.5, padding: '0 6px', width: '50%' }}
+      <input type={tipoInput} className="form-input form-input-sm" style={{ width: '50%' }}
         value={de} onChange={e => emit(e.target.value, ate)} />
-      <input type={tipoInput} className="form-input" style={{ height: 32, fontSize: 11.5, padding: '0 6px', width: '50%' }}
+      <input type={tipoInput} className="form-input form-input-sm" style={{ width: '50%' }}
         value={ate} onChange={e => emit(de, e.target.value)} />
     </div>
   )

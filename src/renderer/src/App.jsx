@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Sun, Moon, Play, X, Plus, ChevronLeft, ChevronRight, LayoutDashboard, CalendarDays, FolderOpen, Database, Settings, LayoutGrid, Receipt } from 'lucide-react'
+import { Sun, Moon, Play, X, Plus, ChevronLeft, ChevronRight, LayoutDashboard, CalendarDays, FolderOpen, Database, Settings, LayoutGrid, Receipt, Lock } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { _initNavegacao } from './lib/funcoes/navegacao.js'
 import SplashScreen    from './pages/SplashScreen'
@@ -14,20 +14,23 @@ import Arquivos        from './pages/Arquivos'
 import EditorSQL       from './pages/EditorSQL'
 import Agenda          from './pages/Agenda'
 import Viagens         from './pages/Viagens'
-import FormBuilder     from './pages/FormBuilder'
+import CofreSenhas     from './pages/CofreSenhas'
 import FormBuilderView from './pages/FormBuilderView'
 import Configuracoes, { aplicarCorSistema } from './pages/Configuracoes'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
 
-// Páginas que NÃO viram aba (comportamento normal)
-const NO_TAB_PAGES = new Set(['formbuilder'])
+// Páginas que NÃO viram aba (comportamento normal) — nenhuma hoje; o
+// FormBuilder que usava isso roda numa janela separada (DesignerApp.jsx),
+// não mais dentro do app principal.
+const NO_TAB_PAGES = new Set()
 
 const PAGE_META = {
   dashboard:           { title: 'Dashboard',            sub: 'VISÃO GERAL'                       },
   'dashboard-designer':{ title: 'Configurar Dashboard', sub: 'DASHBOARD · WIDGETS'               },
   agenda:              { title: 'Agenda',                sub: 'GESTÃO · COMPROMISSOS'             },
   viagens:             { title: 'Despesas de Viagem',     sub: 'GESTÃO · REEMBOLSOS'               },
+  'cofre-senhas':      { title: 'Cofre de Senhas',        sub: 'SEGURANÇA · CREDENCIAIS'            },
   arquivos:            { title: 'Arquivos',              sub: 'FERRAMENTAS · GESTÃO DE ARQUIVOS'  },
   sql:                 { title: 'Editor SQL',            sub: 'FERRAMENTAS · POSTGRESQL'          },
   formbuilder:         { title: 'Criador de Telas',      sub: 'FERRAMENTAS · CADASTROS DINÂMICOS' },
@@ -68,6 +71,7 @@ const FIXED_PAGES = [
   { pageId: 'dashboard',           label: 'Dashboard',         Icon: LayoutDashboard },
   { pageId: 'agenda',              label: 'Agenda',            Icon: CalendarDays    },
   { pageId: 'viagens',             label: 'Despesas de Viagem',Icon: Receipt         },
+  { pageId: 'cofre-senhas',        label: 'Cofre de Senhas',   Icon: Lock            },
   { pageId: 'arquivos',            label: 'Arquivos',          Icon: FolderOpen      },
   { pageId: 'sql',                 label: 'Editor SQL',        Icon: Database        },
   { pageId: 'configuracoes',       label: 'Configuração do Sistema', Icon: Settings  },
@@ -80,7 +84,7 @@ function telaIcon(nome) {
 
 // ── Ícone de página ──────────────────────────────────────────────────────────
 const PAGE_ICON_MAP = {
-  dashboard: LayoutDashboard, agenda: CalendarDays, viagens: Receipt,
+  dashboard: LayoutDashboard, agenda: CalendarDays, viagens: Receipt, 'cofre-senhas': Lock,
   arquivos: FolderOpen, sql: Database, configuracoes: Settings,
   'dashboard-designer': LayoutGrid,
 }
@@ -417,11 +421,6 @@ export default function App() {
 
   _initNavegacao(handleNavigate)
 
-  function handleTelasUpdated() {
-    setTelasVersion(v => v + 1)
-    window.api.formBuilder.listarTelas(true).then(res => res.ok && setTelasDin(res.data)).catch(() => {})
-  }
-
   function closeTab(tabId) {
     setTabs(prev => {
       if (prev.length <= 1) return prev
@@ -485,6 +484,7 @@ export default function App() {
       case 'dashboard-designer': return <DashboardDesigner newTrigger={newTrigger} onNavigate={handleNavigate} />
       case 'agenda':             return <Agenda newTrigger={newTrigger} />
       case 'viagens':            return <Viagens newTrigger={newTrigger} sessao={sessao} />
+      case 'cofre-senhas':       return <CofreSenhas newTrigger={newTrigger} />
       case 'arquivos':           return <Arquivos newTrigger={newTrigger} />
       case 'sql':                return <EditorSQL />
       case 'configuracoes':      return <Configuracoes />
@@ -552,27 +552,19 @@ export default function App() {
         )}
 
         {/* Conteúdo */}
-        {noTabPage ? (
-          <main className="content" key={noTabPage}>
-            <ErrorBoundary key={noTabPage}>
-              <FormBuilder newTrigger={newTrigger} onTelasUpdated={handleTelasUpdated} />
-            </ErrorBoundary>
-          </main>
-        ) : (
-          <div className="tab-content-area">
-            {tabs.map(tab => (
-              <main
-                key={tab.id}
-                className="content"
-                style={{ display: tab.id === activeTabId ? 'flex' : 'none' }}
-              >
-                <ErrorBoundary key={tab.id}>
-                  {renderTabContent(tab.pageId)}
-                </ErrorBoundary>
-              </main>
-            ))}
-          </div>
-        )}
+        <div className="tab-content-area">
+          {tabs.map(tab => (
+            <main
+              key={tab.id}
+              className="content"
+              style={{ display: tab.id === activeTabId ? 'flex' : 'none' }}
+            >
+              <ErrorBoundary key={tab.id}>
+                {renderTabContent(tab.pageId)}
+              </ErrorBoundary>
+            </main>
+          ))}
+        </div>
 
       </div>
       <UpdateBanner />

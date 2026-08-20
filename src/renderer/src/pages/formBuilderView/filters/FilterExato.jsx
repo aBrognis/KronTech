@@ -14,7 +14,7 @@ export default function FilterExato({ campo, value, onChange, pastasSugest, look
   }
 
   return (
-    <select className="form-select" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+    <select className="form-select form-input-sm"
       value={atual}
       onChange={e => {
         const v = e.target.value

@@ -1,7 +1,7 @@
 import { Download, Star, ChevronUp, ChevronDown } from 'lucide-react'
 import { exportarCSV } from '../../lib/funcoes/index.js'
 import { thS, tdS } from './gridStyles.js'
-import PaginacaoBar from './PaginacaoBar.jsx'
+import PaginacaoBar from '../../components/PaginacaoBar.jsx'
 import PainelFiltros from './PainelFiltros.jsx'
 
 // Aba "Acesso": filtro por coluna (server-side) + tabela paginada de

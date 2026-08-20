@@ -2,7 +2,7 @@
 export default function FilterHasFile({ value, onChange }) {
   const atual = value?.valor ?? '__todos__'
   return (
-    <select className="form-select" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+    <select className="form-select form-input-sm"
       value={atual}
       onChange={e => {
         const v = e.target.value

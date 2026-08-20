@@ -364,6 +364,7 @@ async function criarFuncoesPg() {
         WHEN 'url'         THEN 'TEXT'
         WHEN 'login'       THEN 'VARCHAR(100)'
         WHEN 'senha'       THEN 'TEXT'
+        WHEN 'senha_cofre' THEN 'TEXT'
         WHEN 'documento'   THEN 'VARCHAR(18)'
         WHEN 'cep'         THEN 'VARCHAR(9)'
         WHEN 'select'      THEN 'VARCHAR(200)'
@@ -951,6 +952,49 @@ export async function initDb() {
   await query(`CREATE INDEX IF NOT EXISTS idx_despesa_item_001_despesa ON despesa_item_001(despesa_id)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_despesa_001_status ON despesa_001(status)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_despesa_001_consultor ON despesa_001(consultor_id)`).catch(() => {})
+
+  // Cofre de Senhas — senha guardada como TEXT (AES-256-GCM, chave mestra
+  // em config.js, ver encryptCofre/decryptCofre), nunca hash — precisa ser
+  // recuperável em texto puro. nivel_seguranca é recalculado no backend a
+  // cada save, nunca digitado pelo usuário.
+  await query(`
+    CREATE TABLE IF NOT EXISTS cofre_senha_001 (
+      id               SERIAL PRIMARY KEY,
+      codigo           VARCHAR(10)  DEFAULT '',
+      sistema          VARCHAR(200) NOT NULL,
+      categoria        VARCHAR(100) DEFAULT '',
+      ambiente         VARCHAR(20)  DEFAULT 'producao',
+      url              VARCHAR(500) DEFAULT '',
+      usuario          VARCHAR(200) DEFAULT '',
+      senha            TEXT         DEFAULT '',
+      nivel_seguranca  VARCHAR(20)  DEFAULT '',
+      dt_validade      DATE,
+      observacoes      TEXT         DEFAULT '',
+      tags             TEXT         DEFAULT '',
+      favorito         BOOLEAN      DEFAULT FALSE,
+      ativo            BOOLEAN      DEFAULT TRUE,
+      criado_em        TIMESTAMP    DEFAULT NOW(),
+      alterado_em      TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] create cofre_senha_001 (startup):', e.message))
+
+  await query(`CREATE SEQUENCE IF NOT EXISTS cofre_senha_001_codigo_seq START 1`)
+    .catch(e => console.warn('[migration] create cofre_senha_001_codigo_seq:', e.message))
+  await query(`
+    DO $$
+    DECLARE r RECORD; n INTEGER := 0;
+    BEGIN
+      IF (SELECT COUNT(*) FROM cofre_senha_001 WHERE codigo = '' OR codigo IS NULL) > 0 THEN
+        FOR r IN SELECT id FROM cofre_senha_001 WHERE codigo = '' OR codigo IS NULL ORDER BY id LOOP
+          n := nextval('cofre_senha_001_codigo_seq');
+          UPDATE cofre_senha_001 SET codigo = LPAD(n::text, 3, '0') WHERE id = r.id;
+        END LOOP;
+      END IF;
+    END $$;
+  `).catch(e => console.warn('[migration] backfill cofre_senha_001 codigo:', e.message))
+
+  await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_ativo ON cofre_senha_001(ativo)`).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_categoria ON cofre_senha_001(categoria)`).catch(() => {})
 
   // Motor de execução da aba Funções (Scripts/Integrações/Notificações/
   // Automações/Agendamentos/Fluxos) — substitui a persistência antiga em

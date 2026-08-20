@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
+import { randomBytes, createCipheriv, createDecipheriv } from 'crypto'
 import { safeStorage, app } from 'electron'
 
 const IS_DEV = !app.isPackaged
@@ -58,6 +59,15 @@ const DEFAULTS = {
     nome:   'KronTech',
     versao: '1.1.0',
   },
+  // Chave mestra AES do app — ao contrário do safeStorage (DPAPI, atado à
+  // máquina/usuário Windows), essa chave vive no .ini e viaja com o banco:
+  // qualquer instalação do KronTech que aponte pro mesmo Postgres precisa
+  // ter a MESMA chave aqui para conseguir descriptografar dados salvos por
+  // outra máquina (ex.: campos tipo "senha_cofre"). Gerada uma vez na
+  // primeira execução (ver loadConfig) e nunca deve ser sobrescrita depois.
+  Seguranca: {
+    chaveMestra: '',
+  },
 }
 
 // ── Parser INI ────────────────────────────────────────────────────────────────
@@ -112,6 +122,11 @@ export function loadConfig() {
 
   for (const p of Object.values(_cfg.Caminhos)) {
     if (p && !existsSync(p)) mkdirSync(p, { recursive: true })
+  }
+
+  if (!_cfg.Seguranca.chaveMestra) {
+    _cfg.Seguranca.chaveMestra = randomBytes(32).toString('hex')
+    writeFileSync(INI_PATH, stringifyIni(_cfg), 'utf-8')
   }
 
   return _cfg
@@ -177,6 +192,39 @@ export function lerSecaoDeArquivoIni(caminhoArquivo, secao) {
 export function getConfig() {
   if (!_cfg) loadConfig()
   return _cfg
+}
+
+// ── Criptografia reversível independente de máquina (AES-256-GCM) ────────────
+// Usada por dados de negócio que precisam ser lidos de volta em texto puro
+// (ex.: campo "senha_cofre" do FormBuilder) — diferente do safeStorage
+// (DPAPI), essa chave é a mesma em qualquer instalação que aponte pro mesmo
+// banco, então o valor cifrado numa máquina decifra em outra.
+const COFRE_ALGO = 'aes-256-gcm'
+
+export function encryptCofre(texto) {
+  if (!texto) return texto
+  const chave = Buffer.from(getConfig().Seguranca.chaveMestra, 'hex')
+  const iv = randomBytes(12)
+  const cipher = createCipheriv(COFRE_ALGO, chave, iv)
+  const enc = Buffer.concat([cipher.update(String(texto), 'utf-8'), cipher.final()])
+  const tag = cipher.getAuthTag()
+  return Buffer.concat([iv, tag, enc]).toString('base64')
+}
+
+export function decryptCofre(textoCifrado) {
+  if (!textoCifrado) return textoCifrado
+  try {
+    const chave = Buffer.from(getConfig().Seguranca.chaveMestra, 'hex')
+    const buf = Buffer.from(textoCifrado, 'base64')
+    const iv  = buf.subarray(0, 12)
+    const tag = buf.subarray(12, 28)
+    const enc = buf.subarray(28)
+    const decipher = createDecipheriv(COFRE_ALGO, chave, iv)
+    decipher.setAuthTag(tag)
+    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf-8')
+  } catch {
+    return ''
+  }
 }
 
 export function saveConfig(section, key, value) {

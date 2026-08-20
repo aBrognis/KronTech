@@ -343,19 +343,6 @@ export default function DesignerApp() {
             <h1 className="tb-title">{topMeta.title}</h1>
             <span className="tb-sub">{topMeta.sub}</span>
 
-            <div style={{ width: 1, height: 14, background: 'var(--bd)', flexShrink: 0, margin: '0 4px' }} />
-
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              background: 'var(--or4)', border: '1px solid rgba(255,107,43,0.22)',
-              borderRadius: 5, padding: '2px 7px',
-            }}>
-              <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--or)', opacity: 0.85 }} />
-              <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--or)', letterSpacing: 0.3 }}>
-                v{version} · {__BUILD_DATE__} · {__BUILD_TIME__}
-              </span>
-            </div>
-
             {import.meta.env.DEV && (
               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '2px 7px', borderRadius: 4, background: 'var(--or3)', color: 'var(--or)', border: '1px solid var(--or3)', textTransform: 'uppercase' }}>
                 DEV

@@ -35,17 +35,15 @@ export default function PainelFiltros({ camposData, fFiltros, setFiltroCampo, fB
         <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
           onKeyDown={e => e.key === 'Enter' && onBuscar()}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>
-                Busca geral
-              </label>
-              <input className="form-input" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+            <div className="form-group" style={{ margin: 0, minWidth: 0 }}>
+              <label className="form-label">Busca geral</label>
+              <input className="form-input form-input-sm"
                 value={fBusca} onChange={e => setFBusca(e.target.value)}
                 placeholder="buscar em todos os campos..." />
             </div>
             {camposFiltraveis.map(c => (
-              <div key={c.id} style={{ minWidth: 0 }}>
-                <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              <div key={c.id} className="form-group" style={{ margin: 0, minWidth: 0 }}>
+                <label className="form-label" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   title={c.label}>
                   {c.label}
                 </label>

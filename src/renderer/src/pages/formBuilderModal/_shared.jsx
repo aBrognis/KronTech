@@ -43,3 +43,23 @@ export function Row({ label, children }) {
     </div>
   )
 }
+
+// Campo "label + seletor de cor + hex em texto", mesmo padrão usado 5x em
+// CampoPainelPadrao (Label, Conteúdo texto/fundo, Borda) — antes cada bloco
+// reimplementava isso do zero com espaçamento levemente diferente.
+// pickerFallback: cor usada só no <input type="color"> quando value está
+// vazio (o próprio input color não aceita string vazia) — cada campo tinha
+// um fallback diferente no original (cinza pro label, preto pro texto,
+// branco pro fundo, cinza-claro pra borda).
+export function ColorField({ label, value, pickerFallback = '#888888', disabled, onChange }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>{label}</span>
+      <input type="color" value={value || pickerFallback} disabled={disabled}
+        onChange={e => onChange(e.target.value)}
+        style={{ width: 24, height: 24, borderRadius: 5, border: '1px solid var(--bd)', padding: 2, cursor: 'pointer', flexShrink: 0 }} />
+      <input className="form-input" value={value || ''} onChange={e => onChange(e.target.value)}
+        placeholder="padrão" disabled={disabled} style={{ flex: 1, minWidth: 60, height: 24, fontSize: 10.5, fontFamily: 'monospace', padding: '0 6px' }} />
+    </div>
+  )
+}

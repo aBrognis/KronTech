@@ -6,7 +6,7 @@ import SeletorBusca from '../../components/SeletorBusca'
 import PesquisaPadraoModal from '../../components/PesquisaPadraoModal.jsx'
 import InputData from '../../components/InputData'
 import { notificar } from '../../components/Notificacao'
-import PaginacaoBar from '../formBuilderView/PaginacaoBar.jsx'
+import PaginacaoBar from '../../components/PaginacaoBar.jsx'
 import { EMPTY_FORM, STATUS_ORDEM, STATUS_META, MEIOS_TRANSPORTE, diaDaSemana, fmtDataBR, fmtMoeda, novoItem } from './utils'
 
 const CAMPOS_CLIENTE = [{ nome_campo: 'nome', label: 'Nome' }]
@@ -22,9 +22,12 @@ const CAMPOS_BUSCA_DESPESA = [
 export default function Viagens({ sessao, newTrigger }) {
   const [activeTab, setActiveTab] = useState('acesso')
 
+  // Lista completa (não filtrada) — sempre carregada no mount, é a fonte
+  // de verdade pra navegação (« ‹ N/total › ») e pro form, igual
+  // Arquivos.jsx. A aba Acesso NÃO usa isto — usa fResultados (abaixo),
+  // uma consulta filtrada e independente que só roda ao clicar "Buscar".
   const [registros, setRegistros]   = useState([])
-  const [total, setTotal]           = useState(0)
-  const [loading, setLoading]       = useState(false)
+  const [loading, setLoading]       = useState(true)
   const [currentIdx, setCurrentIdx] = useState(-1)
 
   const [mode, setMode]     = useState('view') // 'view' | 'new' | 'edit'
@@ -34,17 +37,19 @@ export default function Viagens({ sessao, newTrigger }) {
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [showConsulta, setShowConsulta] = useState(false)
 
-  // Filtros da aba Acesso
+  // Filtros da aba Acesso — resultado fica em fResultados, null até buscar
+  // (mesmo padrão de Arquivos.jsx), nunca mexe em `registros`.
   const [filtrosAbertos, setFiltrosAbertos] = useState(true)
   const [filtros, setFiltros]         = useState(FILTROS_VAZIOS)
   const [buscaGeral, setBuscaGeral]   = useState('')
+  const [fResultados, setFResultados] = useState(null)
+  const [fLoading, setFLoading]       = useState(false)
   const [pagina, setPagina]     = useState(1)
   const [porPagina, setPorPagina] = useState(25)
-  const [jaConsultou, setJaConsultou] = useState(false)
   const [pastaExportacoes, setPastaExportacoes] = useState('')
 
-  const carregar = useCallback(async (f = filtros, b = buscaGeral) => {
-    setLoading(true)
+  const carregarAcesso = useCallback(async (f = filtros, b = buscaGeral) => {
+    setFLoading(true)
     try {
       const params = {}
       if (f.clienteId)   params.clienteId   = f.clienteId
@@ -54,14 +59,35 @@ export default function Viagens({ sessao, newTrigger }) {
       if (f.dataFim)     params.dataFim     = f.dataFim
       if (b.trim())       params.busca       = b.trim()
       const res = await window.api.viagens.listar(params)
+      setFResultados(res.ok ? res.data || [] : [])
+      setPagina(1)
+    } catch { setFResultados([]) }
+    finally { setFLoading(false) }
+  }, [filtros, buscaGeral])
+
+  // Ao abrir a tela, carrega a lista completa e entra direto no último
+  // registro (aba Cadastro) — ou em modo "novo" se ainda não há nenhum.
+  const carregarTudo = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await window.api.viagens.listar({})
       const lista = res.ok ? res.data || [] : []
       setRegistros(lista)
-      setTotal(lista.length)
-      setPagina(1)
-      setJaConsultou(true)
-    } catch { setRegistros([]); setTotal(0); setJaConsultou(true) }
-    finally { setLoading(false) }
-  }, [filtros, buscaGeral])
+      if (lista.length) {
+        const ultimo = lista.length - 1
+        setCurrentIdx(ultimo)
+        await carregarForm(lista[ultimo])
+        setActiveTab('cadastro')
+      } else {
+        openNew()
+      }
+    } finally {
+      setLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => { carregarTudo() }, [carregarTudo])
 
   useEffect(() => {
     if (newTrigger) openNew()
@@ -72,24 +98,6 @@ export default function Viagens({ sessao, newTrigger }) {
     window.api.config.get().then(res => setPastaExportacoes((res.ok ? res.data?.Caminhos?.exportacoes : '') || ''))
   }, [])
 
-  // Abre direto no último registro, em Cadastro — evita cair sempre na aba
-  // Acesso vazia esperando o usuário clicar em "Buscar".
-  useEffect(() => {
-    (async () => {
-      const res = await window.api.viagens.listar({})
-      const lista = res.ok ? res.data || [] : []
-      setRegistros(lista)
-      setTotal(lista.length)
-      setJaConsultou(true)
-      if (lista.length > 0) {
-        const idx = lista.length - 1
-        setCurrentIdx(idx)
-        await carregarForm(lista[idx])
-        setActiveTab('cadastro')
-      }
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   async function handleConfigurarPastaExportacoes() {
     const res = await window.api.config.selecionarPasta({ chave: 'exportacoes', titulo: 'Selecionar pasta de exportações' })
@@ -103,10 +111,10 @@ export default function Viagens({ sessao, newTrigger }) {
   const [exportandoTodos, setExportandoTodos] = useState(false)
 
   async function handleExportarTodos() {
-    if (!registros.length || exportandoTodos) return
+    if (!(fResultados?.length) || exportandoTodos) return
     setExportandoTodos(true)
     try {
-      const res = await window.api.viagens.exportarExcelLote(registros.map(r => r.id))
+      const res = await window.api.viagens.exportarExcelLote(fResultados.map(r => r.id))
       if (!res?.ok) {
         if (!res?.cancelado) notificar.erro(res?.erro || 'Falha ao exportar.')
         return
@@ -124,12 +132,12 @@ export default function Viagens({ sessao, newTrigger }) {
   function limparFiltros() {
     setFiltros(FILTROS_VAZIOS)
     setBuscaGeral('')
-    carregar(FILTROS_VAZIOS, '')
   }
 
   const qtdFiltrosAtivos = Object.values(filtros).filter(Boolean).length + (buscaGeral.trim() ? 1 : 0)
-  const totalPaginas = Math.max(1, Math.ceil(total / porPagina))
-  const registrosPagina = registros.slice((pagina - 1) * porPagina, pagina * porPagina)
+  const totalFiltrado = fResultados?.length || 0
+  const totalPaginas = Math.max(1, Math.ceil(totalFiltrado / porPagina))
+  const registrosPagina = (fResultados || []).slice((pagina - 1) * porPagina, pagina * porPagina)
 
   async function carregarForm(reg) {
     const res = await window.api.viagens.obter(reg.id)
@@ -152,9 +160,13 @@ export default function Viagens({ sessao, newTrigger }) {
     setMode('view')
   }
 
-  function selecionarLinha(idxAbsoluto) {
-    setCurrentIdx(idxAbsoluto)
-    carregarForm(registros[idxAbsoluto])
+  // Chamada a partir da tabela filtrada da aba Acesso — acha o índice do
+  // registro na lista COMPLETA (registros), não na paginação filtrada.
+  function selecionarLinha(registroFiltrado) {
+    const idx = registros.findIndex(r => r.id === registroFiltrado.id)
+    if (idx < 0) return
+    setCurrentIdx(idx)
+    carregarForm(registros[idx])
     setActiveTab('cadastro')
   }
 
@@ -198,13 +210,8 @@ export default function Viagens({ sessao, newTrigger }) {
   }
 
   function handleDesistir() {
-    if (mode === 'new') {
-      setMode('view')
-      if (currentIdx >= 0 && registros[currentIdx]) carregarForm(registros[currentIdx])
-      else setForm(EMPTY_FORM)
-      return
-    }
     if (currentIdx >= 0 && registros[currentIdx]) carregarForm(registros[currentIdx])
+    else setForm(EMPTY_FORM)
     setMode('view')
   }
 
@@ -223,7 +230,11 @@ export default function Viagens({ sessao, newTrigger }) {
         : await window.api.viagens.atualizar({ id: form.id, ...payload })
       if (!res.ok) { setErro(res.erro); return }
       setMode('view')
-      await carregar()
+      const resLista = await window.api.viagens.listar({})
+      const lista = resLista.ok ? resLista.data || [] : []
+      setRegistros(lista)
+      const idx = lista.findIndex(r => r.id === res.data.id)
+      if (idx >= 0) setCurrentIdx(idx)
       if (mode === 'new') await carregarForm(res.data)
     } finally { setSaving(false) }
   }
@@ -232,10 +243,18 @@ export default function Viagens({ sessao, newTrigger }) {
     setConfirmExcluir(false)
     const res = await window.api.viagens.excluir(form.id)
     if (!res.ok) { setErro(res.erro); return }
-    setForm(EMPTY_FORM)
-    setCurrentIdx(-1)
-    setMode('view')
-    await carregar()
+    const resLista = await window.api.viagens.listar({})
+    const lista = resLista.ok ? resLista.data || [] : []
+    setRegistros(lista)
+    if (lista.length) {
+      const ni = Math.min(currentIdx, lista.length - 1)
+      setCurrentIdx(ni)
+      await carregarForm(lista[ni])
+    } else {
+      setForm(EMPTY_FORM)
+      setCurrentIdx(-1)
+      setMode('view')
+    }
   }
 
   async function handleMudarStatus(status) {
@@ -309,11 +328,11 @@ export default function Viagens({ sessao, newTrigger }) {
         {form.id && <span className="page-tab-info">{form.codigo || '----'} · {form.cliente_nome || form.consultor_nome}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           {activeTab === 'acesso' && (
-            <button className="btn btn-ghost" onClick={handleExportarTodos} disabled={!registros.length || exportandoTodos}
-              title={registros.length ? `Exportar as ${registros.length} despesas do filtro atual` : 'Nenhum registro para exportar'}
+            <button className="btn btn-ghost" onClick={handleExportarTodos} disabled={!(fResultados?.length) || exportandoTodos}
+              title={fResultados?.length ? `Exportar as ${fResultados.length} despesas do filtro atual` : 'Nenhum registro para exportar'}
               style={{ height: 28, fontSize: 11, padding: '0 10px' }}>
               <FileDown size={12} />
-              {exportandoTodos ? 'Exportando...' : `Exportar Todos${registros.length ? ` (${registros.length})` : ''}`}
+              {exportandoTodos ? 'Exportando...' : `Exportar Todos${fResultados?.length ? ` (${fResultados.length})` : ''}`}
             </button>
           )}
           <button className="btn btn-ghost" onClick={handleConfigurarPastaExportacoes}
@@ -359,17 +378,18 @@ export default function Viagens({ sessao, newTrigger }) {
 
               {filtrosAbertos && (
                 <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={e => e.key === 'Enter' && carregar()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 12 }}>
-                    <div>
-                      <label style={LBL}>Busca geral</label>
-                      <input className="form-input" style={{ height: 32, fontSize: 12, width: '100%' }}
+                  onKeyDown={e => e.key === 'Enter' && carregarAcesso()}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 12 }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Busca geral</label>
+                      <input className="form-input form-input-sm"
                         value={buscaGeral} onChange={e => setBuscaGeral(e.target.value)}
                         placeholder="consultor, cliente, local..." />
                     </div>
                     <SeletorBusca
                       label="Cliente"
                       placeholder="Todos"
+                      height={32}
                       valorExibido={filtros.clienteNome}
                       onLimpar={() => setFiltros(f => ({ ...f, clienteId: '', clienteNome: '' }))}
                       titulo="Pesquisa Padrão · entidade_001"
@@ -382,6 +402,7 @@ export default function Viagens({ sessao, newTrigger }) {
                     <SeletorBusca
                       label="Consultor"
                       placeholder="Todos"
+                      height={32}
                       valorExibido={filtros.consultorNome}
                       onLimpar={() => setFiltros(f => ({ ...f, consultorId: '', consultorNome: '' }))}
                       titulo="Pesquisa Padrão · consultores"
@@ -391,73 +412,79 @@ export default function Viagens({ sessao, newTrigger }) {
                       onBuscar={buscarConsultores}
                       onSelecionar={r => setFiltros(f => ({ ...f, consultorId: r.id, consultorNome: r.nome }))}
                     />
-                    <div>
-                      <label style={LBL}>Status</label>
-                      <select className="form-select" style={{ height: 32, fontSize: 12, width: '100%' }}
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Status</label>
+                      <select className="form-select form-input-sm"
                         value={filtros.status} onChange={e => setFiltros(f => ({ ...f, status: e.target.value }))}>
                         <option value="">Todos</option>
                         {STATUS_ORDEM.map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
                       </select>
                     </div>
-                    <div>
-                      <label style={LBL}>Período de</label>
-                      <InputData style={{ height: 32, fontSize: 12, width: '100%' }}
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Período de</label>
+                      <InputData className="form-input form-input-sm"
                         value={filtros.dataIni} onChange={v => setFiltros(f => ({ ...f, dataIni: v }))}
                         onRange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim }))} />
                     </div>
-                    <div>
-                      <label style={LBL}>Período até</label>
-                      <InputData style={{ height: 32, fontSize: 12, width: '100%' }}
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Período até</label>
+                      <InputData className="form-input form-input-sm"
                         value={filtros.dataFim} onChange={v => setFiltros(f => ({ ...f, dataFim: v }))}
                         onRange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim }))} />
                     </div>
                   </div>
                   <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={() => carregar()} disabled={loading}>
-                    <Search size={13} /> {loading ? 'Buscando...' : 'Buscar'}
+                    onClick={() => carregarAcesso()} disabled={fLoading}>
+                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
                   </button>
                 </div>
               )}
             </div>
 
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <div style={{ overflowY: 'auto', flex: 1 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <tr>
-                      <Th style={{ textAlign: 'center', width: 36 }}>#</Th>
-                      <Th>Consultor</Th><Th>Cliente</Th><Th>Período</Th><Th>Status</Th><Th style={{ textAlign: 'right' }}>Total</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrosPagina.map((r, ri) => {
-                      const idxAbsoluto = (pagina - 1) * porPagina + ri
-                      const meta = STATUS_META[r.status] || STATUS_META.rascunho
-                      return (
-                        <tr key={r.id} onDoubleClick={() => selecionarLinha(idxAbsoluto)}
-                          style={{ cursor: 'pointer' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <Td style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 10 }}>{idxAbsoluto + 1}</Td>
-                          <Td>{r.consultor_nome}</Td>
-                          <Td>{r.cliente_nome || 'Nenhum'}</Td>
-                          <Td>{fmtDataBR(r.data_inicio)} a {fmtDataBR(r.data_fim)}</Td>
-                          <Td><span className={`badge ${meta.classe}`}>{meta.label}</span></Td>
-                          <Td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtMoeda(r.total_despesas)}</Td>
-                        </tr>
-                      )
-                    })}
-                    {!loading && registros.length === 0 && (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
-                        {jaConsultou ? 'Nenhum registro encontrado' : 'Clique em "Buscar" para consultar'}
-                      </td></tr>
-                    )}
-                  </tbody>
-                </table>
+            {fResultados === null ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
+                <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
-              <PaginacaoBar pagina={pagina} totalPaginas={totalPaginas} total={total} porPagina={porPagina}
-                onPagina={p => setPagina(p)} onPorPagina={n => { setPorPagina(n); setPagina(1) }} />
-            </div>
+            ) : (
+              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                      <tr>
+                        <Th style={{ textAlign: 'center', width: 36 }}>#</Th>
+                        <Th>Consultor</Th><Th>Cliente</Th><Th>Período</Th><Th>Status</Th><Th style={{ textAlign: 'right' }}>Total</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {registrosPagina.map((r, ri) => {
+                        const idxAbsoluto = (pagina - 1) * porPagina + ri
+                        const meta = STATUS_META[r.status] || STATUS_META.rascunho
+                        return (
+                          <tr key={r.id} onDoubleClick={() => selecionarLinha(r)}
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--s2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <Td style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 10 }}>{idxAbsoluto + 1}</Td>
+                            <Td>{r.consultor_nome}</Td>
+                            <Td>{r.cliente_nome || 'Nenhum'}</Td>
+                            <Td>{fmtDataBR(r.data_inicio)} a {fmtDataBR(r.data_fim)}</Td>
+                            <Td><span className={`badge ${meta.classe}`}>{meta.label}</span></Td>
+                            <Td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtMoeda(r.total_despesas)}</Td>
+                          </tr>
+                        )
+                      })}
+                      {!fLoading && registrosPagina.length === 0 && (
+                        <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
+                          Nenhum registro encontrado
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginacaoBar pagina={pagina} totalPaginas={totalPaginas} total={totalFiltrado} porPagina={porPagina}
+                  onPagina={p => setPagina(p)} onPorPagina={n => { setPorPagina(n); setPagina(1) }} />
+              </div>
+            )}
           </>
         )}
 
@@ -476,9 +503,9 @@ export default function Viagens({ sessao, newTrigger }) {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={LBL}>Código</label>
-                <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Código</label>
+                <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
                   {form.codigo || ''}
                 </div>
               </div>
@@ -559,9 +586,9 @@ export default function Viagens({ sessao, newTrigger }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ background: 'var(--s1)' }}>
-                      <Th>Data</Th><Th>Dia</Th><Th>Descrição</Th><Th>Fornecedor</Th>
-                      <Th style={{ width: 70 }}>Qtde</Th><Th style={{ width: 100 }}>Vl. Unit.</Th>
-                      <Th style={{ width: 90 }}>Valor</Th><Th style={{ width: 96 }}></Th>
+                      <Th style={{ width: 130 }}>Data</Th><Th style={{ width: 90 }}>Dia</Th><Th>Descrição</Th><Th>Fornecedor</Th>
+                      <Th style={{ width: 70, textAlign: 'right' }}>Qtde</Th><Th style={{ width: 100, textAlign: 'right' }}>Vl. Unit.</Th>
+                      <Th style={{ width: 90, textAlign: 'right' }}>Valor</Th><Th style={{ width: 96 }}></Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -572,38 +599,38 @@ export default function Viagens({ sessao, newTrigger }) {
                       const valor = (Number(it.qtde) || 0) * (Number(it.valor_unitario) || 0)
                       return (
                         <tr key={it._key} style={{ borderTop: '1px solid var(--bd)' }}>
-                          <Td><InputData style={CELL_INPUT} value={it.data} disabled={isRO}
+                          <Td><InputData className={`form-input${isRO ? ' cell-date-ro' : ''}`} style={cellInputStyle(isRO)} value={it.data} disabled={isRO}
                             onChange={v => setItem(it._key, { data: v })} /></Td>
-                          <Td><span style={{ color: 'var(--t3)', fontSize: 11 }}>{diaDaSemana(it.data)}</span></Td>
-                          <Td><input style={CELL_INPUT} value={it.descricao} disabled={isRO}
+                          <Td><span style={{ color: 'var(--t3)', fontSize: 11, whiteSpace: 'nowrap' }}>{diaDaSemana(it.data)}</span></Td>
+                          <Td><input style={cellInputStyle(isRO)} value={it.descricao} disabled={isRO}
                             onChange={e => setItem(it._key, { descricao: e.target.value })} placeholder="Ex: Refeição" /></Td>
-                          <Td><input style={CELL_INPUT} value={it.fornecedor} disabled={isRO}
+                          <Td><input style={cellInputStyle(isRO)} value={it.fornecedor} disabled={isRO}
                             onChange={e => setItem(it._key, { fornecedor: e.target.value })} /></Td>
-                          <Td style={{ padding: '9px 4px' }}><input type="number" step="1" min="0" style={CELL_INPUT} value={it.qtde} disabled={isRO}
+                          <Td style={{ padding: '9px 4px' }}><input type="number" step="1" min="0" style={{ ...cellInputStyle(isRO), textAlign: 'right' }} value={it.qtde} disabled={isRO}
                             onChange={e => setItem(it._key, { qtde: e.target.value })} /></Td>
-                          <Td style={{ padding: '9px 4px' }}><input type="number" step="0.01" min="0" style={CELL_INPUT} value={it.valor_unitario} disabled={isRO}
+                          <Td style={{ padding: '9px 4px' }}><input type="number" step="0.01" min="0" style={{ ...cellInputStyle(isRO), textAlign: 'right' }} value={it.valor_unitario} disabled={isRO}
                             onChange={e => setItem(it._key, { valor_unitario: e.target.value })} /></Td>
-                          <Td><span style={{ fontWeight: 600 }}>{fmtMoeda(valor)}</span></Td>
+                          <Td style={{ textAlign: 'right' }}><span style={{ fontWeight: 600 }}>{fmtMoeda(valor)}</span></Td>
                           <Td>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                               {it.arquivo_path ? (
                                 <>
-                                  <button title={it.arquivo_nome} style={ICON_BTN_SM} onClick={() => abrirComprovante(it.arquivo_path)}>
+                                  <button title={it.arquivo_nome} style={iconBtnSmStyle(isRO)} onClick={() => abrirComprovante(it.arquivo_path)}>
                                     <FileDown size={13} color="var(--or)" />
                                   </button>
                                   {!isRO && (
-                                    <button title="Remover comprovante" style={ICON_BTN_SM} onClick={() => removerComprovante(it._key)}>
+                                    <button title="Remover comprovante" style={iconBtnSmStyle(isRO)} onClick={() => removerComprovante(it._key)}>
                                       <FileX size={13} color="var(--red)" />
                                     </button>
                                   )}
                                 </>
                               ) : !isRO && (
-                                <button title="Anexar comprovante" style={ICON_BTN_SM} onClick={() => anexarComprovante(it._key)}>
+                                <button title="Anexar comprovante" style={iconBtnSmStyle(isRO)} onClick={() => anexarComprovante(it._key)}>
                                   <FileDown size={13} />
                                 </button>
                               )}
                               {!isRO && (
-                                <button title="Remover linha" style={ICON_BTN_SM} onClick={() => removerItem(it._key)}>
+                                <button title="Remover linha" style={iconBtnSmStyle(isRO)} onClick={() => removerItem(it._key)}>
                                   <Trash2 size={13} color="var(--red)" />
                                 </button>
                               )}
@@ -640,12 +667,12 @@ export default function Viagens({ sessao, newTrigger }) {
       {activeTab === 'cadastro' && (
         <FormToolbar
           mode={mode}
-          nav={{ currentIdx, total, onNav: navTo }}
-          temRegistros={!!registros.length}
+          nav={{ currentIdx, total: registros.length, onNav: navTo }}
+          temRegistros={registros.length > 0}
           saving={saving}
           onIncluir={openNew}
-          onAlterar={form.id ? () => setMode('edit') : undefined}
-          onExcluir={form.id ? () => setConfirmExcluir(true) : undefined}
+          onAlterar={() => setMode('edit')}
+          onExcluir={() => setConfirmExcluir(true)}
           onConsultar={abrirConsulta}
           onExportar={mode === 'view' && form.id ? handleExportar : undefined}
           onGravar={handleGravar}
@@ -699,12 +726,20 @@ function Td({ children, style }) {
   return <td style={{ padding: '9px 12px', color: 'var(--t2)', borderBottom: '1px solid var(--bd)', fontSize: 12.5, ...style }}>{children}</td>
 }
 
-const CELL_INPUT = {
-  width: '100%', minWidth: 0, boxSizing: 'border-box', border: '1px solid transparent', background: 'transparent',
-  fontSize: 12, padding: '4px 4px', borderRadius: 4, color: 'var(--t1)',
+// Fundo/borda só aparecem em modo edição (Incluir/Alterar) — em modo
+// consulta a grade fica "limpa", só texto, sem parecer editável.
+function cellInputStyle(isRO) {
+  return {
+    width: '100%', minWidth: 0, boxSizing: 'border-box',
+    border: isRO ? '1px solid transparent' : '1px solid var(--bd)',
+    background: 'transparent',
+    fontSize: 12, padding: '4px 8px', borderRadius: 6, color: 'var(--t1)', height: 30,
+  }
 }
-const ICON_BTN_SM = {
-  background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--t3)',
-  width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6,
+function iconBtnSmStyle(isRO) {
+  return {
+    background: 'transparent', border: isRO ? '1px solid transparent' : '1px solid var(--bd)',
+    cursor: 'pointer', color: 'var(--t3)',
+    width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6,
+  }
 }
-const LBL = { fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }

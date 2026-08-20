@@ -26,7 +26,7 @@ export function InputArquivoCampo({ campo, val, tela, isRO, saving, compact, fmt
   // Layout grade: padrão idêntico ao Arquivos.jsx
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%' }}>
-      <div className="form-input" style={{ flex: 1, height: 37, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s1)', cursor: 'default', fontSize: 12, color: arqMeta ? 'var(--t1)' : 'var(--t3)' }}>
+      <div className="form-input" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s1)', cursor: 'default', fontSize: 12, color: arqMeta ? 'var(--t1)' : 'var(--t3)' }}>
         <Paperclip size={14} style={{ flexShrink: 0, color: arqMeta ? 'var(--or)' : 'var(--t3)' }} />
         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {arqMeta ? arqMeta.nome : 'Nenhum arquivo selecionado'}

@@ -8,6 +8,7 @@ import PesquisaPadraoModal from './PesquisaPadraoModal'
 export default function SeletorBusca({
   label, placeholder = 'Selecionar...', valorExibido, onLimpar, disabled = false,
   titulo, campos, colunasExibidas, campoInicial, mostrarFavorito, onBuscar, onSelecionar, renderCelula,
+  height, // opcional: altura do input+lupa, pra bater com outros campos do mesmo painel (ex: filtros com height:32)
 }) {
   const [aberto, setAberto] = useState(false)
 
@@ -22,7 +23,7 @@ export default function SeletorBusca({
             disabled={disabled}
             value={valorExibido || ''}
             placeholder={placeholder}
-            style={{ cursor: 'default', paddingRight: valorExibido && onLimpar && !disabled ? 26 : undefined }}
+            style={{ cursor: 'default', paddingRight: valorExibido && onLimpar && !disabled ? 26 : undefined, ...(height ? { height } : null) }}
           />
           {valorExibido && onLimpar && !disabled && (
             <button
@@ -46,7 +47,7 @@ export default function SeletorBusca({
             title="Pesquisar..."
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 36, flexShrink: 0, borderRadius: 8, border: '1px solid var(--bd)',
+              width: 36, height: height || 36, flexShrink: 0, borderRadius: 8, border: '1px solid var(--bd)',
               background: 'var(--s2)', color: 'var(--t2)', cursor: 'pointer',
             }}
           >

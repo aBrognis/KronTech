@@ -11,9 +11,9 @@ export default function FilterNumero({ value, onChange }) {
 
   return (
     <div style={{ display: 'flex', gap: 6 }}>
-      <input type="number" className="form-input" style={{ height: 32, fontSize: 12, width: '50%', padding: '0 6px' }}
+      <input type="number" className="form-input form-input-sm" style={{ width: '50%' }}
         value={de} placeholder="de" onChange={e => emit(e.target.value, ate)} />
-      <input type="number" className="form-input" style={{ height: 32, fontSize: 12, width: '50%', padding: '0 6px' }}
+      <input type="number" className="form-input form-input-sm" style={{ width: '50%' }}
         value={ate} placeholder="até" onChange={e => emit(de, e.target.value)} />
     </div>
   )

@@ -1,14 +1,13 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { CANVAS_W } from '../../components/FormDesigner'
 import { TIPOS_COM_OPCOES } from './constants.js'
 import { opcoesVazias, slugify } from './camposDefaults.js'
 
 // Encapsula o array `campos` do FormBuilderModal e suas mutações diretas:
-// adicionar campo (via factory), atualizar propriedade, e reordenar por
-// drag&drop na lista de campos. Não inclui handleSalvar/aplicarTemplate
-// nem renderPreviewCampo; essas funções dependem de vários outros states
-// do componente (nomeTela, tela, onSalvar, etc.) e não têm fronteira clara
-// com o estado de campos isoladamente.
+// adicionar campo (via factory) e atualizar propriedade. Não inclui
+// handleSalvar/aplicarTemplate nem renderPreviewCampo; essas funções
+// dependem de vários outros states do componente (nomeTela, tela, onSalvar,
+// etc.) e não têm fronteira clara com o estado de campos isoladamente.
 export function useFormBuilderCampos(telaInicial, editando) {
   const [campos, setCampos] = useState(
     telaInicial?.campos?.length
@@ -29,35 +28,12 @@ export function useFormBuilderCampos(telaInicial, editando) {
       : []
   )
 
-  const dragIdx = useRef(null)
-
   function addCampo(factory, onAdded) {
     const novo = factory(campos)
     setCampos(p => [...p, novo])
     onAdded?.(novo._key)
     return novo
   }
-
-  function onDragStart(e, idx) {
-    dragIdx.current = idx
-    e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', String(idx))
-  }
-
-  function onDragOver(e, idx) {
-    e.preventDefault()
-    const from = dragIdx.current
-    if (from === null || from === idx) return
-    dragIdx.current = idx
-    setCampos(prev => {
-      const arr = [...prev]
-      const [moved] = arr.splice(from, 1)
-      arr.splice(idx, 0, moved)
-      return arr
-    })
-  }
-
-  function onDragEnd() { dragIdx.current = null }
 
   function atualizarCampo(key, field, value) {
     setCampos(prev => prev.map(c => {
@@ -80,5 +56,5 @@ export function useFormBuilderCampos(telaInicial, editando) {
     }))
   }
 
-  return { campos, setCampos, addCampo, atualizarCampo, onDragStart, onDragOver, onDragEnd }
+  return { campos, setCampos, addCampo, atualizarCampo }
 }

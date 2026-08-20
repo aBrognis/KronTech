@@ -160,6 +160,19 @@ const api = {
     login:          (usuario, senha)  => ipcRenderer.invoke('auth:login', usuario, senha),
     redefinirSenha: (opts)            => ipcRenderer.invoke('auth:redefinirSenha', opts),
   },
+  crypto: {
+    encrypt: (texto)        => ipcRenderer.invoke('crypto:encrypt', texto),
+    decrypt: (textoCifrado) => ipcRenderer.invoke('crypto:decrypt', textoCifrado),
+  },
+  cofreSenhas: {
+    listar:           (filtros) => ipcRenderer.invoke('cofreSenhas:listar', filtros),
+    obter:             (id)      => ipcRenderer.invoke('cofreSenhas:obter', id),
+    criar:             (d)       => ipcRenderer.invoke('cofreSenhas:criar', d),
+    atualizar:         (d)       => ipcRenderer.invoke('cofreSenhas:atualizar', d),
+    excluir:           (id)      => ipcRenderer.invoke('cofreSenhas:excluir', id),
+    toggleFavorito:    (id)      => ipcRenderer.invoke('cofreSenhas:toggleFavorito', id),
+    listarCategorias: ()        => ipcRenderer.invoke('cofreSenhas:listarCategorias'),
+  },
   funcoes: {
     listarScripts:      ()  => ipcRenderer.invoke('funcoes:listarScripts'),
     criarScript:        (d) => ipcRenderer.invoke('funcoes:criarScript', d),

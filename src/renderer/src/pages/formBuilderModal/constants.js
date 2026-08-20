@@ -33,6 +33,7 @@ export const TIPOS = [
   // ── Autenticação ──────────────────────────────────────────────────────────
   { valor: 'login',        label: 'Login (usuário)',   pg: 'VARCHAR(100)',  desc: 'Campo de login/usuário usado na autenticação do sistema.', ex: 'admin, joao.silva' },
   { valor: 'senha',        label: 'Senha (hash)',      pg: 'TEXT',          desc: 'Campo de senha com hash bcrypt. Exibe botão "Redefinir senha" no lugar do valor.', ex: '••••••••' },
+  { valor: 'senha_cofre',  label: 'Senha (cofre)',     pg: 'TEXT',          desc: 'Senha reversível, criptografada (AES). Pode ser visualizada com o olho, gerada automaticamente e mostra indicador de força. Ideal para cofres de senha de sistemas externos.', ex: 'K7#mP9$qLx2v' },
 ]
 
 export const TIPOS_COM_OPCOES = ['select', 'radio', 'flags']
@@ -104,4 +105,7 @@ export const TIPO_META = {
   hora:        { short: 'HOR', color: '#34D399' },
   percentual:  { short: 'PCT', color: '#A78BFA' },
   calculo:     { short: 'FX',  color: '#FB923C' },
+  login:       { short: 'LGN', color: '#60A5FA' },
+  senha:       { short: 'SNH', color: '#F87171' },
+  senha_cofre: { short: 'COF', color: '#F87171' },
 }

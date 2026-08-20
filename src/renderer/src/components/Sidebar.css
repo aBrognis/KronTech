@@ -90,6 +90,7 @@ html.light .sb::before {
 .sb-logo-icon:hover { filter: drop-shadow(0 0 14px rgba(255,107,43,.55)); }
 .sb-wordmark { white-space: nowrap; overflow: hidden; opacity: 1; transition: opacity 0.22s; }
 .sb.collapsed .sb-wordmark { opacity: 0; }
+.sb-logo-name-row { display: flex; align-items: center; gap: 6px; }
 .sb-logo-name {
   font-family: var(--ft); font-size: 15px; font-weight: 700;
   letter-spacing: -0.6px; line-height: 1.1; color: var(--t1);
@@ -99,6 +100,11 @@ html.light .sb::before {
   font-size: 8px; letter-spacing: 0.5px; color: var(--t3);
   margin-top: 3px; font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-badge-designer {
+  font-family: var(--ft); font-size: 15px; font-weight: 700;
+  letter-spacing: -0.6px; line-height: 1.1; color: var(--t1);
+  flex-shrink: 0;
 }
 
 /* Scroll */

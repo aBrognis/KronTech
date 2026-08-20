@@ -2,7 +2,7 @@
 // clicar "Buscar" (ver PainelFiltros.jsx).
 export default function FilterTexto({ value, onChange }) {
   return (
-    <input className="form-input" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+    <input className="form-input form-input-sm"
       value={value?.valor || ''}
       onChange={e => onChange(e.target.value ? { op: 'contains', valor: e.target.value } : null)}
       placeholder="filtrar..." />

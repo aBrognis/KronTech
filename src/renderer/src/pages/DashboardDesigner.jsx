@@ -9,7 +9,7 @@ import { LucideIcon, WidgetBody,
          TIPOS, PALETA, INTERVALOS, SQL_HINTS, SQL_GUIDE } from './dash'
 import FormToolbar from '../components/FormToolbar.jsx'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
-import PaginacaoBar from '../pages/formBuilderView/PaginacaoBar.jsx'
+import PaginacaoBar from '../components/PaginacaoBar.jsx'
 import { thS, tdS } from './formBuilderView/gridStyles.js'
 import { notificar } from '../components/Notificacao'
 
@@ -40,6 +40,10 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   const [selected,      setSelected]      = useState(null)
   const [mode,          setMode]          = useState('view') // 'view' | 'new' | 'edit'
   const [form,          setForm]          = useState(emptyForm())
+  // Último widget selecionado antes de entrar em modo "novo" — sem isso,
+  // "Desistir" depois de "Incluir" não tinha pra onde voltar e caía na
+  // aba Acesso vazia em vez do widget anterior.
+  const [ultimoSelected, setUltimoSelected] = useState(null)
   const [saving,        setSaving]        = useState(false)
   const [deleting,      setDeleting]      = useState(null)
   const [testing,       setTesting]       = useState(false)
@@ -101,14 +105,18 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
         const lista = res.ok ? res.data : []
         setWidgets(lista)
         setLoading(false)
-        // Abre direto no último registro, em modo consulta — mesmo padrão
-        // pedido para Despesas de Viagem (viagens/index.jsx), evita cair
-        // sempre na aba Acesso vazia sem nada selecionado.
+        // Sempre entra na aba Cadastro (aqui "geral") — no último widget se
+        // existir, ou em modo "novo" se ainda não há nenhum. Mesmo padrão
+        // de Despesas de Viagem/Cofre de Senhas — nunca cai na aba Acesso
+        // vazia sem nada selecionado.
         if (lista.length > 0) {
           const ultimo = lista[lista.length - 1]
           setSelected(ultimo.id)
+          setUltimoSelected(ultimo)
           setForm(formFromWidget(ultimo))
           setActiveTab('geral')
+        } else {
+          handleIncluir()
         }
       })
       .catch(() => setLoading(false))
@@ -152,6 +160,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   // edição direta.
   function openView(w) {
     setSelected(w.id)
+    setUltimoSelected(w)
     setMode('view')
     setForm(formFromWidget(w))
     resetPreview()
@@ -240,13 +249,13 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
   }
 
   function handleDesistir() {
-    if (mode === 'new') {
+    const w = widgets.find(x => x.id === selected) || ultimoSelected
+    if (w) {
+      setSelected(w.id)
+      setForm(formFromWidget(w))
+    } else {
       setSelected(null)
       setForm(emptyForm())
-      setActiveTab('acesso')
-    } else {
-      const w = widgets.find(x => x.id === selected)
-      if (w) setForm(formFromWidget(w))
     }
     resetPreview()
     setMode('view')
@@ -546,7 +555,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                   <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:14 }}>
                     <div>
                       <FieldLabel>Código</FieldLabel>
-                      <div className="form-input" style={{ width:80, fontSize:13, fontWeight:700, letterSpacing:1.5, display:'flex', alignItems:'center', justifyContent:'center', height:37, cursor:'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily:'monospace' }}>
+                      <div className="form-input" style={{ width:80, fontSize:13, fontWeight:700, letterSpacing:1.5, display:'flex', alignItems:'center', justifyContent:'center', cursor:'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily:'monospace' }}>
                         {form.codigo || ''}
                       </div>
                     </div>
@@ -670,7 +679,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                                 width:28, height:28, borderRadius:7, cursor: isRO ? 'default' : 'pointer',
                                 background:c, flexShrink:0,
                                 border: `2px solid ${active ? 'var(--t1)' : 'transparent'}`,
-                                opacity: isRO && !active ? .5 : 1,
+                                opacity: isRO && !active ? .8 : 1,
                               }}
                             />
                           )
@@ -682,6 +691,7 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                             title="Escolher cor personalizada"
                             style={{
                               width:28, height:28, borderRadius:7, cursor: isRO ? 'default' : 'pointer', flexShrink:0,
+                              opacity: isRO && PALETA.slice(0, 35).some(c => c.toLowerCase() === form.cor?.toLowerCase()) ? .8 : 1,
                               border: `2px solid ${!PALETA.slice(0, 35).some(c => c.toLowerCase() === form.cor?.toLowerCase()) ? 'var(--t1)' : 'transparent'}`,
                               background: !PALETA.slice(0, 35).some(c => c.toLowerCase() === form.cor?.toLowerCase())
                                 ? form.cor
@@ -755,13 +765,13 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
                         </div>
                       </div>
                       <textarea
-                        className="form-textarea"
+                        className="form-textarea sql-editor-textarea"
                         value={form.sql_query}
                         onChange={e => { f('sql_query', e.target.value); setPreviewRows(null); setPreviewFields([]); setPreviewErr(null) }}
                         placeholder={sqlHint || 'SELECT ...'}
                         spellCheck={false}
                         disabled={isRO}
-                        style={{ width:'100%', height:'clamp(180px, calc(100vh - 620px), 320px)', fontFamily:'Cascadia Code, Consolas, monospace', fontSize:13, resize:'vertical', lineHeight:1.7, background:'transparent', border:'none', padding:18 }}
+                        style={{ width:'100%', height:'clamp(180px, calc(100vh - 620px), 320px)', fontFamily:'Cascadia Code, Consolas, monospace', fontSize:13, resize:'vertical', lineHeight:1.7, border:'none', padding:18 }}
                       />
                       <div style={{ display:'flex', gap:12, alignItems:'center', padding:'12px 14px', borderTop:'1px solid var(--bd)', background:'var(--s2)' }}>
                         <button
@@ -1064,8 +1074,8 @@ export default function DashboardDesigner({ newTrigger, onNavigate }) {
           temRegistros={!!selected && selected !== 'new'}
           saving={saving}
           onIncluir={handleIncluir}
-          onAlterar={selected && selected !== 'new' ? handleAlterar : undefined}
-          onExcluir={selected && selected !== 'new' ? handleExcluir : undefined}
+          onAlterar={handleAlterar}
+          onExcluir={handleExcluir}
           onConsultar={abrirConsulta}
           onGravar={handleGravar}
           onDesistir={handleDesistir}

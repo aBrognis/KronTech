@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import '../App.css'
 import { thS, tdS } from './formBuilderView/gridStyles.js'
-import PaginacaoBar from './formBuilderView/PaginacaoBar.jsx'
+import PaginacaoBar from '../components/PaginacaoBar.jsx'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import FormToolbar from '../components/FormToolbar.jsx'
 import { notificar } from '../components/Notificacao'
@@ -427,31 +427,31 @@ export default function Arquivos({ newTrigger }) {
               {fPainelAberto && (
                 <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
                   onKeyDown={e => e.key === 'Enter' && handleBuscarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 12 }}>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Nome</label>
-                      <input className="form-input" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 12 }}>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Nome</label>
+                      <input className="form-input form-input-sm"
                         value={fNome} onChange={e => setFNome(e.target.value)} placeholder="filtrar por nome..." autoFocus />
                     </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Categoria</label>
-                      <select className="form-select" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Categoria</label>
+                      <select className="form-select form-input-sm"
                         value={fCategoria} onChange={e => setFCategoria(e.target.value)}>
                         <option value="">Todas</option>
                         {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
                       </select>
                     </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Pasta</label>
-                      <select className="form-select" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Pasta</label>
+                      <select className="form-select form-input-sm"
                         value={fPasta} onChange={e => setFPasta(e.target.value)}>
                         <option value="">Todas</option>
                         {pastas.map(p => <option key={p}>{p}</option>)}
                       </select>
                     </div>
-                    <div>
-                      <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .4, display: 'block', marginBottom: 4 }}>Tags</label>
-                      <input className="form-input" style={{ height: 32, fontSize: 12, padding: '0 8px', width: '100%' }}
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Tags</label>
+                      <input className="form-input form-input-sm"
                         value={fTags} onChange={e => setFTags(e.target.value)} placeholder="filtrar por tag..." />
                     </div>
                   </div>
@@ -550,7 +550,7 @@ export default function Arquivos({ newTrigger }) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 12, marginBottom: 14 }}>
                     <div className="form-group">
                       <label className="form-label">Código</label>
-                      <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
+                      <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
                         {form.codigo || ''}
                       </div>
                     </div>
@@ -580,7 +580,7 @@ export default function Arquivos({ newTrigger }) {
                   <div className="form-group" style={{ marginBottom: 14 }}>
                     <label className="form-label">Arquivo</label>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <div className="form-input" style={{ flex: 1, height: 37, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s1)', cursor: 'default', fontSize: 12, color: form.arquivo_nome ? 'var(--t1)' : 'var(--t3)' }}>
+                      <div className="form-input" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s1)', cursor: 'default', fontSize: 12, color: form.arquivo_nome ? 'var(--t1)' : 'var(--t3)' }}>
                         <ExtIcon ext={form.arquivo_ext} size={14} />
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {form.arquivo_nome || 'Nenhum arquivo selecionado'}
@@ -658,11 +658,11 @@ export default function Arquivos({ newTrigger }) {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div className="form-group">
                           <label className="form-label">Criado em</label>
-                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 37, background: 'var(--s1)', cursor: 'default' }}>{fmtDate(currentItem.dt_criacao)}</div>
+                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', background: 'var(--s1)', cursor: 'default' }}>{fmtDate(currentItem.dt_criacao)}</div>
                         </div>
                         <div className="form-group">
                           <label className="form-label">Atualizado em</label>
-                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', height: 37, background: 'var(--s1)', cursor: 'default' }}>{fmtDate(currentItem.dt_atualizacao)}</div>
+                          <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', background: 'var(--s1)', cursor: 'default' }}>{fmtDate(currentItem.dt_atualizacao)}</div>
                         </div>
                       </div>
                     </div>

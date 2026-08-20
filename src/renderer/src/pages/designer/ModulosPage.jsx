@@ -1,17 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  LayoutGrid, ChevronUp, ChevronDown, ChevronRight, ExternalLink, Check, Plus, Trash2, Edit2,
+  ChevronUp, ChevronDown, ChevronRight, ExternalLink, Check, Plus, Trash2, Edit2,
 } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
 import { MENU_BASE, MENU_DESIGNER } from '../../components/Sidebar'
 import FormToolbar from '../../components/FormToolbar'
 import { notificar } from '../../components/Notificacao'
-
-function TilaIcon({ nome, size = 15, cor = 'var(--or)' }) {
-  const key  = (nome || 'layout').split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
-  const Icon = LucideIcons[key] || LayoutGrid
-  return <Icon size={size} color={cor} />
-}
+import TilaIcon from './TilaIcon.jsx'
 
 function modArrowBtn(dis) {
   return {

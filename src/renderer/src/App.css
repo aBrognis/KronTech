@@ -575,6 +575,19 @@ html.light .form-textarea:focus {
 .form-select   { cursor: pointer; appearance: none; }
 .form-select option { background: var(--s2); color: var(--t1); }
 
+/* Variante compacta — ÚNICA usada em painéis de filtro (aba Acesso) em
+   todo o sistema. 32px de altura, mesma fonte reduzida (12px). Antes desta
+   classe existir, cada tela (Arquivos, viagens, CofreSenhas, PainelFiltros
+   do FormBuilder) reimplementava isso com `style={{ height: 32, ... }}`
+   inline, divergindo sutilmente entre si (padding, fontSize). Sempre usar
+   esta classe em vez de height inline num painel de filtro. */
+.form-input.form-input-sm,
+.form-select.form-input-sm {
+  height: 32px;
+  font-size: 12px;
+  padding: 0 10px;
+}
+
 /* Remove as setas nativas de incremento/decremento de input[type=number]
    em todo o sistema — usadas hoje em grades como Despesas de Viagem. */
 input[type="number"]::-webkit-inner-spin-button,
@@ -593,6 +606,13 @@ input[type="number"] {
    sistema (var(--s1), igual .form-input/.form-select). O ícone do
    calendário é mantido, só invertido no tema escuro (senão fica preto
    sobre fundo escuro, invisível). */
+input[type="date"] {
+  /* Neutraliza o color-scheme herdado do tema — sem isso, o Chromium pinta
+     os pseudo-elementos internos (datetime-edit, segmentos) com a paleta
+     nativa do sistema operacional em vez de respeitar 100% o background
+     abaixo, mesmo com !important. Só afeta este input, não o tema global. */
+  color-scheme: normal;
+}
 input[type="date"],
 input[type="date"]::-webkit-datetime-edit,
 input[type="date"]::-webkit-datetime-edit-fields-wrapper,
@@ -637,7 +657,26 @@ html.light .form-textarea:disabled {
   border-color: var(--bd) !important;
 }
 
+/* Editor SQL do Dashboard Designer: fica dentro de uma moldura própria com
+   fundo --s3 — não deve herdar o fundo --s1 do disabled genérico acima,
+   senão destoa (bloco parece "apagado"/cinza) mesmo em modo consulta. */
+.sql-editor-textarea:disabled {
+  background: transparent !important;
+}
+
 /* Mantém o form-input-readonly para elementos <div> com aparência de campo */
+/* Campo de data em modo consulta dentro de grades de itens (ex: despesas
+   de viagem) — sem borda/sombra, igual aos demais campos "limpos" da
+   linha. Precisa de especificidade >= html.light .form-input:disabled
+   acima (2 classes + pseudo-classe + elemento html), senão perde mesmo
+   vindo depois no arquivo. Também zera o box-shadow do .form-input base,
+   que sozinho já parece uma borda sutil. */
+input.cell-date-ro.cell-date-ro:disabled,
+html.light input.cell-date-ro.cell-date-ro:disabled {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
 .form-input-readonly {
   background: var(--s1);
   border: 1.5px solid var(--bd);

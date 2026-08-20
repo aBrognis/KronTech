@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  Plus, Save, X, Trash2, Edit2, Search,
-  ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  Download, Copy, Check, Star, ExternalLink, RotateCcw,
-  CheckCircle2, XCircle, Loader2, Building2, MapPin, CheckSquare, Square, Globe,
-  Paperclip, ImageIcon, Palette, Link, Timer, Calculator, CalendarClock, Gauge, Percent,
-  FolderInput, Settings, Clipboard, Upload, Eye, EyeOff,
+  Plus, Save, X, Edit2, Search,
+  ChevronsLeft, ChevronLeft, ChevronsRight,
+  Download, Copy, Check, Star, RotateCcw,
+  Building2, MapPin, CheckSquare, Square, Globe,
+  ImageIcon, Palette, Link, Timer, Calculator, CalendarClock, Gauge, Percent,
+  FolderInput, Settings, Clipboard, Upload,
 } from 'lucide-react'
 import { CANVAS_W, CANVAS_H_MIN } from '../components/FormDesigner'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal'
@@ -31,6 +31,12 @@ import { InputSubGrid } from './formBuilderView/inputs/InputSubGrid.jsx'
 import {
   InputPasta, InputDataHora, InputHora, InputUrl, InputLogin, InputSenha, InputPadrao,
 } from './formBuilderView/inputs/InputEspecial.jsx'
+import { InputSenhaCofre } from './formBuilderView/inputs/InputSenhaCofre.jsx'
+import ModalRedefinirSenha from './formBuilderView/modais/ModalRedefinirSenha.jsx'
+import ModalSelecaoLookup from './formBuilderView/modais/ModalSelecaoLookup.jsx'
+import ModalImportacaoMassa from './formBuilderView/modais/ModalImportacaoMassa.jsx'
+import ModalPreviewArquivo from './formBuilderView/modais/ModalPreviewArquivo.jsx'
+import ModalConfirmarExclusao from './formBuilderView/modais/ModalConfirmarExclusao.jsx'
 import { maskCPF, maskCNPJ, maskCEP, maskCPFStr, maskCNPJStr, maskCEPStr } from '../lib/utils/masks.js'
 import { notificar } from '../components/Notificacao'
 import '../App.css'
@@ -96,6 +102,30 @@ function filtrarStr(val = '', busca, modo) {
   if (modo === 'iniciando') return v.startsWith(q)
   if (modo === 'igual')     return v === q
   return v.includes(q)
+}
+
+// Tipos de campo que não usam o wrapper padrão de form-group (label + input) —
+// compartilhado pelos dois motores de layout (absoluto e grade).
+const SKIP_LABEL = ['booleano', 'botao', 'favorito', 'timestamps']
+const NO_WRAPPER = ['botao', 'favorito', 'timestamps', 'copiar']
+const ARQ_SUFFIXES = ['_nome', '_ext', '_tamanho', '_path']
+
+// Campo satélite de arquivo (ex: "foto_nome", "foto_ext") é preenchido
+// automaticamente a partir do campo "arquivo" pai — exibido como texto
+// somente-leitura em vez de input. Retorna null se `campo` não for satélite.
+function arquivoSatelliteInfo(campo, tela, val) {
+  const suffix = ARQ_SUFFIXES.find(s => campo.nome_campo.endsWith(s))
+  if (!suffix) return null
+  const prefixo = campo.nome_campo.slice(0, -suffix.length)
+  const campoArqPai = tela?.campos.find(c => c.nome_campo === prefixo && c.tipo === 'arquivo')
+  if (!campoArqPai) return null
+  let exibe = ''
+  if (val) {
+    if (suffix === '_tamanho') exibe = fmtSize(Number(val)) || ''
+    else if (suffix === '_ext') exibe = String(val).toUpperCase()
+    else exibe = String(val)
+  }
+  return { exibe }
 }
 
 export default function FormBuilderView({ nomeTabela, onTituloChange }) {
@@ -277,6 +307,16 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       f[c.nome_campo] = v
     })
     if (t.col_favorito !== false) f.favorito = reg.favorito ?? false
+    // Campos "senha_cofre" ficam salvos cifrados (AES) — descriptografa só
+    // ao carregar o form em memória, nunca fica em texto puro no banco.
+    const camposSenhaCofre = t.campos.filter(c => c.ativo && c.tipo === 'senha_cofre')
+    if (camposSenhaCofre.length) {
+      await Promise.all(camposSenhaCofre.map(async c => {
+        if (!f[c.nome_campo]) return
+        const res = await window.api.crypto.decrypt(f[c.nome_campo])
+        f[c.nome_campo] = res.ok ? res.data : ''
+      }))
+    }
     const camposSubGrid = t.campos.filter(c => c.ativo && c.tipo === 'sub_grid' && c.opcoes?.subGridTabela)
     if (camposSubGrid.length) {
       await Promise.all(camposSubGrid.map(async c => {
@@ -352,6 +392,16 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         dados[c.nome_campo] = form[c.nome_campo] ?? null
       })
       if (tela.col_favorito !== false) dados.favorito = form.favorito ?? false
+
+      // Campos "senha_cofre" só viajam cifrados (AES) — nunca em texto puro.
+      const camposSenhaCofre = tela.campos.filter(c => c.ativo && c.tipo === 'senha_cofre')
+      if (camposSenhaCofre.length) {
+        await Promise.all(camposSenhaCofre.map(async c => {
+          if (!dados[c.nome_campo]) return
+          const res = await window.api.crypto.encrypt(dados[c.nome_campo])
+          dados[c.nome_campo] = res.ok ? res.data : null
+        }))
+      }
 
       const camposSubGrid = tela.campos.filter(c => c.ativo && c.tipo === 'sub_grid' && c.opcoes?.subGridTabela)
       const subGrids = {}
@@ -449,27 +499,16 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       borderStyle: campo.border_width != null ? 'solid' : undefined,
     }
 
-    // Detecta se é campo satélite de arquivo (preenchido automaticamente)
-    const ARQ_SUFFIXES = ['_nome', '_ext', '_tamanho', '_path']
-    const arqSuffix = ARQ_SUFFIXES.find(s => campo.nome_campo.endsWith(s))
-    if (arqSuffix) {
-      const prefixo = campo.nome_campo.slice(0, -arqSuffix.length)
-      const campoArqPai = tela?.campos.find(c => c.nome_campo === prefixo && c.tipo === 'arquivo')
-      if (campoArqPai) {
-        let exibe = ''
-        if (val) {
-          if (arqSuffix === '_tamanho') exibe = fmtSize(Number(val)) || ''
-          else if (arqSuffix === '_ext') exibe = String(val).toUpperCase()
-          else exibe = String(val)
-        }
-        return (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%', padding: '0 2px', gap: 8 }}>
-            <span style={{ fontSize: 11, color: val ? 'var(--t1)' : 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'right', fontWeight: val ? 500 : 400 }}>
-              {exibe}
-            </span>
-          </div>
-        )
-      }
+    // Campo satélite de arquivo (preenchido automaticamente)
+    const satelite = arquivoSatelliteInfo(campo, tela, val)
+    if (satelite) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%', padding: '0 2px', gap: 8 }}>
+          <span style={{ fontSize: 11, color: val ? 'var(--t1)' : 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'right', fontWeight: val ? 500 : 400 }}>
+            {satelite.exibe}
+          </span>
+        </div>
+      )
     }
 
     if (campo.tipo === 'favorito') {
@@ -662,6 +701,8 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         setRedefinirConf={setRedefinirConf} setRedefinirErro={setRedefinirErro} setRedefinirOpen={setRedefinirOpen} />
     )
 
+    if (campo.tipo === 'senha_cofre') return <InputSenhaCofre campo={campo} val={val} tela={tela} isRO={isRO} saving={saving} setField={setField} />
+
     return <InputPadrao campo={campo} val={val} isRO={isRO} saving={saving} inputStyle={inputStyle} setField={setField} />
   }
 
@@ -670,7 +711,7 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
     return (
       <label
         className={`form-label${semNegrito ? ' form-label--normal' : ''}`}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2, fontSize: campo.font_size ? `${campo.font_size}px` : '10px', color: campo.label_cor || undefined }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: campo.font_size ? `${campo.font_size}px` : '10px', color: campo.label_cor || undefined }}
       >
         <span>
           {campo.label}
@@ -793,30 +834,16 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
                       )
                     }
 
-                    const SKIP_LABEL = ['booleano', 'botao', 'favorito', 'timestamps']
-                    const NO_WRAPPER = ['botao', 'favorito', 'timestamps', 'copiar']
-
                     // Satélites de arquivo: renderizar como linha label/valor sem borda de input
-                    const ARQ_SUFFIXES_W = ['_nome', '_ext', '_tamanho', '_path']
-                    const arqSuffixW = ARQ_SUFFIXES_W.find(s => campo.nome_campo.endsWith(s))
-                    if (arqSuffixW) {
-                      const prefixoW = campo.nome_campo.slice(0, -arqSuffixW.length)
-                      const isPaiArq = tela?.campos.find(c => c.nome_campo === prefixoW && c.tipo === 'arquivo')
-                      if (isPaiArq) {
-                        const valW = form[campo.nome_campo] ?? ''
-                        let exibeW = ''
-                        if (valW) {
-                          if (arqSuffixW === '_tamanho') exibeW = fmtSize(Number(valW)) || ''
-                          else if (arqSuffixW === '_ext') exibeW = String(valW).toUpperCase()
-                          else exibeW = String(valW)
-                        }
-                        return (
-                          <div key={campo.id} style={{ position: 'absolute', left: x, top: y, width: w, height: h, boxSizing: 'border-box', padding: '0 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                            <span style={{ fontSize: 11, color: 'var(--t3)', flexShrink: 0 }}>{campo.label}</span>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: valW ? 'var(--t1)' : 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{exibeW}</span>
-                          </div>
-                        )
-                      }
+                    const valW = form[campo.nome_campo] ?? ''
+                    const sateliteW = arquivoSatelliteInfo(campo, tela, valW)
+                    if (sateliteW) {
+                      return (
+                        <div key={campo.id} style={{ position: 'absolute', left: x, top: y, width: w, height: h, boxSizing: 'border-box', padding: '0 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                          <span style={{ fontSize: 11, color: 'var(--t3)', flexShrink: 0 }}>{campo.label}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: valW ? 'var(--t1)' : 'var(--t3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'right' }}>{sateliteW.exibe}</span>
+                        </div>
+                      )
                     }
 
                     if (NO_WRAPPER.includes(campo.tipo)) {
@@ -941,199 +968,39 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
         />
       )}
 
-      {/* Modal Lookup */}
       {/* Modal Redefinir Senha */}
-      {redefinirOpen && (() => {
-        const match = redefinirNova.length > 0 && redefinirConf.length > 0 && redefinirNova === redefinirConf
-        const mismatch = redefinirConf.length > 0 && redefinirNova !== redefinirConf
-        const tipoInput = redefinirMostrar ? 'text' : 'password'
-        return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.55)' }}
-            onClick={e => { if (e.target === e.currentTarget) setRedefinirOpen(false) }}>
-            <div style={{ width: 400, background: 'var(--s1)', borderRadius: 14, boxShadow: 'var(--sh-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', background: 'var(--s2)', borderBottom: '1px solid var(--bd)' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>🔑 Redefinir Senha</span>
-                <button onClick={() => setRedefinirOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}><X size={15} /></button>
-              </div>
-              <div style={{ padding: '20px 20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* Nova senha */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Nova senha</label>
-                  <div style={{ position: 'relative' }}>
-                    <input className="form-input" type={tipoInput} value={redefinirNova} autoFocus
-                      onChange={e => { setRedefinirNova(e.target.value); setRedefinirErro('') }}
-                      placeholder="••••••••" style={{ height: 36, paddingRight: 36 }} />
-                    <button type="button" onClick={() => setRedefinirMostrar(v => !v)}
-                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}>
-                      {redefinirMostrar ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                </div>
-                {/* Confirmar senha */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <label className="form-label" style={{ marginBottom: 0 }}>Confirmar senha</label>
-                    {match && <span style={{ fontSize: 10, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 3, fontWeight: 600 }}><Check size={11} /> Senhas iguais</span>}
-                    {mismatch && <span style={{ fontSize: 10, color: '#f87171', fontWeight: 600 }}>✗ Não coincidem</span>}
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input className="form-input" type={tipoInput} value={redefinirConf}
-                      onChange={e => { setRedefinirConf(e.target.value); setRedefinirErro('') }}
-                      placeholder="••••••••"
-                      style={{ height: 36, paddingRight: 36, borderColor: match ? '#4ade80' : mismatch ? '#f87171' : undefined, transition: 'border-color .2s' }} />
-                    <button type="button" onClick={() => setRedefinirMostrar(v => !v)}
-                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}>
-                      {redefinirMostrar ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                </div>
-                {redefinirErro && <div style={{ fontSize: 11, color: '#f87171', background: 'rgba(248,113,113,.1)', borderRadius: 6, padding: '6px 10px' }}>{redefinirErro}</div>}
-              </div>
-              <div style={{ display: 'flex', gap: 8, padding: '0 20px 16px' }}>
-                <button className="btn btn-primary" disabled={redefinirSaving}
-                  onClick={async () => {
-                    if (!redefinirNova) { setRedefinirErro('Digite a nova senha.'); return }
-                    if (redefinirNova.length < 4) { setRedefinirErro('Mínimo 4 caracteres.'); return }
-                    if (redefinirNova !== redefinirConf) { setRedefinirErro('As senhas não coincidem.'); return }
-                    setRedefinirSaving(true)
-                    try {
-                      const r = await window.api.auth.redefinirSenha({ tabelaUsuario: tela.nome_tabela, campoCodigo: 'id', id: form._id, novaSenha: redefinirNova })
-                      if (r.ok) { setRedefinirOpen(false) }
-                      else setRedefinirErro(r.erro || 'Erro ao redefinir senha.')
-                    } catch (e) { setRedefinirErro(e.message) }
-                    finally { setRedefinirSaving(false) }
-                  }}>
-                  {redefinirSaving ? 'Salvando...' : '✓ Confirmar'}
-                </button>
-                <button className="btn btn-ghost" onClick={() => setRedefinirOpen(false)}>Cancelar</button>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
+      {redefinirOpen && (
+        <ModalRedefinirSenha
+          tela={tela} formId={form._id}
+          nova={redefinirNova} setNova={setRedefinirNova}
+          conf={redefinirConf} setConf={setRedefinirConf}
+          erro={redefinirErro} setErro={setRedefinirErro}
+          saving={redefinirSaving} setSaving={setRedefinirSaving}
+          mostrar={redefinirMostrar} setMostrar={setRedefinirMostrar}
+          onFechar={() => setRedefinirOpen(false)}
+          onSucesso={() => setRedefinirOpen(false)}
+        />
+      )}
 
+      {/* Modal seleção lookup */}
       {lkpModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.5)' }}
-          onClick={e => { if (e.target === e.currentTarget) setLkpModalOpen(false) }}>
-          <div style={{ width: 520, maxWidth: '92vw', maxHeight: '80vh', background: 'var(--s1)', borderRadius: 14, boxShadow: 'var(--sh-lg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', background: 'var(--s2)', borderBottom: '1px solid var(--bd)' }}>
-              <span style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--t1)' }}>Selecionar · {lkpModalCampo?.label}</span>
-              <button onClick={() => setLkpModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}><X size={15} /></button>
-            </div>
-            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--bd)' }}>
-              <input className="form-input" value={lkpModalBusca}
-                onChange={e => setLkpModalBusca(e.target.value)}
-                placeholder="Filtrar..." autoFocus style={{ height: 32, width: '100%' }} />
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {lkpModalLoading ? (
-                <div style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 12 }}>Carregando...</div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    {lkpModalTodos
-                      .filter(o => !lkpModalBusca.trim() || o.label.toLowerCase().includes(lkpModalBusca.toLowerCase()))
-                      .map((o, ri) => {
-                        const isSel = lkpModalSelId === o.id
-                        return (
-                          <tr key={o.id}
-                            onClick={() => setLkpModalSelId(o.id)}
-                            onDoubleClick={() => { setLkpModalSelId(o.id); setField(lkpModalCampo.nome_campo, o.id); setLkpModalOpen(false) }}
-                            style={{ cursor: 'pointer', background: ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--s3)' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = ri % 2 ? 'rgba(0,0,0,.015)' : 'transparent' }}>
-                            <td style={{ padding: '7px 4px', width: 20, textAlign: 'center', color: 'var(--or)' }}>
-                              {isSel ? <ChevronRight size={12} strokeWidth={2.5} /> : null}
-                            </td>
-                            <td style={{ padding: '7px 10px', fontSize: 12, color: 'var(--t1)' }}>{o.label}</td>
-                          </tr>
-                        )
-                      })}
-                    {lkpModalTodos.filter(o => !lkpModalBusca.trim() || o.label.toLowerCase().includes(lkpModalBusca.toLowerCase())).length === 0 && (
-                      <tr><td colSpan={2} style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum resultado</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8, padding: '10px 14px', borderTop: '1px solid var(--bd)', background: 'var(--s2)' }}>
-              <button className="btn btn-primary" onClick={confirmarLookupModal} disabled={!lkpModalSelId}>✓ Confirmar</button>
-              <button className="btn btn-ghost"   onClick={() => setLkpModalOpen(false)}>✕ Fechar</button>
-              {lkpModalSelId && <button className="btn btn-ghost" onClick={() => { setField(lkpModalCampo?.nome_campo, null); setLkpModalOpen(false) }}>Limpar seleção</button>}
-            </div>
-          </div>
-        </div>
+        <ModalSelecaoLookup
+          campo={lkpModalCampo} todos={lkpModalTodos}
+          busca={lkpModalBusca} setBusca={setLkpModalBusca}
+          loading={lkpModalLoading} selId={lkpModalSelId} setSelId={setLkpModalSelId}
+          onSelecionarCampo={setField}
+          onConfirmar={confirmarLookupModal}
+          onFechar={() => setLkpModalOpen(false)}
+        />
       )}
 
       {/* Modal Importação em Massa */}
       {importando && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)' }}>
-          <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: 520, maxWidth: '94vw', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {importProg.fase === 'concluido'
-                ? <CheckCircle2 size={22} color="var(--green, #22c55e)" />
-                : (importProg.fase === 'cancelado' || importProg.fase === 'erro')
-                  ? <XCircle size={22} color="var(--red, #ef4444)" />
-                  : <Loader2 size={22} color="var(--or)" style={{ animation: 'spin 1s linear infinite' }} />}
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-                  {importProg.fase === 'escaneando' && 'Escaneando arquivos...'}
-                  {importProg.fase === 'importando' && 'Importando arquivos...'}
-                  {importProg.fase === 'concluido'  && 'Importação concluída!'}
-                  {importProg.fase === 'cancelado'  && 'Importação cancelada'}
-                  {importProg.fase === 'erro'       && 'Erro na importação'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>
-                  {importProg.total > 0 ? `${importProg.total.toLocaleString('pt-BR')} arquivos encontrados` : 'Aguarde...'}
-                </div>
-              </div>
-            </div>
-            {importProg.total > 0 && (
-              <div>
-                <div style={{ height: 8, background: 'var(--s3)', borderRadius: 99, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(100, (importProg.atual / importProg.total) * 100)}%`,
-                    background: importProg.fase === 'concluido' ? 'var(--green, #22c55e)' : importProg.fase === 'cancelado' ? 'var(--red, #ef4444)' : 'var(--or)',
-                    borderRadius: 99, transition: 'width .2s ease',
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, color: 'var(--t3)' }}>
-                  <span>{importProg.atual.toLocaleString('pt-BR')} de {importProg.total.toLocaleString('pt-BR')}</span>
-                  <span>{Math.round((importProg.atual / importProg.total) * 100)}%</span>
-                </div>
-              </div>
-            )}
-            {importProg.arquivo && importProg.fase === 'importando' && (
-              <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 8, padding: '8px 12px', fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {importProg.arquivo}
-              </div>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {[
-                { label: 'Inseridos', val: importProg.inseridos, cor: 'var(--green, #22c55e)' },
-                { label: 'Ignorados', val: importProg.ignorados, cor: 'var(--t3)'             },
-              ].map(({ label, val, cor }) => (
-                <div key={label} style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: cor, fontVariantNumeric: 'tabular-nums' }}>{(val || 0).toLocaleString('pt-BR')}</div>
-                  <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 2, textTransform: 'uppercase', letterSpacing: .8 }}>{label}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              {(importProg.fase === 'importando' || importProg.fase === 'escaneando') && (
-                <button className="btn btn-danger" onClick={() => window.api.arquivos.cancelarImport()}>
-                  <X size={13} /> Cancelar
-                </button>
-              )}
-              {(importProg.fase === 'concluido' || importProg.fase === 'cancelado' || importProg.fase === 'erro') && (
-                <button className="btn btn-primary" onClick={() => setImportando(false)}>
-                  <CheckCircle2 size={13} /> Fechar
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <ModalImportacaoMassa
+          progresso={importProg}
+          onCancelar={() => window.api.arquivos.cancelarImport()}
+          onFechar={() => setImportando(false)}
+        />
       )}
 
       {/* Popover "ver registro relacionado" */}
@@ -1149,37 +1016,13 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       {lkpPopover && <div style={{ position: 'fixed', inset: 0, zIndex: 1199 }} onClick={() => setLkpPopover(null)} />}
 
       {/* Modal Preview de arquivo */}
-      {preview && (() => {
-        const ext = (preview.ext || '').toLowerCase()
-        const PREVIEW_IMG = ['png','jpg','jpeg','gif','bmp','webp','svg']
-        const PREVIEW_PDF = ['pdf']
-        const tipo = PREVIEW_IMG.includes(ext) ? 'img' : PREVIEW_PDF.includes(ext) ? 'pdf' : null
-        return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.7)', backdropFilter: 'blur(8px)' }}
-            onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
-            <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 14, boxShadow: 'var(--sh-lg)', width: '90vw', height: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 18px', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
-                <span style={{ fontWeight: 600, fontSize: 12.5, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{preview.nome}</span>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button className="btn btn-ghost" onClick={() => handleAbrirArquivo(preview)}><ExternalLink size={13} /> Abrir externamente</button>
-                  <button onClick={() => setPreview(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex', padding: 2 }}><X size={15} /></button>
-                </div>
-              </div>
-              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 8 }}>
-                {tipo === 'img' && <img src={`file://${preview.path}`} alt={preview.nome} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />}
-                {tipo === 'pdf' && <iframe src={`file://${preview.path}`} style={{ width: '100%', height: '100%', border: 'none', borderRadius: 8 }} title={preview.nome} />}
-                {!tipo && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--t3)' }}>
-                    <Paperclip size={40} strokeWidth={1} />
-                    <span style={{ fontSize: 13 }}>Preview não disponível para arquivos <strong style={{ color: 'var(--t1)' }}>.{ext.toUpperCase()}</strong></span>
-                    <button className="btn btn-ghost" onClick={() => handleAbrirArquivo(preview)}><ExternalLink size={13} /> Abrir com aplicativo padrão</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
+      {preview && (
+        <ModalPreviewArquivo
+          preview={preview}
+          onAbrirExterno={handleAbrirArquivo}
+          onFechar={() => setPreview(null)}
+        />
+      )}
 
       {/* Rodapé (só na aba Cadastro) */}
       {activeTab === 'cadastro' && (
@@ -1199,23 +1042,10 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
 
       {/* Modal de confirmação de exclusão */}
       {confirmExcluir && (
-        <div style={{ position:'fixed', inset:0, zIndex:1200, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,.45)' }}>
-          <div style={{ width:380, background:'var(--s1)', borderRadius:14, boxShadow:'var(--sh-lg)', overflow:'hidden' }}>
-            <div style={{ padding:'20px 22px 10px', display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:'rgba(220,38,38,.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <Trash2 size={16} color="var(--red)"/>
-              </div>
-              <div>
-                <div style={{ fontWeight:700, fontSize:14, color:'var(--t1)' }}>Excluir registro</div>
-                <div style={{ fontSize:12, color:'var(--t3)', marginTop:2 }}>Esta ação não pode ser desfeita.</div>
-              </div>
-            </div>
-            <div style={{ padding:'8px 22px 20px', display:'flex', gap:8, justifyContent:'flex-end' }}>
-              <button className="btn btn-ghost" style={{ height:34, fontSize:12 }} onClick={() => setConfirmExcluir(false)}>Cancelar</button>
-              <button className="btn btn-danger" style={{ height:34, fontSize:12 }} onClick={confirmarExcluir}>Excluir</button>
-            </div>
-          </div>
-        </div>
+        <ModalConfirmarExclusao
+          onCancelar={() => setConfirmExcluir(false)}
+          onConfirmar={confirmarExcluir}
+        />
       )}
     </div>
   )
@@ -1249,13 +1079,13 @@ function MetaDados({ reg, onToggleFav, showFav = true, showTs = true }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="form-group">
                 <label className="form-label" style={{ textAlign: 'center' }}>Criado em</label>
-                <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, background: 'var(--s1)', cursor: 'default', textAlign: 'center' }}>
+                <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--s1)', cursor: 'default', textAlign: 'center' }}>
                   {fmtDate(reg.criado_em)}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label" style={{ textAlign: 'center' }}>Atualizado em</label>
-                <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 37, background: 'var(--s1)', cursor: 'default', textAlign: 'center' }}>
+                <div className="form-input" style={{ fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--s1)', cursor: 'default', textAlign: 'center' }}>
                   {fmtDate(reg.alterado_em)}
                 </div>
               </div>

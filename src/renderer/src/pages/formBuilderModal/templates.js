@@ -553,28 +553,32 @@ export const TEMPLATES = [
   },
 
   // ── Controle de Acesso / Senhas ────────────────────────────────────────────
+  // Campo "senha_cofre" já embute mostrar/ocultar, copiar, gerar senha forte
+  // e barra de força — não precisa de campos "Copiar Senha" nem "Nível
+  // Segurança" separados como no template antigo, que duplicavam essas ações.
   {
     id: 'cofre_senhas',
     emoji: '🔐', label: 'Cofre de Senhas', categoria: 'Segurança',
-    descricao: 'Sistema, usuário, senha, URL de acesso, categoria, data de validade e nível de segurança.',
-    nomeTela: 'Cofre de Senhas', icone: 'lock', canvasW: 1200, canvasH: 494,
+    descricao: 'Sistema, usuário, senha (cofre criptografado com gerador e força), URL de acesso, categoria e validade.',
+    nomeTela: 'Cofre de Senhas', icone: 'lock', canvasW: 1200, canvasH: 510,
     campos: [
-      // Linha 1: Código(110)+14+Sistema(802)+14+Categoria(246)=1172→last=14+110+14+802+14=954, 954+246=1200≠1186 → Categoria(232): last=954+232=1186✓ 110+14+802+14+232=1172✓
+      // Linha 1: Código(110)+14+Sistema(802)+14+Categoria(232)=1172→last=954+232=1186✓
       { _key:'cs1', nomeCampo:'codigo',      label:'Código',        tipo:'codigo_auto', tamanho:20,  obrigatorio:false, sequencial:true,  campoBusca:false, valorPadrao:'001', largura:9,   opcoes:{seqChars:3},   x_pos:14,  y_pos:14,  w_px:110, h_px:56 },
       { _key:'cs2', nomeCampo:'sistema',     label:'Sistema',       tipo:'texto',       tamanho:200, obrigatorio:true,  sequencial:false, campoBusca:true,  valorPadrao:'',    largura:68,  opcoes:null,           x_pos:138, y_pos:14,  w_px:802, h_px:56 },
       { _key:'cs3', nomeCampo:'categoria',   label:'Categoria',     tipo:'pasta',       tamanho:100, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:20,  opcoes:null,           x_pos:954, y_pos:14,  w_px:232, h_px:56 },
       { _key:'cs4', nomeCampo:'url',         label:'URL de Acesso', tipo:'url',         tamanho:500, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:78,  w_px:1172, h_px:56 },
-      // Linha 3: Usuário(579)+14+Senha(579)=1172→last=607+579=1186✓
-      { _key:'cs5', nomeCampo:'usuario',     label:'Usuário / E-mail',tipo:'texto',     tamanho:200, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:49,  opcoes:null,           x_pos:14,  y_pos:142, w_px:579, h_px:56 },
-      { _key:'cs6', nomeCampo:'senha',       label:'Senha',         tipo:'texto',       tamanho:200, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:49,  opcoes:null,           x_pos:607, y_pos:142, w_px:579, h_px:56 },
-      // Linha 4: CopiarSenha(240)+14+CopiarUsuario(240)+14+Validade(260)+14+NivelSeg(390)=1144→+28=1172: last=14+240+14+240+14+260+14=796, 796+390=1186✓
-      { _key:'cs7', nomeCampo:'cpy_senha',   label:'Copiar Senha',  tipo:'copiar',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'senha',largura:20, opcoes:null,           x_pos:14,  y_pos:206, w_px:240, h_px:56 },
-      { _key:'cs8', nomeCampo:'cpy_usuario', label:'Copiar Usuário',tipo:'copiar',      tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'usuario',largura:20,opcoes:null,          x_pos:268, y_pos:206, w_px:240, h_px:56 },
-      { _key:'cs9', nomeCampo:'dt_validade', label:'Válido até',    tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:22,  opcoes:null,           x_pos:522, y_pos:206, w_px:260, h_px:56 },
-      { _key:'cs10',nomeCampo:'seguranca',   label:'Nível Segurança',tipo:'progresso',  tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'0',   largura:33,  opcoes:null,           x_pos:796, y_pos:206, w_px:390, h_px:56 },
-      { _key:'cs11',nomeCampo:'observacoes', label:'Observações',   tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:270, w_px:1172, h_px:80 },
-      { _key:'cs12',nomeCampo:'tags',        label:'Tags',          tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:358, w_px:1172, h_px:56 },
-      { _key:'cs13',nomeCampo:'_fav',        label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:422, w_px:220, h_px:44 },
+      // Linha 3: Usuário(579)+14+Senha(579)=1172→last=607+579=1186✓. Senha
+      // mais alta (72px) pra caber a barra de força embaixo do input.
+      { _key:'cs5', nomeCampo:'usuario',     label:'Usuário / E-mail',tipo:'texto',     tamanho:200, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:49,  opcoes:null,           x_pos:14,  y_pos:142, w_px:579, h_px:72 },
+      { _key:'cs6', nomeCampo:'senha',       label:'Senha',         tipo:'senha_cofre', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:49,  opcoes:null,           x_pos:607, y_pos:142, w_px:579, h_px:72 },
+      // Linha 4: Validade(260)+14+Nível(260)=534. "senha_nivel" é campo
+      // satélite do "senha" (sufixo _nivel) — preenchido automaticamente
+      // pelo senha_cofre a cada mudança na senha, nunca editado à mão.
+      { _key:'cs9', nomeCampo:'dt_validade', label:'Válido até',    tipo:'data',        tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:22,  opcoes:null,           x_pos:14,  y_pos:230, w_px:260, h_px:56 },
+      { _key:'cs10',nomeCampo:'senha_nivel', label:'Nível de Segurança', tipo:'texto', tamanho:20, obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:22,  opcoes:null,           x_pos:288, y_pos:230, w_px:260, h_px:56 },
+      { _key:'cs11',nomeCampo:'observacoes', label:'Observações',   tipo:'texto_longo', tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:294, w_px:1172, h_px:80 },
+      { _key:'cs12',nomeCampo:'tags',        label:'Tags',          tipo:'tags',        tamanho:300, obrigatorio:false, sequencial:false, campoBusca:true,  valorPadrao:'',    largura:100, opcoes:null,           x_pos:14,  y_pos:382, w_px:1172, h_px:56 },
+      { _key:'cs13',nomeCampo:'_fav',        label:'Favorito',      tipo:'favorito',    tamanho:0,   obrigatorio:false, sequencial:false, campoBusca:false, valorPadrao:'',    largura:50,  opcoes:null,           x_pos:14,  y_pos:446, w_px:220, h_px:44 },
     ],
   },
 

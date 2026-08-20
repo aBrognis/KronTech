@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { X, Plus, Trash2, Eye, Settings, Save, AlertCircle, Info, Layout, CircleDot, ExternalLink, Minus, ChevronLeft, ChevronDown, Star, Clock, Copy, Search } from 'lucide-react'
+import { Plus, Trash2, Eye, Settings, Save, AlertCircle, Info, Layout, CircleDot, ExternalLink, Minus, ChevronDown, Star, Clock, Copy, Search } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import FormDesigner, { autoPos, CANVAS_W } from '../components/FormDesigner'
 import FormToolbar from '../components/FormToolbar'
@@ -24,7 +24,7 @@ import OpcoesList from './formBuilderModal/OpcoesList.jsx'
 import TemplateModal from './formBuilderModal/TemplateModal.jsx'
 import { useFormBuilderCampos } from './formBuilderModal/useFormBuilderCampos.js'
 
-export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, inline = false }) {
+export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar }) {
   const editando = !!tela
 
   const [aba,           setAba]           = useState('campos')
@@ -84,7 +84,7 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   const [canvasW,       setCanvasW]       = useState(tela?.canvas_w       || 780)
   const [canvasH,       setCanvasH]       = useState(tela?.canvas_h       || 480)
 
-  const { campos, setCampos, addCampo: addCampoBase, atualizarCampo, onDragStart, onDragOver, onDragEnd } = useFormBuilderCampos(tela, editando)
+  const { campos, setCampos, addCampo: addCampoBase, atualizarCampo } = useFormBuilderCampos(tela, editando)
   function addCampo(factory) {
     addCampoBase(factory, (novoKey) => setExpandedKeys(prev => new Set([...prev, novoKey])))
   }
@@ -422,9 +422,9 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
   const secHead = { fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }
 
   const abas = [
-    { id: 'campos',   Icon: Settings, label: 'Campos'   },
-    { id: 'designer', Icon: Layout,   label: 'Design'   },
-    { id: 'preview',  Icon: Eye,      label: 'Preview'  },
+    { id: 'campos',   label: 'Campos'  },
+    { id: 'designer', label: 'Design'  },
+    { id: 'preview',  label: 'Preview' },
   ]
 
   // ── Campo card ────────────────────────────────────────────────────────────
@@ -678,62 +678,41 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
     )
   }
 
-  // ── MODO INLINE (abas, sem backdrop) ────────────────────────────────────
-  if (inline) return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--s1)' }}>
+  return (
+    <div className="page-with-footer">
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--bd)', flexShrink: 0, gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={onFechar}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 12, padding: '4px 10px', borderRadius: 8, transition: 'var(--tr)' }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--t1)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--t3)'}
-          >
-            <ChevronLeft size={15} /> Voltar
+      {/* Abas — mesmo padrão do resto do sistema (docs/PADRAO_TELAS.md):
+          ações ficam à direita dentro da própria page-tabs, sem header
+          separado acima. Sem botão Voltar — "Desistir" no rodapé já tem a
+          mesma ação de sair sem salvar. */}
+      <div className="page-tabs">
+        {abas.map(({ id, label }) => (
+          <button key={id} className={`page-tab${aba === id ? ' active' : ''}`} onClick={() => setAba(id)}>
+            {label}
           </button>
-          <div style={{ width: 1, height: 18, background: 'var(--bd)', flexShrink: 0 }} />
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-            {editando ? `Editar · ${tela.nome_tela}` : 'Nova Tela'}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {!editando && (
-            <button className="btn btn-ghost" onClick={() => setShowTemplates(true)} style={{ height: 32, gap: 5, fontSize: 12 }}>
-              <Layout size={13} /> Templates
+        ))}
+        {aba === 'designer' && (
+          <span className="page-tab-info" style={{ marginLeft: 'auto', maxWidth: 'none' }}>
+            Arraste campos • Resize pelo canto inferior direito • Clique para selecionar
+          </span>
+        )}
+        <div style={{ marginLeft: aba === 'designer' ? 0 : 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          {!editando && aba === 'campos' && (
+            <button className="btn btn-ghost" onClick={() => setShowTemplates(true)} style={{ height: 28, gap: 5, fontSize: 11, padding: '0 10px' }}>
+              <Layout size={12} /> Templates
             </button>
           )}
         </div>
       </div>
 
       {erro && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 20px', background: 'rgba(248,113,113,.1)', borderBottom: '1px solid rgba(248,113,113,.25)', color: 'var(--red)', fontSize: 12.5, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 20px', background: 'rgba(248,113,113,.1)', borderBottom: '1px solid rgba(239,68,68,.25)', color: 'var(--red)', fontSize: 12.5, flexShrink: 0 }}>
           <AlertCircle size={14} style={{ flexShrink: 0 }} /> {erro}
         </div>
       )}
 
-      {/* Abas */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', padding: '0 22px', flexShrink: 0 }}>
-        {abas.map(({ id, Icon, label }) => (
-          <button key={id} onClick={() => setAba(id)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-            borderBottom: `2px solid ${aba === id ? 'var(--or)' : 'transparent'}`,
-            padding: '9px 4px', marginRight: 20, fontSize: 12,
-            color: aba === id ? 'var(--or)' : 'var(--t3)',
-            cursor: 'pointer', fontWeight: aba === id ? 600 : 400, marginBottom: -1,
-          }}>
-            <Icon size={13} /> {label}
-          </button>
-        ))}
-        {aba === 'designer' && (
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--t3)', alignSelf: 'center', paddingRight: 4 }}>
-            Arraste campos • Resize pelo canto inferior direito • Clique para selecionar
-          </span>
-        )}
-      </div>
-
       {/* Body */}
-      <div style={{ overflowY: aba === 'designer' ? 'hidden' : 'auto', flex: 1, padding: aba === 'designer' ? 14 : '18px 22px', display: 'flex', flexDirection: 'column', gap: aba === 'designer' ? 0 : 20, minHeight: 0 }}>
+      <div className="page-content" style={{ overflowY: aba === 'designer' ? 'hidden' : 'auto', padding: aba === 'designer' ? 14 : undefined, gap: aba === 'designer' ? 0 : undefined }}>
 
         {aba === 'campos' && (() => {
           const selCampo = campos.find(c => c._key === expandedKeys.values().next().value) || null
@@ -934,165 +913,6 @@ export default function FormBuilderModal({ tela, modulos, onSalvar, onFechar, in
         onDesistir={onFechar}
       />
 
-      {showTemplates && <TemplateModal onSelecionar={aplicarTemplate} onFechar={() => setShowTemplates(false)} />}
-    </div>
-  )
-
-  // ── MODO MODAL (existente) ────────────────────────────────────────────────
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(8px)', padding: 16 }}
-      onClick={e => e.target === e.currentTarget && onFechar()}>
-      <div style={{
-        background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 16,
-        width: aba === 'designer' ? '96vw' : '100%',
-        maxWidth: aba === 'designer' ? 1200 : 900,
-        height: aba === 'designer' ? '90vh' : 'auto',
-        maxHeight: aba === 'designer' ? '90vh' : '92vh',
-        display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: 'var(--sh-lg)',
-        transition: 'max-width .2s, width .2s',
-      }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 22px', borderBottom: '1px solid var(--bd)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>
-              {editando ? `Editar: ${tela.nome_tela}` : 'Nova Tela'}
-            </div>
-            {!editando && (
-              <button className="btn btn-ghost" onClick={() => setShowTemplates(true)} style={{ height: 30, gap: 5, fontSize: 11 }}>
-                <Layout size={12} /> Templates
-              </button>
-            )}
-          </div>
-          <button onClick={onFechar} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', display: 'flex' }}><X size={18} /></button>
-        </div>
-
-        {/* Abas */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--bd)', padding: '0 22px', flexShrink: 0 }}>
-          {abas.map(({ id, Icon, label }) => (
-            <button key={id} onClick={() => setAba(id)} style={{
-              display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
-              borderBottom: `2px solid ${aba === id ? 'var(--or)' : 'transparent'}`,
-              padding: '9px 4px', marginRight: 20, fontSize: 12,
-              color: aba === id ? 'var(--or)' : 'var(--t3)',
-              cursor: 'pointer', fontWeight: aba === id ? 600 : 400, marginBottom: -1,
-            }}>
-              <Icon size={13} /> {label}
-            </button>
-          ))}
-          {aba === 'designer' && (
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--t3)', alignSelf: 'center', paddingRight: 4 }}>
-              Arraste campos • Resize pelo canto inferior direito • Clique para selecionar
-            </span>
-          )}
-        </div>
-
-        {/* Body */}
-        <div style={{ overflowY: aba === 'designer' ? 'hidden' : 'auto', flex: 1, padding: aba === 'designer' ? 14 : '18px 22px', display: 'flex', flexDirection: 'column', gap: aba === 'designer' ? 0 : 20, minHeight: 0 }}>
-
-          {/* ABA: CAMPOS */}
-          {aba === 'campos' && (
-            <>
-              {renderIdentificacao(false)}
-
-              {/* Lista de campos */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={secHead}>Campos do Formulário</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }} disabled={salvando || campos.some(c => c.tipo === 'favorito')}
-                      onClick={() => setCampos(p => [...p, favoritoVazio(p)])}>
-                      <Star size={12} /> Favorito
-                    </button>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }} disabled={salvando || campos.some(c => c.tipo === 'timestamps')}
-                      onClick={() => setCampos(p => [...p, timestampsVazio(p)])}>
-                      <Clock size={12} /> Datas
-                    </button>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }}
-                      onClick={() => setCampos(p => [...p, divisorVazio(p)])} disabled={salvando}>
-                      <Minus size={12} /> Divisor
-                    </button>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }}
-                      onClick={() => addCampo(botaoVazio)} disabled={salvando}>
-                      <CircleDot size={12} /> Botão
-                    </button>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }}
-                      onClick={() => addCampo(lookupVazio)} disabled={salvando}>
-                      <ExternalLink size={12} /> Lookup
-                    </button>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }}
-                      onClick={() => addCampo(campoVazio)} disabled={salvando}>
-                      <Plus size={12} /> Campo
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: 10, color: 'var(--t3)', marginBottom: 8 }}>
-                  Use a aba <strong style={{ color: 'var(--or)' }}>Designer</strong> para posicionar e dimensionar os campos visualmente
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {campos.map((campo, idx) => renderCampoCard(campo, idx))}
-                  {campos.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 12, background: 'var(--s2)', borderRadius: 10, border: '1px dashed var(--bd)' }}>
-                      Nenhum campo adicionado. Clique em <strong>+ Adicionar Campo</strong>.
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginTop: 8, padding: '12px 14px', background: 'var(--s2)', borderRadius: 8, border: '1px solid var(--bd)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Elementos especiais</div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }} disabled={salvando || campos.some(c => c.tipo === 'favorito')}
-                      onClick={() => setCampos(p => [...p, favoritoVazio(p)])}>
-                      <Star size={12} /> Favorito
-                    </button>
-                    <button className="btn btn-ghost" style={{ height: 28, fontSize: 11 }} disabled={salvando || campos.some(c => c.tipo === 'timestamps')}
-                      onClick={() => setCampos(p => [...p, timestampsVazio(p)])}>
-                      <Clock size={12} /> Datas
-                    </button>
-                  </div>
-                  <div style={{ fontSize: 9, color: 'var(--t3)', fontFamily: 'monospace' }}>
-                    Sempre incluídas: <span style={{ color: 'var(--t2)' }}>
-                      id · ativo{campos.some(c => c.tipo === 'timestamps') ? ' · criado_em · alterado_em' : ''}{campos.some(c => c.tipo === 'favorito') ? ' · favorito' : ''}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ABA: DESIGNER */}
-          {aba === 'designer' && (
-            <FormDesigner
-              campos={campos}
-              onChange={handleDesignerChange}
-              canvasConfigW={canvasW}
-              canvasConfigH={canvasH}
-              onCanvasConfig={(w, h) => { setCanvasW(w); setCanvasH(h) }}
-              renderFieldPanel={renderCampoPainel}
-            />
-          )}
-
-          {/* ABA: PREVIEW */}
-          {aba === 'preview' && renderPreview(false)}
-
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 22px', borderTop: '1px solid var(--bd)', flexShrink: 0, background: 'var(--s1)', gap: 12 }}>
-          <div>
-            {erro && <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--red)' }}><AlertCircle size={13} /> {erro}</div>}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-ghost" onClick={onFechar} disabled={salvando}>Cancelar</button>
-            <button className="btn btn-primary" onClick={handleSalvar} disabled={salvando}>
-              <Save size={13} /> {salvando ? 'Salvando...' : editando ? 'Salvar Alterações' : 'Criar Tela'}
-            </button>
-          </div>
-        </div>
-
-      </div>
       {showTemplates && <TemplateModal onSelecionar={aplicarTemplate} onFechar={() => setShowTemplates(false)} />}
     </div>
   )
