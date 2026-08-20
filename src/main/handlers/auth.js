@@ -50,7 +50,11 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
       if (!okSenha) return { ok: false, erro: 'Senha incorreta.' }
       return { ok: true, user: { id: row.id, usuario: row.usuario, nome: row.nome, perfil: row.perfil, fonte: 'sistema' } }
     } catch (e) {
-      return { ok: false, erro: 'Erro interno: ' + e.message }
+      // e.message às vezes vem vazio pra certos erros do driver pg (ex.:
+      // connection terminated) — cai no e.detail/e.code como fallback pra
+      // nunca devolver "Erro interno:" sem nenhuma pista do que houve.
+      const detalhe = e.message || e.detail || e.code || String(e)
+      return { ok: false, erro: 'Erro interno: ' + detalhe }
     }
   })
 

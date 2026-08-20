@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound, Clock, Copy as CopyIcon } from 'lucide-react'
+import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound } from 'lucide-react'
 import { notificar } from '../components/Notificacao'
 import ImportarBancoModal from '../components/ImportarBancoModal'
 
@@ -503,27 +503,24 @@ export default function Configuracoes() {
 
                 {tokenGerado && (
                   <div style={{
-                    background: 'var(--or4)', border: '1px solid var(--or3)', borderRadius: 10,
-                    padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 10,
-                    animation: 'tokenCardIn .2s ease',
+                    background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 8,
+                    padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8,
                   }}>
-                    <style>{'@keyframes tokenCardIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}'}</style>
-                    <code style={{
-                      fontSize: 15, fontFamily: 'monospace', fontWeight: 600, color: 'var(--t1)',
-                      letterSpacing: 1, wordBreak: 'break-all', lineHeight: 1.5, textAlign: 'center',
-                    }}>
-                      {tokenGerado.token}
-                    </code>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--t3)' }}>
-                        <Clock size={11} />
-                        Expira às {new Date(tokenGerado.expira_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                      <button className="btn btn-primary" onClick={copiarToken}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, padding: '0 12px', height: 28, flexShrink: 0 }}>
-                        {tokenCopiado ? <Check size={12} /> : <CopyIcon size={12} />}
-                        {tokenCopiado ? 'Copiado!' : 'Copiar token'}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <code style={{
+                        flex: 1, fontSize: 12, fontFamily: 'monospace', color: 'var(--t1)',
+                        wordBreak: 'break-all',
+                      }}>
+                        {tokenGerado.token}
+                      </code>
+                      <button className="btn btn-ghost" onClick={copiarToken}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '0 10px', height: 26, flexShrink: 0 }}>
+                        {tokenCopiado ? <Check size={11} /> : null}
+                        {tokenCopiado ? 'Copiado!' : 'Copiar'}
                       </button>
+                    </div>
+                    <div style={{ fontSize: 10.5, color: 'var(--t3)' }}>
+                      Expira em {new Date(tokenGerado.expira_em).toLocaleTimeString('pt-BR')}
                     </div>
                   </div>
                 )}

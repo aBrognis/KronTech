@@ -37,6 +37,18 @@ const DEFAULTS = {
     usuario:  'postgres',
     senha:    'postgres',
   },
+  // Usada só pela feature "Importar Banco" (dev-only, ver
+  // src/main/services/importarBanco.js) — credenciais de leitura do banco de
+  // produção + caminho da pasta onde fica o krontech.ini de produção (pra
+  // trazer também a seção [Personalizacao], que não vem do banco).
+  BancoProducao: {
+    host:     '',
+    port:     '5432',
+    database: '',
+    usuario:  '',
+    senha:    '',
+    iniPath:  '',
+  },
   Caminhos: {
     arquivos: join(BASE_DIR, 'arquivos'),
     backup:   join(BASE_DIR, 'backup'),
@@ -46,16 +58,6 @@ const DEFAULTS = {
     nome:   'KronTech',
     versao: '1.1.0',
   },
-  // Usada só pela feature "Importar Banco" (dev-only, ver
-  // src/main/services/importarBanco.js) — credenciais de leitura do banco de
-  // produção + caminho da pasta onde fica o krontech.ini de produção (pra
-  // trazer também a seção [Personalizacao], que não vem do banco). Não faz
-  // sentido em produção: lá não existe "de onde importar".
-  ...(IS_DEV ? {
-    BancoProducao: {
-      host: '', port: '5432', database: '', usuario: '', senha: '', iniPath: '',
-    },
-  } : {}),
 }
 
 // ── Parser INI ────────────────────────────────────────────────────────────────
