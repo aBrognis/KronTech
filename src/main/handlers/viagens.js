@@ -4,6 +4,7 @@ import { join } from 'path'
 import { BrowserWindow, dialog } from 'electron'
 import { gerarExcelViagem } from '../services/exportViagem.js'
 import { pastaExportacaoAutomatica } from '../services/exportPaths.js'
+import { getConfig } from '../config.js'
 
 export const STATUS_VALIDOS = ['rascunho', 'nao_enviado', 'enviado', 'reembolsado']
 
@@ -182,25 +183,35 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     return query(`SELECT id, nome FROM kr_usuarios_001 WHERE ativo=TRUE ORDER BY nome`)
   }))
 
+  function nomeArquivoDespesa(cabecalho) {
+    const fmtDataArquivo = d => {
+      const dt = new Date(d)
+      if (Number.isNaN(dt.getTime())) return ''
+      return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(dt).replace(/\//g, '-')
+    }
+    return `DESPESAS VIAGEM ${fmtDataArquivo(cabecalho.data_inicio)} ATE ${fmtDataArquivo(cabecalho.data_fim)} - ${(cabecalho.consultor_nome || 'CONSULTOR').toUpperCase()}.xlsx`
+      .replace(/[\\/:*?"<>|]/g, '')
+  }
+
+  // Monta o buffer .xlsx de uma despesa — reaproveitado tanto pela
+  // exportação individual quanto pelo "Exportar Todos" em lote.
+  async function gerarBufferDespesa(id) {
+    const cabecalho = await queryOne('SELECT * FROM despesa_001 WHERE id=$1', [id])
+    if (!cabecalho) return null
+    const itens = await query('SELECT * FROM despesa_item_001 WHERE despesa_id=$1 ORDER BY data, id', [id])
+    const buffer = await gerarExcelViagem({ ...cabecalho, itens })
+    return { cabecalho, buffer, nome: nomeArquivoDespesa(cabecalho) }
+  }
+
   ipcMain.handle('viagens:exportarExcel', async (e, id) => {
     try {
-      const cabecalho = await queryOne('SELECT * FROM despesa_001 WHERE id=$1', [id])
-      if (!cabecalho) return { ok: false, erro: `Despesa #${id} não encontrada.` }
-      const itens = await query('SELECT * FROM despesa_item_001 WHERE despesa_id=$1 ORDER BY data, id', [id])
-
-      const fmtDataArquivo = d => {
-        const dt = new Date(d)
-        if (Number.isNaN(dt.getTime())) return ''
-        return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(dt).replace(/\//g, '-')
-      }
-      const nomeSugerido = `DESPESAS VIAGEM ${fmtDataArquivo(cabecalho.data_inicio)} ATE ${fmtDataArquivo(cabecalho.data_fim)} - ${(cabecalho.consultor_nome || 'CONSULTOR').toUpperCase()}.xlsx`
-        .replace(/[\\/:*?"<>|]/g, '')
-
-      const buffer = await gerarExcelViagem({ ...cabecalho, itens })
+      const dados = await gerarBufferDespesa(id)
+      if (!dados) return { ok: false, erro: `Despesa #${id} não encontrada.` }
+      const { cabecalho, buffer, nome } = dados
 
       const pastaAuto = pastaExportacaoAutomatica(cabecalho.cliente_nome, cabecalho.data_inicio)
       if (pastaAuto) {
-        const filePath = join(pastaAuto, nomeSugerido)
+        const filePath = join(pastaAuto, nome)
         writeFileSync(filePath, buffer)
         return { ok: true, path: filePath }
       }
@@ -208,7 +219,7 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
       const win = BrowserWindow.fromWebContents(e.sender)
       const { canceled, filePath } = await dialog.showSaveDialog(win, {
         title: 'Exportar despesas de viagem',
-        defaultPath: nomeSugerido,
+        defaultPath: nome,
         filters: [{ name: 'Excel', extensions: ['xlsx'] }],
       })
       if (canceled || !filePath) return { ok: false, cancelado: true }
@@ -217,5 +228,44 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     } catch (err) {
       return { ok: false, erro: err.message }
     }
+  })
+
+  // Exporta várias despesas de uma vez, um .xlsx por registro — mesma
+  // organização automática <exportações>/<ano>/<mês>/<cliente>/ de sempre.
+  // Se a pasta de exportações não estiver configurada, pede uma vez só (não
+  // um diálogo por arquivo) e salva todos ali direto, sem subpastas.
+  ipcMain.handle('viagens:exportarExcelLote', async (e, ids) => {
+    if (!Array.isArray(ids) || !ids.length) return { ok: false, erro: 'Nenhum registro para exportar.' }
+    const cfg = getConfig()
+    const temPastaAuto = !!cfg?.Caminhos?.exportacoes
+
+    let pastaFallback = null
+    if (!temPastaAuto) {
+      const win = BrowserWindow.fromWebContents(e.sender)
+      const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+        title: 'Selecionar pasta para exportar as despesas',
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (canceled || !filePaths.length) return { ok: false, cancelado: true }
+      pastaFallback = filePaths[0]
+    }
+
+    let sucesso = 0
+    const falhas = []
+    for (const id of ids) {
+      try {
+        const dados = await gerarBufferDespesa(id)
+        if (!dados) { falhas.push(`#${id}: não encontrada`); continue }
+        const { cabecalho, buffer, nome } = dados
+        const pasta = temPastaAuto
+          ? pastaExportacaoAutomatica(cabecalho.cliente_nome, cabecalho.data_inicio)
+          : pastaFallback
+        writeFileSync(join(pasta, nome), buffer)
+        sucesso++
+      } catch (err) {
+        falhas.push(`#${id}: ${err.message}`)
+      }
+    }
+    return { ok: true, sucesso, total: ids.length, falhas }
   })
 }

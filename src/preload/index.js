@@ -232,6 +232,7 @@ const api = {
     mudarStatus:       (payload) => ipcRenderer.invoke('viagens:mudarStatus', payload),
     listarConsultores: ()        => ipcRenderer.invoke('viagens:listarConsultores'),
     exportarExcel:     (id)      => ipcRenderer.invoke('viagens:exportarExcel', id),
+    exportarExcelLote: (ids)     => ipcRenderer.invoke('viagens:exportarExcelLote', ids),
   },
 }
 

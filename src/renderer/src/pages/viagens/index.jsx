@@ -100,6 +100,27 @@ export default function Viagens({ sessao, newTrigger }) {
     }
   }
 
+  const [exportandoTodos, setExportandoTodos] = useState(false)
+
+  async function handleExportarTodos() {
+    if (!registros.length || exportandoTodos) return
+    setExportandoTodos(true)
+    try {
+      const res = await window.api.viagens.exportarExcelLote(registros.map(r => r.id))
+      if (!res?.ok) {
+        if (!res?.cancelado) notificar.erro(res?.erro || 'Falha ao exportar.')
+        return
+      }
+      if (res.falhas?.length) {
+        notificar.aviso(`${res.sucesso} de ${res.total} exportadas. Falharam: ${res.falhas.join(', ')}`)
+      } else {
+        notificar.sucesso(`${res.sucesso} despesa${res.sucesso === 1 ? '' : 's'} exportada${res.sucesso === 1 ? '' : 's'} com sucesso.`)
+      }
+    } finally {
+      setExportandoTodos(false)
+    }
+  }
+
   function limparFiltros() {
     setFiltros(FILTROS_VAZIOS)
     setBuscaGeral('')
@@ -287,6 +308,14 @@ export default function Viagens({ sessao, newTrigger }) {
         <button className={`page-tab${activeTab === 'cadastro' ? ' active' : ''}`} onClick={() => setActiveTab('cadastro')}>Cadastro</button>
         {form.id && <span className="page-tab-info">{form.codigo || '----'} · {form.cliente_nome || form.consultor_nome}</span>}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          {activeTab === 'acesso' && (
+            <button className="btn btn-ghost" onClick={handleExportarTodos} disabled={!registros.length || exportandoTodos}
+              title={registros.length ? `Exportar as ${registros.length} despesas do filtro atual` : 'Nenhum registro para exportar'}
+              style={{ height: 28, fontSize: 11, padding: '0 10px' }}>
+              <FileDown size={12} />
+              {exportandoTodos ? 'Exportando...' : `Exportar Todos${registros.length ? ` (${registros.length})` : ''}`}
+            </button>
+          )}
           <button className="btn btn-ghost" onClick={handleConfigurarPastaExportacoes}
             title={pastaExportacoes ? `Pasta de exportações: ${pastaExportacoes}` : 'Nenhuma pasta configurada — exportações abrem "Salvar como"'}
             style={{ height: 28, fontSize: 11, padding: '0 10px' }}>
