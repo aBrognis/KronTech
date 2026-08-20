@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound } from 'lucide-react'
+import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound, Copy as CopyIcon } from 'lucide-react'
 import { notificar } from '../components/Notificacao'
 import ImportarBancoModal from '../components/ImportarBancoModal'
 
@@ -491,39 +491,42 @@ export default function Configuracoes() {
               esse token válido, a importação não roda. */}
           {!isDev && (
             <SecCard icon={<KeyRound size={14} />} title="Token de Importação" subtitle="Autoriza 'Importar Banco' em ambiente de dev" collapsible>
-              <div style={{ fontSize: 11.5, color: 'var(--t3)', marginBottom: 12, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11.5, color: 'var(--t3)', marginBottom: 14, lineHeight: 1.6 }}>
                 Gere um token aqui e cole no modal "Importar Banco" do ambiente de desenvolvimento. Vale por 10 minutos e só pode ser usado uma vez, mesmo se a importação falhar.
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button className="btn btn-primary" onClick={gerarTokenImportacao} disabled={gerandoToken}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32, alignSelf: 'flex-start' }}>
-                  {gerandoToken ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <KeyRound size={12} />}
-                  {gerandoToken ? 'Gerando...' : 'Gerar token'}
-                </button>
 
-                {tokenGerado && (
-                  <div style={{
-                    background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 8,
-                    padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {tokenGerado ? (
+                <div className="form-group">
+                  <label className="form-label">Token gerado</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="form-input" style={{
+                      flex: 1, display: 'flex', alignItems: 'center',
+                      height: 'auto', padding: '10px 12px', cursor: 'default', minWidth: 0,
+                    }}>
                       <code style={{
-                        flex: 1, fontSize: 12, fontFamily: 'monospace', color: 'var(--t1)',
-                        wordBreak: 'break-all',
+                        fontSize: 12, fontFamily: 'monospace', color: 'var(--t1)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                         {tokenGerado.token}
                       </code>
-                      <button className="btn btn-ghost" onClick={copiarToken}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '0 10px', height: 26, flexShrink: 0 }}>
-                        {tokenCopiado ? <Check size={11} /> : null}
-                        {tokenCopiado ? 'Copiado!' : 'Copiar'}
-                      </button>
                     </div>
-                    <div style={{ fontSize: 10.5, color: 'var(--t3)' }}>
-                      Expira em {new Date(tokenGerado.expira_em).toLocaleTimeString('pt-BR')}
-                    </div>
+                    <button className="btn btn-ghost" onClick={copiarToken} style={{ height: 38, flexShrink: 0 }}>
+                      {tokenCopiado ? <Check size={13} /> : <CopyIcon size={13} />}
+                      {tokenCopiado ? 'Copiado!' : 'Copiar'}
+                    </button>
                   </div>
-                )}
+                  <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 6 }}>
+                    Expira às {new Date(tokenGerado.expira_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              ) : null}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: tokenGerado ? 14 : 0 }}>
+                <button className="btn btn-primary" onClick={gerarTokenImportacao} disabled={gerandoToken}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                  {gerandoToken ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <KeyRound size={12} />}
+                  {gerandoToken ? 'Gerando...' : tokenGerado ? 'Gerar novo token' : 'Gerar token'}
+                </button>
               </div>
             </SecCard>
           )}
