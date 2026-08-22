@@ -36,6 +36,7 @@ export default function CofreSenhas({ newTrigger }) {
   const [erro, setErro] = useState(null)
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [showConsulta, setShowConsulta] = useState(false)
+  const [reusoDetectado, setReusoDetectado] = useState(null)
 
   const [filtrosAbertos, setFiltrosAbertos] = useState(true)
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
@@ -158,8 +159,7 @@ export default function CofreSenhas({ newTrigger }) {
     setMode('view')
   }
 
-  async function handleGravar() {
-    if (!form.sistema.trim()) { setErro('Informe o sistema.'); return }
+  async function gravarDeFato() {
     setSaving(true)
     setErro(null)
     try {
@@ -177,6 +177,16 @@ export default function CofreSenhas({ newTrigger }) {
       await carregarCategorias()
       await carregarForm(res.data)
     } finally { setSaving(false) }
+  }
+
+  async function handleGravar() {
+    if (!form.sistema.trim()) { setErro('Informe o sistema.'); return }
+    const senhaReutilizavel = form.tipo_credencial === 'login_senha' || form.tipo_credencial === 'api_token'
+    if (senhaReutilizavel && form.senha) {
+      const res = await window.api.cofreSenhas.verificarReuso({ senha: form.senha, excluirId: form.id })
+      if (res.ok && res.data?.length) { setReusoDetectado(res.data); return }
+    }
+    await gravarDeFato()
   }
 
   async function confirmarExclusao() {
@@ -520,6 +530,27 @@ export default function CofreSenhas({ newTrigger }) {
             <div style={{ display: 'flex', gap: 8, padding: '14px 22px 20px', justifyContent: 'flex-end' }}>
               <button className="btn btn-ghost" onClick={() => setConfirmExcluir(false)}>Cancelar</button>
               <button className="btn btn-danger" onClick={confirmarExclusao}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reusoDetectado && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.45)' }}>
+          <div style={{ width: 420, background: 'var(--s1)', borderRadius: 14, boxShadow: 'var(--sh-lg)', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 22px 10px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <AlertTriangle size={18} color="var(--or)" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--t1)' }}>Senha já utilizada</div>
+                <div style={{ fontSize: 12, color: 'var(--t3)', marginTop: 6, lineHeight: 1.6 }}>
+                  Esta senha também está cadastrada em: {reusoDetectado.map(r => r.sistema).join(', ')}.
+                  Usar a mesma senha em vários sistemas é um risco de segurança.
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, padding: '14px 22px 20px', justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setReusoDetectado(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={async () => { setReusoDetectado(null); await gravarDeFato() }}>Salvar mesmo assim</button>
             </div>
           </div>
         </div>

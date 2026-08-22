@@ -172,6 +172,7 @@ const api = {
     excluir:           (id)      => ipcRenderer.invoke('cofreSenhas:excluir', id),
     toggleFavorito:    (id)      => ipcRenderer.invoke('cofreSenhas:toggleFavorito', id),
     listarCategorias: ()        => ipcRenderer.invoke('cofreSenhas:listarCategorias'),
+    verificarReuso:    (opts)    => ipcRenderer.invoke('cofreSenhas:verificarReuso', opts),
   },
   funcoes: {
     listarScripts:      ()  => ipcRenderer.invoke('funcoes:listarScripts'),

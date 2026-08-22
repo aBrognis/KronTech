@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { join, dirname } from 'path'
-import { randomBytes, createCipheriv, createDecipheriv } from 'crypto'
+import { randomBytes, createCipheriv, createDecipheriv, createHmac } from 'crypto'
 import { safeStorage, app } from 'electron'
 
 const IS_DEV = !app.isPackaged
@@ -220,6 +220,17 @@ export function decryptCofre(textoCifrado) {
   } catch {
     return ''
   }
+}
+
+// Hash de comparação (não reversível) para detectar senha reutilizada no
+// Cofre de Senhas sem decriptar todas as credenciais a cada save. HMAC (não
+// SHA-256 puro) porque usa a mesma chaveMestra como chave — sem ela, o hash
+// não é sujeito a rainbow table, e se a chave vazar o dano já seria o mesmo
+// de vazar as senhas cifradas em si.
+export function hashLookupCofre(texto) {
+  if (!texto) return ''
+  const chave = Buffer.from(getConfig().Seguranca.chaveMestra, 'hex')
+  return createHmac('sha256', chave).update(String(texto), 'utf-8').digest('hex')
 }
 
 export function saveConfig(section, key, value) {

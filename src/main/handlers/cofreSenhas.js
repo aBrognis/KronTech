@@ -1,4 +1,9 @@
-import { encryptCofre, decryptCofre } from '../config'
+import { encryptCofre, decryptCofre, hashLookupCofre } from '../config'
+
+// senha_hash_lookup só se aplica a tipos que representam uma credencial de
+// acesso reutilizável (login/senha, token de API) — nota segura é texto
+// livre, não faz sentido comparar "reuso" contra ela.
+const TIPOS_COM_HASH_LOOKUP = ['login_senha', 'api_token']
 
 // Mesma heurística leve usada no renderer (InputSenhaCofre.jsx) — mantida
 // em espelho porque o nível gravado precisa refletir a senha real (só o
@@ -66,17 +71,18 @@ export function registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne }) 
     const senhaCifrada = d.senha ? encryptCofre(d.senha) : ''
     const notaCifrada = d.nota_segura ? encryptCofre(d.nota_segura) : ''
     const totpCifrado = d.totp_secret ? encryptCofre(d.totp_secret) : ''
+    const hashLookup = TIPOS_COM_HASH_LOOKUP.includes(tipo) ? hashLookupCofre(d.senha || '') : ''
     const nivel = calcularNivel(d.senha || '')
     const codRow = await queryOne(`SELECT nextval('cofre_senha_001_codigo_seq') AS next`)
     const codigo = String(codRow.next).padStart(3, '0')
     const row = await queryOne(`
       INSERT INTO cofre_senha_001
         (codigo, sistema, categoria, ambiente, url, usuario, senha, nivel_seguranca, dt_validade, observacoes, tags, favorito,
-         tipo_credencial, nota_segura, totp_secret)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *
+         tipo_credencial, nota_segura, totp_secret, senha_hash_lookup)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *
     `, [codigo, d.sistema.trim(), d.categoria || '', d.ambiente || 'producao', d.url || '',
         d.usuario || '', senhaCifrada, nivel, d.dt_validade || null, d.observacoes || '',
-        d.tags || '', !!d.favorito, tipo, notaCifrada, totpCifrado])
+        d.tags || '', !!d.favorito, tipo, notaCifrada, totpCifrado, hashLookup])
     return linhaParaFrontend(row)
   }))
 
@@ -86,6 +92,8 @@ export function registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne }) 
     const senhaCifrada = d.senha ? encryptCofre(d.senha) : ''
     const notaCifrada = d.nota_segura ? encryptCofre(d.nota_segura) : ''
     const totpCifrado = d.totp_secret ? encryptCofre(d.totp_secret) : ''
+    const tipo = d.tipo_credencial || 'login_senha'
+    const hashLookup = TIPOS_COM_HASH_LOOKUP.includes(tipo) ? hashLookupCofre(d.senha || '') : ''
     const nivel = calcularNivel(d.senha || '')
     // tipo_credencial nunca é alterado aqui — bloqueado após a criação
     // (campo desabilitado no frontend fora do modo "novo").
@@ -93,13 +101,22 @@ export function registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne }) 
       UPDATE cofre_senha_001
       SET sistema=$1, categoria=$2, ambiente=$3, url=$4, usuario=$5, senha=$6,
           nivel_seguranca=$7, dt_validade=$8, observacoes=$9, tags=$10, favorito=$11,
-          nota_segura=$12, totp_secret=$13, alterado_em=NOW()
-      WHERE id=$14 RETURNING *
+          nota_segura=$12, totp_secret=$13, senha_hash_lookup=$14, alterado_em=NOW()
+      WHERE id=$15 RETURNING *
     `, [d.sistema.trim(), d.categoria || '', d.ambiente || 'producao', d.url || '',
         d.usuario || '', senhaCifrada, nivel, d.dt_validade || null, d.observacoes || '',
-        d.tags || '', !!d.favorito, notaCifrada, totpCifrado, d.id])
+        d.tags || '', !!d.favorito, notaCifrada, totpCifrado, hashLookup, d.id])
     if (!row) throw new Error(`Registro #${d.id} não encontrado.`)
     return linhaParaFrontend(row)
+  }))
+
+  ipcMain.handle('cofreSenhas:verificarReuso', wrap(async (_, { senha, excluirId } = {}) => {
+    if (!senha) return []
+    const hash = hashLookupCofre(senha)
+    const params = [hash]
+    let cond = 'senha_hash_lookup=$1 AND ativo=TRUE'
+    if (excluirId) { params.push(excluirId); cond += ` AND id<>$${params.length}` }
+    return query(`SELECT id, sistema, usuario, tipo_credencial FROM cofre_senha_001 WHERE ${cond}`, params)
   }))
 
   ipcMain.handle('cofreSenhas:excluir', wrap(async (_, id) => {
