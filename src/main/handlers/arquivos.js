@@ -3,6 +3,48 @@ import { readFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync
 import { join, extname, basename, dirname, relative } from 'path'
 import { execSync } from 'child_process'
 
+// Seleção + cópia física genérica (dialog nativo → copia pra
+// baseDir/subpasta, resolve colisão de nome, não grava nada no banco — o
+// chamador decide onde persistir o path retornado). Extraída para função
+// exportável reaproveitada por outros módulos (ex.: anexos do Cofre de
+// Senhas), mantendo o handler `arquivos:selecionarECopiar` como wrapper.
+export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = [] } = {}, win, getConfig) {
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    title: 'Selecionar arquivo',
+    properties: ['openFile'],
+    filters: filtros.length ? filtros : undefined,
+  })
+  if (canceled || !filePaths.length) return null
+  const src     = filePaths[0]
+  const stat    = statSync(src)
+  const cfg     = getConfig()
+  const baseDir = cfg.Caminhos?.arquivos || join(app.getPath('userData'), 'arquivos')
+  const destDir = join(baseDir, subpasta)
+  if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
+  const origName = basename(src)
+  const origExt  = extname(origName)
+  const origBase = basename(origName, origExt)
+  let destName = origName
+  let destPath = join(destDir, destName)
+  let counter  = 1
+  while (existsSync(destPath)) {
+    destName = `${origBase} (${counter++})${origExt}`
+    destPath = join(destDir, destName)
+  }
+  try {
+    copyFileSync(src, destPath)
+  } catch (err) {
+    return { ok: false, erro: err.message }
+  }
+  return {
+    ok:      true,
+    path:    destPath,
+    nome:    destName,
+    ext:     origExt.toLowerCase().replace('.', ''),
+    tamanho: stat.size,
+  }
+}
+
 export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getConfig, importLog, importCancelFlags, categoriaByExt, scanDir }) {
 
   ipcMain.handle('arquivos:getAll', wrap(async () => {
@@ -279,42 +321,9 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
   })
 
   // Seleção + cópia genérica para uso no FormBuilder (sem gravar no banco)
-  ipcMain.handle('arquivos:selecionarECopiar', async (e, { subpasta = 'anexos', filtros = [] } = {}) => {
+  ipcMain.handle('arquivos:selecionarECopiar', async (e, opts) => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-      title: 'Selecionar arquivo',
-      properties: ['openFile'],
-      filters: filtros.length ? filtros : undefined,
-    })
-    if (canceled || !filePaths.length) return null
-    const src     = filePaths[0]
-    const stat    = statSync(src)
-    const cfg     = getConfig()
-    const baseDir = cfg.Caminhos?.arquivos || join(app.getPath('userData'), 'arquivos')
-    const destDir = join(baseDir, subpasta)
-    if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
-    const origName = basename(src)
-    const origExt  = extname(origName)
-    const origBase = basename(origName, origExt)
-    let destName = origName
-    let destPath = join(destDir, destName)
-    let counter  = 1
-    while (existsSync(destPath)) {
-      destName = `${origBase} (${counter++})${origExt}`
-      destPath = join(destDir, destName)
-    }
-    try {
-      copyFileSync(src, destPath)
-    } catch (err) {
-      return { ok: false, erro: err.message }
-    }
-    return {
-      ok:      true,
-      path:    destPath,
-      nome:    destName,
-      ext:     origExt.toLowerCase().replace('.', ''),
-      tamanho: stat.size,
-    }
+    return selecionarECopiarArquivo(opts, win, getConfig)
   })
 
   ipcMain.handle('arquivos:copiarClipboard', (_, caminhoArquivo) => {

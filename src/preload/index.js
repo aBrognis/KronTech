@@ -181,6 +181,11 @@ const api = {
     registrar: (opts)         => ipcRenderer.invoke('cofreSenhaAcesso:registrar', opts),
     listar:    (credencialId) => ipcRenderer.invoke('cofreSenhaAcesso:listar', credencialId),
   },
+  cofreSenhaAnexos: {
+    listar:    (credencialId) => ipcRenderer.invoke('cofreSenhaAnexos:listar', credencialId),
+    adicionar: (opts)         => ipcRenderer.invoke('cofreSenhaAnexos:adicionar', opts),
+    remover:   (id)           => ipcRenderer.invoke('cofreSenhaAnexos:remover', id),
+  },
   funcoes: {
     listarScripts:      ()  => ipcRenderer.invoke('funcoes:listarScripts'),
     criarScript:        (d) => ipcRenderer.invoke('funcoes:criarScript', d),

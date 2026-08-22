@@ -11,6 +11,7 @@ import InputData from '../components/InputData'
 import { notificar } from '../components/Notificacao'
 import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
 import LogAcessoModal from '../components/cofre/LogAcessoModal.jsx'
+import AnexosPainel from '../components/cofre/AnexosPainel.jsx'
 import { AMBIENTES, NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
 const FILTROS_VAZIOS = { busca: '', categoria: '', ambiente: '', apenasFavoritos: false, apenasVencidas: false }
@@ -499,6 +500,10 @@ export default function CofreSenhas({ newTrigger, sessao }) {
             )}
 
             <datalist id="cofre-categorias">{categorias.map(c => <option key={c} value={c} />)}</datalist>
+
+            {form.id && (
+              <AnexosPainel credencialId={form.id} usuarioNome={nomeUsuarioAtual} disabled={isRO} />
+            )}
 
             <div className="form-group">
               <label className="form-label">Observações</label>
