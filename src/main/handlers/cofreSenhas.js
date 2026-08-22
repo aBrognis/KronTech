@@ -89,6 +89,19 @@ export function registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne }) 
   ipcMain.handle('cofreSenhas:atualizar', wrap(async (_, d) => {
     if (!d.id) throw new Error('ID é obrigatório.')
     if (!d.sistema?.trim()) throw new Error('Sistema é obrigatório.')
+
+    // Histórico de senha: se o valor mudou em relação ao que está gravado
+    // (login_senha ou api_token), arquiva a senha ANTIGA antes de sobrescrever.
+    // Nunca guarda a senha nova aqui — só a que está saindo de uso.
+    const atual = await queryOne('SELECT senha FROM cofre_senha_001 WHERE id=$1', [d.id])
+    const senhaAtualPlana = atual ? decryptCofre(atual.senha) : ''
+    if (atual && (d.senha || '') !== senhaAtualPlana && senhaAtualPlana) {
+      await query(
+        `INSERT INTO cofre_senha_historico_001 (credencial_id, senha_anterior, alterado_por) VALUES ($1,$2,$3)`,
+        [d.id, encryptCofre(senhaAtualPlana), d.usuarioNome || '']
+      )
+    }
+
     const senhaCifrada = d.senha ? encryptCofre(d.senha) : ''
     const notaCifrada = d.nota_segura ? encryptCofre(d.nota_segura) : ''
     const totpCifrado = d.totp_secret ? encryptCofre(d.totp_secret) : ''

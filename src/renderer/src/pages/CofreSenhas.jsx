@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, Trash2, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search,
-  Star, Lock, ExternalLink, Copy, Check, Calendar, AlertTriangle, FolderOpen,
+  Star, Lock, ExternalLink, Copy, Check, Calendar, AlertTriangle, FolderOpen, History,
 } from 'lucide-react'
 import '../App.css'
 import FormToolbar from '../components/FormToolbar'
@@ -9,6 +9,7 @@ import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import PasswordVaultField from '../components/PasswordVaultField.jsx'
 import InputData from '../components/InputData'
 import { notificar } from '../components/Notificacao'
+import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
 import { AMBIENTES, NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
 const FILTROS_VAZIOS = { busca: '', categoria: '', ambiente: '', apenasFavoritos: false, apenasVencidas: false }
@@ -37,6 +38,7 @@ export default function CofreSenhas({ newTrigger }) {
   const [confirmExcluir, setConfirmExcluir] = useState(false)
   const [showConsulta, setShowConsulta] = useState(false)
   const [reusoDetectado, setReusoDetectado] = useState(null)
+  const [showHistorico, setShowHistorico] = useState(false)
 
   const [filtrosAbertos, setFiltrosAbertos] = useState(true)
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
@@ -456,7 +458,16 @@ export default function CofreSenhas({ newTrigger }) {
               </div>
             ) : (
               <div className="form-group">
-                <label className="form-label">{form.tipo_credencial === 'api_token' ? 'Chave de API / Token' : 'Senha'}</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label className="form-label" style={{ margin: 0 }}>{form.tipo_credencial === 'api_token' ? 'Chave de API / Token' : 'Senha'}</label>
+                  {isRO && form.id && (
+                    <button type="button" onClick={() => setShowHistorico(true)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 11, padding: '0 0 4px' }}
+                      title="Ver histórico de senhas anteriores">
+                      <History size={12} /> Histórico
+                    </button>
+                  )}
+                </div>
                 <PasswordVaultField
                   value={form.senha}
                   onChange={v => setForm(f => ({ ...f, senha: v }))}
@@ -533,6 +544,10 @@ export default function CofreSenhas({ newTrigger }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showHistorico && form.id && (
+        <HistoricoSenhaModal credencialId={form.id} onFechar={() => setShowHistorico(false)} />
       )}
 
       {reusoDetectado && (

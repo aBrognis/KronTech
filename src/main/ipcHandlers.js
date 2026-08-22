@@ -22,6 +22,7 @@ import { registerImportarBancoHandlers } from './handlers/importarBanco'
 import { registerTokenImportacaoHandlers } from './handlers/tokenImportacao'
 import { registerCryptoHandlers } from './handlers/crypto'
 import { registerCofreSenhasHandlers } from './handlers/cofreSenhas'
+import { registerCofreSenhaHistoricoHandlers } from './handlers/cofreSenhaHistorico'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -43,4 +44,5 @@ export function registerHandlers() {
   registerTokenImportacaoHandlers({ ipcMain, wrap, query })
   registerCryptoHandlers({ ipcMain })
   registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne })
+  registerCofreSenhaHistoricoHandlers({ ipcMain, wrap, query })
 }
