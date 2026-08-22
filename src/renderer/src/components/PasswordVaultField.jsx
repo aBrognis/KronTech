@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Eye, EyeOff, RefreshCw, Copy, Check, Settings2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Eye, EyeOff, RefreshCw, Copy, Check, Settings2, Save, Star } from 'lucide-react'
 
 const MAXLEN = 200
 
@@ -56,6 +56,45 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
   const [tamanho, setTamanho]         = useState(20)
   const [classes, setClasses]         = useState({ maiuscula: true, minuscula: true, numero: true, simbolo: true })
   const [evitarAmbiguos, setEvitarAmbiguos] = useState(false)
+
+  const [perfis, setPerfis]                 = useState([])
+  const [perfilSelecionado, setPerfilSelecionado] = useState('')
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false)
+  const [nomeNovoPerfil, setNomeNovoPerfil] = useState('')
+
+  useEffect(() => {
+    if (semGerador || !window.api?.cofreSenhaGerador) return
+    window.api.cofreSenhaGerador.listarPerfis().then(res => {
+      if (!res.ok) return
+      const lista = res.data || []
+      setPerfis(lista)
+      const padrao = lista.find(p => p.padrao)
+      if (padrao) aplicarPerfil(padrao)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function aplicarPerfil(p) {
+    setTamanho(p.tamanho)
+    setClasses({ maiuscula: p.usa_maiuscula, minuscula: p.usa_minuscula, numero: p.usa_numero, simbolo: p.usa_simbolo })
+    setEvitarAmbiguos(p.evitar_ambiguos)
+    setPerfilSelecionado(String(p.id))
+  }
+
+  async function salvarPerfilAtual() {
+    if (!nomeNovoPerfil.trim()) return
+    const res = await window.api.cofreSenhaGerador.salvarPerfil({
+      nome: nomeNovoPerfil.trim(), tamanho, usa_maiuscula: classes.maiuscula, usa_minuscula: classes.minuscula,
+      usa_numero: classes.numero, usa_simbolo: classes.simbolo, evitar_ambiguos: evitarAmbiguos, padrao: perfis.length === 0,
+    })
+    if (res.ok) {
+      const listar = await window.api.cofreSenhaGerador.listarPerfis()
+      if (listar.ok) setPerfis(listar.data || [])
+      setPerfilSelecionado(String(res.data.id))
+      setNomeNovoPerfil('')
+      setSalvandoPerfil(false)
+    }
+  }
 
   const forca = calcularForcaSenha(value)
 
@@ -153,6 +192,15 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6 }}>Gerador de senha</span>
               <span style={{ fontSize: 10, color: 'var(--t3)' }}>Comprimento</span>
             </div>
+
+            {perfis.length > 0 && (
+              <select className="form-select" style={{ height: 28, fontSize: 11 }} value={perfilSelecionado}
+                onChange={e => { const p = perfis.find(x => String(x.id) === e.target.value); if (p) aplicarPerfil(p) }}>
+                <option value="">Perfil personalizado</option>
+                {perfis.map(p => <option key={p.id} value={p.id}>{p.nome}{p.padrao ? ' (padrão)' : ''}</option>)}
+              </select>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <input type="range" min={8} max={64} value={tamanho}
                 onChange={e => setTamanho(Number(e.target.value))}
@@ -180,6 +228,25 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
               onClick={handleGerar} style={{ height: 30, fontSize: 11.5, gap: 6 }}>
               <RefreshCw size={12} /> Gerar senha
             </button>
+
+            {window.api?.cofreSenhaGerador && (
+              salvandoPerfil ? (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input className="form-input" style={{ height: 28, fontSize: 11, flex: 1 }}
+                    value={nomeNovoPerfil} onChange={e => setNomeNovoPerfil(e.target.value)}
+                    placeholder="Nome do perfil" autoFocus />
+                  <button type="button" className="btn btn-primary" disabled={!nomeNovoPerfil.trim()}
+                    onClick={salvarPerfilAtual} style={{ height: 28, fontSize: 11, padding: '0 8px' }}>
+                    <Save size={11} />
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="btn btn-ghost"
+                  onClick={() => setSalvandoPerfil(true)} style={{ height: 26, fontSize: 10.5, gap: 5 }}>
+                  <Star size={11} /> Salvar como perfil...
+                </button>
+              )
+            )}
         </div>
       )}
     </div>

@@ -25,6 +25,7 @@ import { registerCofreSenhasHandlers } from './handlers/cofreSenhas'
 import { registerCofreSenhaHistoricoHandlers } from './handlers/cofreSenhaHistorico'
 import { registerCofreSenhaAcessoHandlers } from './handlers/cofreSenhaAcesso'
 import { registerCofreSenhaAnexosHandlers } from './handlers/cofreSenhaAnexos'
+import { registerCofreSenhaGeradorHandlers } from './handlers/cofreSenhaGerador'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -49,4 +50,5 @@ export function registerHandlers() {
   registerCofreSenhaHistoricoHandlers({ ipcMain, wrap, query })
   registerCofreSenhaAcessoHandlers({ ipcMain, wrap, query })
   registerCofreSenhaAnexosHandlers({ ipcMain, wrap, query, queryOne, getConfig })
+  registerCofreSenhaGeradorHandlers({ ipcMain, wrap, query, queryOne })
 }
