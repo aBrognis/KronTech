@@ -11,7 +11,7 @@ function gerarSecretLocal() {
   return Array.from(arr, n => alfabeto[n % alfabeto.length]).join('')
 }
 
-export default function TotpField({ credencialId, value, onChange, disabled, onCopiarCodigo }) {
+export default function TotpField({ credencialId, value, salvo, onChange, disabled, onCopiarCodigo }) {
   const [codigo, setCodigo] = useState(null)
   const [segundosRestantes, setSegundosRestantes] = useState(0)
   const [showQr, setShowQr] = useState(false)
@@ -19,7 +19,7 @@ export default function TotpField({ credencialId, value, onChange, disabled, onC
   const [copiado, setCopiado] = useState(false)
   const intervalRef = useRef(null)
 
-  const ativo = !!credencialId && !!value
+  const ativo = !!credencialId && !!value && !!salvo
 
   useEffect(() => {
     if (!ativo) { setCodigo(null); return }

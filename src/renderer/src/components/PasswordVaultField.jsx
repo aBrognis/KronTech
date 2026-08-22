@@ -28,7 +28,7 @@ function gerarSenha({ tamanho, classes, evitarAmbiguos }) {
 // não é uma auditoria criptográfica de verdade. Espelhada no backend
 // (src/main/handlers/cofreSenhas.js) pra gravar o nível junto com a senha.
 export function calcularForcaSenha(senha) {
-  if (!senha) return { score: 0, label: '', cor: 'var(--bd2)' }
+  if (!senha) return { score: 0, barraPct: 0, label: '', cor: 'var(--bd2)' }
   let pontos = 0
   pontos += Math.min(senha.length, 32) * 2.2 // até 32 chars — sem teto artificial pra tokens longos
   if (/[a-z]/.test(senha)) pontos += 6
@@ -40,10 +40,14 @@ export function calcularForcaSenha(senha) {
   if (senha.length < 8) pontos -= 20
   pontos = Math.max(0, Math.min(100, pontos))
 
-  if (pontos < 35)  return { score: pontos, label: 'Fraca',  cor: '#f87171' }
-  if (pontos < 65)  return { score: pontos, label: 'Média',  cor: '#fbbf24' }
-  if (pontos < 85)  return { score: pontos, label: 'Forte',  cor: '#4ade80' }
-  return                   { score: pontos, label: 'Muito forte', cor: '#22c55e' }
+  // barraPct é a largura visual da barra — degraus fixos por faixa, não o
+  // score bruto (que raramente chega perto de 100 mesmo numa senha ótima,
+  // já que o teto de comprimento pontuado é 32 chars) — sem isso, mesmo uma
+  // senha "Muito forte" aparentava barra incompleta.
+  if (pontos < 35)  return { score: pontos, barraPct: 25,  label: 'Fraca',       cor: '#f87171' }
+  if (pontos < 65)  return { score: pontos, barraPct: 50,  label: 'Média',       cor: '#fbbf24' }
+  if (pontos < 85)  return { score: pontos, barraPct: 75,  label: 'Forte',       cor: '#4ade80' }
+  return                   { score: pontos, barraPct: 100, label: 'Muito forte', cor: '#22c55e' }
 }
 
 // Campo de senha reversível: mostrar/ocultar, copiar, gerador configurável
@@ -178,7 +182,7 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
       {value && !semGerador && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ flex: 1, height: 4, background: 'var(--s3)', borderRadius: 99, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${forca.score}%`, background: forca.cor, borderRadius: 99, transition: 'width .2s ease, background .2s ease' }} />
+            <div style={{ height: '100%', width: `${forca.barraPct}%`, background: forca.cor, borderRadius: 99, transition: 'width .2s ease, background .2s ease' }} />
           </div>
           <span style={{ fontSize: 9.5, fontWeight: 700, color: forca.cor, flexShrink: 0, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: .3 }}>
             {forca.label}
@@ -187,45 +191,63 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
       )}
 
       {showGerador && !semGerador && (
-        <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6 }}>Gerador de senha</span>
-              <span style={{ fontSize: 10, color: 'var(--t3)' }}>Comprimento</span>
-            </div>
+        <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6 }}>Gerador de senha</span>
 
             {perfis.length > 0 && (
-              <select className="form-select" style={{ height: 28, fontSize: 11 }} value={perfilSelecionado}
+              <select className="form-select" style={{ height: 30, fontSize: 11.5 }} value={perfilSelecionado}
                 onChange={e => { const p = perfis.find(x => String(x.id) === e.target.value); if (p) aplicarPerfil(p) }}>
                 <option value="">Perfil personalizado</option>
                 {perfis.map(p => <option key={p.id} value={p.id}>{p.nome}{p.padrao ? ' (padrão)' : ''}</option>)}
               </select>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--t2)' }}>Comprimento</span>
+                <input type="number" min={8} max={64} value={tamanho}
+                  onChange={e => setTamanho(Math.max(8, Math.min(64, Number(e.target.value) || 8)))}
+                  style={{ width: 52, height: 26, fontSize: 12, fontWeight: 700, textAlign: 'center', fontVariantNumeric: 'tabular-nums', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 6, color: 'var(--t1)' }} />
+              </div>
               <input type="range" min={8} max={64} value={tamanho}
                 onChange={e => setTamanho(Number(e.target.value))}
-                style={{ flex: 1 }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t1)', minWidth: 24, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{tamanho}</span>
+                style={{ width: '100%' }} />
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-              {Object.entries(CLASSES).map(([key, { label }]) => (
-                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11.5, color: 'var(--t2)' }}>
-                  <input type="checkbox" checked={classes[key]}
-                    onChange={e => setClasses(c => ({ ...c, [key]: e.target.checked }))} />
-                  {label}
-                </label>
-              ))}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11.5, color: 'var(--t2)' }}>
-                <input type="checkbox" checked={evitarAmbiguos}
-                  onChange={e => setEvitarAmbiguos(e.target.checked)} />
-                Evitar caracteres ambíguos (I, l, 1, O, 0)
-              </label>
+
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--t2)', marginBottom: 6 }}>Caracteres incluídos</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {Object.entries(CLASSES).map(([key, { label, chars }]) => {
+                  const ativa = classes[key]
+                  return (
+                    <button key={key} type="button" onClick={() => setClasses(c => ({ ...c, [key]: !c[key] }))}
+                      title={label}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                        border: `1px solid ${ativa ? 'var(--or)' : 'var(--bd)'}`,
+                        background: ativa ? 'var(--or3)' : 'var(--s1)',
+                        color: ativa ? 'var(--or)' : 'var(--t3)',
+                        fontSize: 11, fontWeight: 600,
+                      }}>
+                      <code style={{ fontFamily: 'monospace', fontSize: 10.5 }}>{chars.slice(0, 3)}</code>
+                      {label.split(' (')[0]}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 11.5, color: 'var(--t2)' }}>
+              <input type="checkbox" checked={evitarAmbiguos}
+                onChange={e => setEvitarAmbiguos(e.target.checked)} />
+              Evitar caracteres ambíguos (I, l, 1, O, 0)
+            </label>
+
             {nenhumaClasseAtiva && (
               <div style={{ fontSize: 10.5, color: 'var(--red)' }}>Selecione ao menos um tipo de caractere.</div>
             )}
             <button type="button" className="btn btn-primary" disabled={nenhumaClasseAtiva}
-              onClick={handleGerar} style={{ height: 30, fontSize: 11.5, gap: 6 }}>
+              onClick={handleGerar} style={{ height: 32, fontSize: 11.5, gap: 6 }}>
               <RefreshCw size={12} /> Gerar senha
             </button>
 

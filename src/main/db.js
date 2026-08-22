@@ -963,7 +963,6 @@ export async function initDb() {
       codigo           VARCHAR(10)  DEFAULT '',
       sistema          VARCHAR(200) NOT NULL,
       categoria        VARCHAR(100) DEFAULT '',
-      ambiente         VARCHAR(20)  DEFAULT 'producao',
       url              VARCHAR(500) DEFAULT '',
       usuario          VARCHAR(200) DEFAULT '',
       senha            TEXT         DEFAULT '',
@@ -1005,6 +1004,11 @@ export async function initDb() {
       ADD COLUMN IF NOT EXISTS totp_secret       TEXT        DEFAULT '',
       ADD COLUMN IF NOT EXISTS senha_hash_lookup CHAR(64)    DEFAULT ''
   `).catch(e => console.warn('[migration] alter cofre_senha_001 novos campos (startup):', e.message))
+
+  // Campo "Ambiente" removido — sem utilidade prática (mesmo cofre pode
+  // guardar acessos de produção/homologação sem precisar dessa distinção).
+  await query(`ALTER TABLE cofre_senha_001 DROP COLUMN IF EXISTS ambiente`)
+    .catch(e => console.warn('[migration] drop coluna ambiente de cofre_senha_001 (startup):', e.message))
 
   await query(`
     CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_hash_lookup ON cofre_senha_001(senha_hash_lookup)

@@ -13,9 +13,9 @@ import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
 import LogAcessoModal from '../components/cofre/LogAcessoModal.jsx'
 import AnexosPainel from '../components/cofre/AnexosPainel.jsx'
 import TotpField from '../components/cofre/TotpField.jsx'
-import { AMBIENTES, NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
+import { NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
-const FILTROS_VAZIOS = { busca: '', categoria: '', ambiente: '', apenasFavoritos: false, apenasVencidas: false }
+const FILTROS_VAZIOS = { busca: '', categoria: '', apenasFavoritos: false, apenasVencidas: false }
 const CAMPOS_BUSCA = [
   { nome_campo: 'codigo',   label: 'Código'  },
   { nome_campo: 'sistema',  label: 'Sistema' },
@@ -56,7 +56,6 @@ export default function CofreSenhas({ newTrigger, sessao }) {
       const params = {}
       if (f.busca.trim())     params.busca = f.busca.trim()
       if (f.categoria)        params.categoria = f.categoria
-      if (f.ambiente)         params.ambiente = f.ambiente
       if (f.apenasFavoritos)  params.apenasFavoritos = true
       if (f.apenasVencidas)   params.apenasVencidas = true
       const res = await window.api.cofreSenhas.listar(params)
@@ -102,7 +101,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
     setFiltros(FILTROS_VAZIOS)
   }
 
-  const qtdFiltrosAtivos = [filtros.busca.trim(), filtros.categoria, filtros.ambiente, filtros.apenasFavoritos, filtros.apenasVencidas].filter(Boolean).length
+  const qtdFiltrosAtivos = [filtros.busca.trim(), filtros.categoria, filtros.apenasFavoritos, filtros.apenasVencidas].filter(Boolean).length
 
   async function carregarForm(reg) {
     const res = await window.api.cofreSenhas.obter(reg.id)
@@ -110,7 +109,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
     const d = res.data
     setForm({
       id: d.id, codigo: d.codigo || '', sistema: d.sistema || '', categoria: d.categoria || '',
-      ambiente: d.ambiente || 'producao', url: d.url || '', usuario: d.usuario || '',
+      url: d.url || '', usuario: d.usuario || '',
       senha: d.senha || '', nivel_seguranca: d.nivel_seguranca || '',
       dt_validade: d.dt_validade ? String(d.dt_validade).slice(0, 10) : '',
       observacoes: d.observacoes || '', tags: d.tags || '', favorito: !!d.favorito,
@@ -278,7 +277,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
               {filtrosAbertos && (
                 <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
                   onKeyDown={e => e.key === 'Enter' && carregarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
                     <div className="form-group" style={{ margin: 0 }}>
                       <label className="form-label">Busca geral</label>
                       <input className="form-input form-input-sm"
@@ -291,14 +290,6 @@ export default function CofreSenhas({ newTrigger, sessao }) {
                         value={filtros.categoria} onChange={e => setFiltros(f => ({ ...f, categoria: e.target.value }))}>
                         <option value="">Todas</option>
                         {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Ambiente</label>
-                      <select className="form-select form-input-sm"
-                        value={filtros.ambiente} onChange={e => setFiltros(f => ({ ...f, ambiente: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {AMBIENTES.map(a => <option key={a.valor} value={a.valor}>{a.label}</option>)}
                       </select>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, paddingBottom: 6 }}>
@@ -366,7 +357,6 @@ export default function CofreSenhas({ newTrigger, sessao }) {
                           {r.usuario && <span>{r.usuario}</span>}
                           {r.categoria && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><FolderOpen size={10} /> {r.categoria}</span>}
                           {r.dt_validade && <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Calendar size={10} /> {fmtDataBR(r.dt_validade)}</span>}
-                          <code style={{ fontFamily: 'monospace', fontSize: 10, background: 'var(--s3)', padding: '1px 6px', borderRadius: 4, color: 'var(--t2)' }}>{AMBIENTES.find(a => a.valor === r.ambiente)?.label || r.ambiente}</code>
                         </div>
                       </div>
 
@@ -405,7 +395,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
                 </button>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 10 }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">Código</label>
                 <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
@@ -416,13 +406,6 @@ export default function CofreSenhas({ newTrigger, sessao }) {
                 <label className="form-label">Sistema *</label>
                 <input className="form-input" value={form.sistema} disabled={isRO}
                   onChange={e => setForm(f => ({ ...f, sistema: e.target.value }))} placeholder="Ex: Servidor de E-mail" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Ambiente</label>
-                <select className="form-select" style={{ width: 160 }} value={form.ambiente} disabled={isRO}
-                  onChange={e => setForm(f => ({ ...f, ambiente: e.target.value }))}>
-                  {AMBIENTES.map(a => <option key={a.valor} value={a.valor}>{a.label}</option>)}
-                </select>
               </div>
             </div>
 
@@ -449,54 +432,61 @@ export default function CofreSenhas({ newTrigger, sessao }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: form.tipo_credencial === 'login_senha' ? '1fr 1fr' : '1fr', gap: 10 }}>
-              {form.tipo_credencial === 'login_senha' && (
-                <div className="form-group">
-                  <label className="form-label">Usuário / E-mail</label>
-                  <CampoComCopiar value={form.usuario} disabled={isRO}
-                    onChange={v => setForm(f => ({ ...f, usuario: v }))} placeholder="usuario@empresa.com.br" />
-                </div>
-              )}
+            {form.tipo_credencial === 'login_senha' && (
               <div className="form-group">
-                <label className="form-label">Válido até</label>
-                <InputData value={form.dt_validade} disabled={isRO}
-                  onChange={v => setForm(f => ({ ...f, dt_validade: v }))} />
+                <label className="form-label">Usuário / E-mail</label>
+                <CampoComCopiar value={form.usuario} disabled={isRO}
+                  onChange={v => setForm(f => ({ ...f, usuario: v }))} placeholder="usuario@empresa.com.br" />
               </div>
-            </div>
+            )}
 
             {form.tipo_credencial === 'nota_segura' ? (
-              <div className="form-group">
-                <label className="form-label">Nota Segura</label>
-                <PasswordVaultField
-                  value={form.nota_segura}
-                  onChange={v => setForm(f => ({ ...f, nota_segura: v }))}
-                  disabled={isRO}
-                  semGerador
-                  multilinha
-                  placeholder="Texto sigiloso — ex: recovery codes, chave privada, PIN..."
-                  onVisualizar={() => form.id && registrarAcesso(form.id, 'visualizar')}
-                  onCopiar={() => form.id && registrarAcesso(form.id, 'copiar')}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10, alignItems: 'start' }}>
+                <div className="form-group">
+                  <label className="form-label">Nota Segura</label>
+                  <PasswordVaultField
+                    value={form.nota_segura}
+                    onChange={v => setForm(f => ({ ...f, nota_segura: v }))}
+                    disabled={isRO}
+                    semGerador
+                    multilinha
+                    placeholder="Texto sigiloso — ex: recovery codes, chave privada, PIN..."
+                    onVisualizar={() => form.id && registrarAcesso(form.id, 'visualizar')}
+                    onCopiar={() => form.id && registrarAcesso(form.id, 'copiar')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Válido até</label>
+                  <InputData value={form.dt_validade} disabled={isRO}
+                    onChange={v => setForm(f => ({ ...f, dt_validade: v }))} />
+                </div>
               </div>
             ) : (
-              <div className="form-group">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label className="form-label" style={{ margin: 0 }}>{form.tipo_credencial === 'api_token' ? 'Chave de API / Token' : 'Senha'}</label>
-                  {isRO && form.id && (
-                    <button type="button" onClick={() => setShowHistorico(true)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 11, padding: '0 0 4px' }}
-                      title="Ver histórico de senhas anteriores">
-                      <History size={12} /> Histórico
-                    </button>
-                  )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10, alignItems: 'start' }}>
+                <div className="form-group">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <label className="form-label" style={{ margin: 0 }}>{form.tipo_credencial === 'api_token' ? 'Chave de API / Token' : 'Senha'}</label>
+                    {isRO && form.id && (
+                      <button type="button" onClick={() => setShowHistorico(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 11, padding: '0 0 4px' }}
+                        title="Ver histórico de senhas anteriores">
+                        <History size={12} /> Histórico
+                      </button>
+                    )}
+                  </div>
+                  <PasswordVaultField
+                    value={form.senha}
+                    onChange={v => setForm(f => ({ ...f, senha: v }))}
+                    disabled={isRO}
+                    onVisualizar={() => form.id && registrarAcesso(form.id, 'visualizar')}
+                    onCopiar={() => form.id && registrarAcesso(form.id, 'copiar')}
+                  />
                 </div>
-                <PasswordVaultField
-                  value={form.senha}
-                  onChange={v => setForm(f => ({ ...f, senha: v }))}
-                  disabled={isRO}
-                  onVisualizar={() => form.id && registrarAcesso(form.id, 'visualizar')}
-                  onCopiar={() => form.id && registrarAcesso(form.id, 'copiar')}
-                />
+                <div className="form-group">
+                  <label className="form-label">Válido até</label>
+                  <InputData value={form.dt_validade} disabled={isRO}
+                    onChange={v => setForm(f => ({ ...f, dt_validade: v }))} />
+                </div>
               </div>
             )}
 
@@ -505,6 +495,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
             <TotpField
               credencialId={form.id}
               value={form.totp_secret}
+              salvo={isRO}
               onChange={v => setForm(f => ({ ...f, totp_secret: v }))}
               disabled={isRO}
               onCopiarCodigo={() => form.id && registrarAcesso(form.id, 'copiar_totp')}
