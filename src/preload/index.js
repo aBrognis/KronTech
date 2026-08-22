@@ -173,6 +173,8 @@ const api = {
     toggleFavorito:    (id)      => ipcRenderer.invoke('cofreSenhas:toggleFavorito', id),
     listarCategorias: ()        => ipcRenderer.invoke('cofreSenhas:listarCategorias'),
     verificarReuso:    (opts)    => ipcRenderer.invoke('cofreSenhas:verificarReuso', opts),
+    totpCodigoAtual:   (id)      => ipcRenderer.invoke('cofreSenhas:totpCodigoAtual', id),
+    totpQrCode:        (id)      => ipcRenderer.invoke('cofreSenhas:totpQrCode', id),
   },
   cofreSenhaHistorico: {
     listar: (credencialId) => ipcRenderer.invoke('cofreSenhaHistorico:listar', credencialId),

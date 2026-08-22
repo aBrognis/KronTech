@@ -12,6 +12,7 @@ import { notificar } from '../components/Notificacao'
 import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
 import LogAcessoModal from '../components/cofre/LogAcessoModal.jsx'
 import AnexosPainel from '../components/cofre/AnexosPainel.jsx'
+import TotpField from '../components/cofre/TotpField.jsx'
 import { AMBIENTES, NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
 const FILTROS_VAZIOS = { busca: '', categoria: '', ambiente: '', apenasFavoritos: false, apenasVencidas: false }
@@ -500,6 +501,14 @@ export default function CofreSenhas({ newTrigger, sessao }) {
             )}
 
             <datalist id="cofre-categorias">{categorias.map(c => <option key={c} value={c} />)}</datalist>
+
+            <TotpField
+              credencialId={form.id}
+              value={form.totp_secret}
+              onChange={v => setForm(f => ({ ...f, totp_secret: v }))}
+              disabled={isRO}
+              onCopiarCodigo={() => form.id && registrarAcesso(form.id, 'copiar_totp')}
+            />
 
             {form.id && (
               <AnexosPainel credencialId={form.id} usuarioNome={nomeUsuarioAtual} disabled={isRO} />

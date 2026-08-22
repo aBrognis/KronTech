@@ -1,4 +1,5 @@
 import { encryptCofre, decryptCofre, hashLookupCofre } from '../config'
+import { gerarCodigoAtual, gerarQrCodeDataUrl } from '../services/totpService'
 
 // senha_hash_lookup só se aplica a tipos que representam uma credencial de
 // acesso reutilizável (login/senha, token de API) — nota segura é texto
@@ -148,5 +149,20 @@ export function registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne }) 
   ipcMain.handle('cofreSenhas:listarCategorias', wrap(async () => {
     const rows = await query(`SELECT DISTINCT categoria FROM cofre_senha_001 WHERE categoria != '' AND ativo = TRUE ORDER BY categoria`)
     return rows.map(r => r.categoria)
+  }))
+
+  ipcMain.handle('cofreSenhas:totpCodigoAtual', wrap(async (_, id) => {
+    const row = await queryOne('SELECT totp_secret, sistema FROM cofre_senha_001 WHERE id=$1', [id])
+    const secret = row ? decryptCofre(row.totp_secret) : ''
+    if (!secret) throw new Error('Este registro não tem chave TOTP configurada.')
+    return gerarCodigoAtual(secret)
+  }))
+
+  ipcMain.handle('cofreSenhas:totpQrCode', wrap(async (_, id) => {
+    const row = await queryOne('SELECT totp_secret, sistema, usuario FROM cofre_senha_001 WHERE id=$1', [id])
+    const secret = row ? decryptCofre(row.totp_secret) : ''
+    if (!secret) throw new Error('Este registro não tem chave TOTP configurada.')
+    const dataUrl = await gerarQrCodeDataUrl(secret, `${row.sistema}${row.usuario ? ':' + row.usuario : ''}`)
+    return { dataUrl }
   }))
 }
