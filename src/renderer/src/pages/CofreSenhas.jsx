@@ -9,7 +9,7 @@ import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import PasswordVaultField from '../components/PasswordVaultField.jsx'
 import InputData from '../components/InputData'
 import { notificar } from '../components/Notificacao'
-import { AMBIENTES, NIVEL_META, EMPTY_FORM, fmtDataBR, estaVencida } from './cofreSenhas/utils'
+import { AMBIENTES, NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
 const FILTROS_VAZIOS = { busca: '', categoria: '', ambiente: '', apenasFavoritos: false, apenasVencidas: false }
 const CAMPOS_BUSCA = [
@@ -107,6 +107,8 @@ export default function CofreSenhas({ newTrigger }) {
       senha: d.senha || '', nivel_seguranca: d.nivel_seguranca || '',
       dt_validade: d.dt_validade ? String(d.dt_validade).slice(0, 10) : '',
       observacoes: d.observacoes || '', tags: d.tags || '', favorito: !!d.favorito,
+      tipo_credencial: d.tipo_credencial || 'login_senha',
+      nota_segura: d.nota_segura || '', totp_secret: d.totp_secret || '',
     })
     setErro(null)
     setMode('view')
@@ -392,6 +394,16 @@ export default function CofreSenhas({ newTrigger }) {
               </div>
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Tipo de Credencial</label>
+              <select className="form-select" style={{ width: 260 }} value={form.tipo_credencial}
+                disabled={isRO || mode === 'edit'}
+                title={mode === 'edit' ? 'O tipo não pode ser alterado após a criação — crie um novo registro se precisar de outro tipo.' : undefined}
+                onChange={e => setForm(f => ({ ...f, tipo_credencial: e.target.value }))}>
+                {TIPOS_CREDENCIAL.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+              </select>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="form-group">
                 <label className="form-label">Categoria</label>
@@ -405,12 +417,14 @@ export default function CofreSenhas({ newTrigger }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div className="form-group">
-                <label className="form-label">Usuário / E-mail</label>
-                <CampoComCopiar value={form.usuario} disabled={isRO}
-                  onChange={v => setForm(f => ({ ...f, usuario: v }))} placeholder="usuario@empresa.com.br" />
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: form.tipo_credencial === 'login_senha' ? '1fr 1fr' : '1fr', gap: 10 }}>
+              {form.tipo_credencial === 'login_senha' && (
+                <div className="form-group">
+                  <label className="form-label">Usuário / E-mail</label>
+                  <CampoComCopiar value={form.usuario} disabled={isRO}
+                    onChange={v => setForm(f => ({ ...f, usuario: v }))} placeholder="usuario@empresa.com.br" />
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Válido até</label>
                 <InputData value={form.dt_validade} disabled={isRO}
@@ -418,14 +432,28 @@ export default function CofreSenhas({ newTrigger }) {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Senha</label>
-              <PasswordVaultField
-                value={form.senha}
-                onChange={v => setForm(f => ({ ...f, senha: v }))}
-                disabled={isRO}
-              />
-            </div>
+            {form.tipo_credencial === 'nota_segura' ? (
+              <div className="form-group">
+                <label className="form-label">Nota Segura</label>
+                <PasswordVaultField
+                  value={form.nota_segura}
+                  onChange={v => setForm(f => ({ ...f, nota_segura: v }))}
+                  disabled={isRO}
+                  semGerador
+                  multilinha
+                  placeholder="Texto sigiloso — ex: recovery codes, chave privada, PIN..."
+                />
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label">{form.tipo_credencial === 'api_token' ? 'Chave de API / Token' : 'Senha'}</label>
+                <PasswordVaultField
+                  value={form.senha}
+                  onChange={v => setForm(f => ({ ...f, senha: v }))}
+                  disabled={isRO}
+                />
+              </div>
+            )}
 
             <datalist id="cofre-categorias">{categorias.map(c => <option key={c} value={c} />)}</datalist>
 

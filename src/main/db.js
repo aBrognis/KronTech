@@ -996,6 +996,76 @@ export async function initDb() {
   await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_ativo ON cofre_senha_001(ativo)`).catch(() => {})
   await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_categoria ON cofre_senha_001(categoria)`).catch(() => {})
 
+  // ── Cofre de Senhas — reformulação (tipos de credencial, reuso de senha,
+  //    histórico, log de acesso, anexos, perfis de gerador) ─────────────────
+  await query(`
+    ALTER TABLE cofre_senha_001
+      ADD COLUMN IF NOT EXISTS tipo_credencial   VARCHAR(20) NOT NULL DEFAULT 'login_senha',
+      ADD COLUMN IF NOT EXISTS nota_segura       TEXT        DEFAULT '',
+      ADD COLUMN IF NOT EXISTS totp_secret       TEXT        DEFAULT '',
+      ADD COLUMN IF NOT EXISTS senha_hash_lookup CHAR(64)    DEFAULT ''
+  `).catch(e => console.warn('[migration] alter cofre_senha_001 novos campos (startup):', e.message))
+
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_hash_lookup ON cofre_senha_001(senha_hash_lookup)
+    WHERE senha_hash_lookup <> ''
+  `).catch(() => {})
+  await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_001_tipo ON cofre_senha_001(tipo_credencial)`).catch(() => {})
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS cofre_senha_anexo_001 (
+      id            SERIAL PRIMARY KEY,
+      credencial_id INTEGER      NOT NULL REFERENCES cofre_senha_001(id) ON DELETE CASCADE,
+      tipo_anexo    VARCHAR(20)  NOT NULL DEFAULT 'generico',
+      nome_original VARCHAR(255) NOT NULL,
+      caminho       TEXT         NOT NULL,
+      extensao      VARCHAR(10)  DEFAULT '',
+      tamanho_bytes INTEGER      DEFAULT 0,
+      descricao     VARCHAR(255) DEFAULT '',
+      criado_em     TIMESTAMP    DEFAULT NOW(),
+      criado_por    VARCHAR(120) DEFAULT ''
+    )
+  `).catch(e => console.warn('[migration] criar cofre_senha_anexo_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_anexo_001_credencial ON cofre_senha_anexo_001(credencial_id)`).catch(() => {})
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS cofre_senha_historico_001 (
+      id             SERIAL PRIMARY KEY,
+      credencial_id  INTEGER      NOT NULL REFERENCES cofre_senha_001(id) ON DELETE CASCADE,
+      senha_anterior TEXT         NOT NULL,
+      alterado_em    TIMESTAMP    DEFAULT NOW(),
+      alterado_por   VARCHAR(120) DEFAULT ''
+    )
+  `).catch(e => console.warn('[migration] criar cofre_senha_historico_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_historico_001_credencial ON cofre_senha_historico_001(credencial_id)`).catch(() => {})
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS cofre_senha_acesso_log_001 (
+      id             SERIAL PRIMARY KEY,
+      credencial_id  INTEGER      NOT NULL REFERENCES cofre_senha_001(id) ON DELETE CASCADE,
+      acao           VARCHAR(20)  NOT NULL,
+      usuario_nome   VARCHAR(120) DEFAULT '',
+      criado_em      TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] criar cofre_senha_acesso_log_001 (startup):', e.message))
+  await query(`CREATE INDEX IF NOT EXISTS idx_cofre_senha_acesso_log_001_credencial ON cofre_senha_acesso_log_001(credencial_id, criado_em DESC)`).catch(() => {})
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS cofre_senha_gerador_perfil_001 (
+      id               SERIAL PRIMARY KEY,
+      nome             VARCHAR(100) NOT NULL,
+      tamanho          INTEGER      NOT NULL DEFAULT 20,
+      usa_maiuscula    BOOLEAN      NOT NULL DEFAULT TRUE,
+      usa_minuscula    BOOLEAN      NOT NULL DEFAULT TRUE,
+      usa_numero       BOOLEAN      NOT NULL DEFAULT TRUE,
+      usa_simbolo      BOOLEAN      NOT NULL DEFAULT TRUE,
+      evitar_ambiguos  BOOLEAN      NOT NULL DEFAULT FALSE,
+      padrao           BOOLEAN      NOT NULL DEFAULT FALSE,
+      criado_em        TIMESTAMP    DEFAULT NOW(),
+      alterado_em      TIMESTAMP    DEFAULT NOW()
+    )
+  `).catch(e => console.warn('[migration] criar cofre_senha_gerador_perfil_001 (startup):', e.message))
+
   // Motor de execução da aba Funções (Scripts/Integrações/Notificações/
   // Automações/Agendamentos/Fluxos) — substitui a persistência antiga em
   // .ini (saveSectionConfig só suporta pares chave=valor simples, corrompia

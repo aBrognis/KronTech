@@ -49,7 +49,7 @@ export function calcularForcaSenha(senha) {
 // Campo de senha reversível: mostrar/ocultar, copiar, gerador configurável
 // (comprimento + classes de caractere) e barra de força — usado tanto pelo
 // campo "senha_cofre" do FormBuilder quanto pela tela nativa Cofre de Senhas.
-export default function PasswordVaultField({ value, onChange, disabled, placeholder = 'Senha' }) {
+export default function PasswordVaultField({ value, onChange, disabled, placeholder = 'Senha', semGerador = false, multilinha = false }) {
   const [visivel, setVisivel]         = useState(false)
   const [copiado, setCopiado]         = useState(false)
   const [showGerador, setShowGerador] = useState(false)
@@ -79,43 +79,56 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <div style={{ display: 'flex', gap: 4 }}>
         <div style={{ position: 'relative', flex: 1 }}>
-          <input
-            className="form-input"
-            type={visivel ? 'text' : 'password'}
-            value={value}
-            onChange={e => onChange(e.target.value.slice(0, MAXLEN))}
-            disabled={disabled}
-            placeholder={placeholder}
-            autoComplete="new-password"
-            maxLength={MAXLEN}
-            style={{ height: 36, width: '100%', paddingRight: 32, fontFamily: visivel ? 'monospace' : undefined, letterSpacing: visivel ? undefined : 2 }}
-          />
+          {multilinha ? (
+            <textarea
+              className="form-textarea"
+              value={visivel ? value : value ? '•'.repeat(Math.min(value.length, 60)) : ''}
+              onChange={e => { if (visivel) onChange(e.target.value.slice(0, MAXLEN * 4)) }}
+              readOnly={!visivel}
+              disabled={disabled}
+              placeholder={placeholder}
+              rows={3}
+              style={{ width: '100%', paddingRight: 32, fontFamily: visivel ? 'monospace' : undefined, resize: 'vertical' }}
+            />
+          ) : (
+            <input
+              className="form-input"
+              type={visivel ? 'text' : 'password'}
+              value={value}
+              onChange={e => onChange(e.target.value.slice(0, MAXLEN))}
+              disabled={disabled}
+              placeholder={placeholder}
+              autoComplete="new-password"
+              maxLength={MAXLEN}
+              style={{ height: 36, width: '100%', paddingRight: 32, fontFamily: visivel ? 'monospace' : undefined, letterSpacing: visivel ? undefined : 2 }}
+            />
+          )}
           <button type="button" onClick={() => setVisivel(v => !v)} disabled={!value}
-            style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: value ? 'pointer' : 'default', color: 'var(--t3)', display: 'flex', padding: 2, opacity: value ? 1 : .4 }}
-            title={visivel ? 'Ocultar senha' : 'Mostrar senha'}>
+            style={{ position: 'absolute', right: 6, top: multilinha ? 10 : '50%', transform: multilinha ? 'none' : 'translateY(-50%)', background: 'none', border: 'none', cursor: value ? 'pointer' : 'default', color: 'var(--t3)', display: 'flex', padding: 2, opacity: value ? 1 : .4 }}
+            title={visivel ? 'Ocultar' : 'Mostrar'}>
             {visivel ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         </div>
-        {!disabled && (
+        {!disabled && !semGerador && (
           <button type="button" className="btn btn-ghost"
             onClick={() => setShowGerador(v => !v)} title="Configurar gerador de senha"
             style={{ flexShrink: 0, padding: '0 9px', height: 36, color: showGerador ? 'var(--or)' : undefined }}>
             <Settings2 size={14} />
           </button>
         )}
-        {!disabled && (
+        {!disabled && !semGerador && (
           <button type="button" className="btn btn-ghost"
             onClick={handleGerar} title="Gerar senha" style={{ flexShrink: 0, padding: '0 9px', height: 36 }}>
             <RefreshCw size={14} />
           </button>
         )}
         <button type="button" className="btn btn-ghost" disabled={!value}
-          onClick={handleCopiar} title="Copiar senha" style={{ flexShrink: 0, padding: '0 9px', height: 36, color: copiado ? 'var(--green)' : undefined }}>
+          onClick={handleCopiar} title="Copiar" style={{ flexShrink: 0, padding: '0 9px', height: 36, color: copiado ? 'var(--green)' : undefined }}>
           {copiado ? <Check size={14} /> : <Copy size={14} />}
         </button>
       </div>
 
-      {value && (
+      {value && !semGerador && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div style={{ flex: 1, height: 4, background: 'var(--s3)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${forca.score}%`, background: forca.cor, borderRadius: 99, transition: 'width .2s ease, background .2s ease' }} />
@@ -126,7 +139,7 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
         </div>
       )}
 
-      {showGerador && (
+      {showGerador && !semGerador && (
         <div style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .6 }}>Gerador de senha</span>
