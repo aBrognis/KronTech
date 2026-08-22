@@ -484,7 +484,7 @@ export default function App() {
       case 'dashboard-designer': return <DashboardDesigner newTrigger={newTrigger} onNavigate={handleNavigate} />
       case 'agenda':             return <Agenda newTrigger={newTrigger} />
       case 'viagens':            return <Viagens newTrigger={newTrigger} sessao={sessao} />
-      case 'cofre-senhas':       return <CofreSenhas newTrigger={newTrigger} />
+      case 'cofre-senhas':       return <CofreSenhas newTrigger={newTrigger} sessao={sessao} />
       case 'arquivos':           return <Arquivos newTrigger={newTrigger} />
       case 'sql':                return <EditorSQL />
       case 'configuracoes':      return <Configuracoes />

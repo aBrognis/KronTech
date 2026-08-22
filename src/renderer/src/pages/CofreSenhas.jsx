@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, Trash2, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search,
-  Star, Lock, ExternalLink, Copy, Check, Calendar, AlertTriangle, FolderOpen, History,
+  Star, Lock, ExternalLink, Copy, Check, Calendar, AlertTriangle, FolderOpen, History, ScrollText,
 } from 'lucide-react'
 import '../App.css'
 import FormToolbar from '../components/FormToolbar'
@@ -10,6 +10,7 @@ import PasswordVaultField from '../components/PasswordVaultField.jsx'
 import InputData from '../components/InputData'
 import { notificar } from '../components/Notificacao'
 import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
+import LogAcessoModal from '../components/cofre/LogAcessoModal.jsx'
 import { AMBIENTES, NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
 const FILTROS_VAZIOS = { busca: '', categoria: '', ambiente: '', apenasFavoritos: false, apenasVencidas: false }
@@ -19,7 +20,7 @@ const CAMPOS_BUSCA = [
   { nome_campo: 'usuario',  label: 'Usuário' },
 ]
 
-export default function CofreSenhas({ newTrigger }) {
+export default function CofreSenhas({ newTrigger, sessao }) {
   const [activeTab, setActiveTab] = useState('cadastro')
 
   // Lista completa (não filtrada) — sempre carregada no mount, é a fonte
@@ -39,6 +40,7 @@ export default function CofreSenhas({ newTrigger }) {
   const [showConsulta, setShowConsulta] = useState(false)
   const [reusoDetectado, setReusoDetectado] = useState(null)
   const [showHistorico, setShowHistorico] = useState(false)
+  const [showLogAcesso, setShowLogAcesso] = useState(false)
 
   const [filtrosAbertos, setFiltrosAbertos] = useState(true)
   const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
@@ -217,12 +219,19 @@ export default function CofreSenhas({ newTrigger }) {
     if (form.id === id) setForm(f => ({ ...f, favorito: res.data.favorito }))
   }
 
+  const nomeUsuarioAtual = sessao?.nome || sessao?.usuario || 'desconhecido'
+
+  function registrarAcesso(credencialId, acao) {
+    window.api.cofreSenhaAcesso.registrar({ credencialId, acao, usuarioNome: nomeUsuarioAtual }).catch(() => {})
+  }
+
   async function handleCopiarSenhaLinha(reg) {
     const res = await window.api.cofreSenhas.obter(reg.id)
     if (!res.ok || !res.data.senha) return
     await window.api.clipboard.write(res.data.senha)
     setCopiadoId(reg.id)
     setTimeout(() => setCopiadoId(null), 1500)
+    registrarAcesso(reg.id, 'copiar')
   }
 
   const isRO = mode === 'view'
@@ -385,6 +394,15 @@ export default function CofreSenhas({ newTrigger }) {
 
         {activeTab === 'cadastro' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {isRO && form.id && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setShowLogAcesso(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 11 }}
+                  title="Ver log de acesso deste item">
+                  <ScrollText size={12} /> Log de Acesso
+                </button>
+              </div>
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 10 }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">Código</label>
@@ -454,6 +472,8 @@ export default function CofreSenhas({ newTrigger }) {
                   semGerador
                   multilinha
                   placeholder="Texto sigiloso — ex: recovery codes, chave privada, PIN..."
+                  onVisualizar={() => form.id && registrarAcesso(form.id, 'visualizar')}
+                  onCopiar={() => form.id && registrarAcesso(form.id, 'copiar')}
                 />
               </div>
             ) : (
@@ -472,6 +492,8 @@ export default function CofreSenhas({ newTrigger }) {
                   value={form.senha}
                   onChange={v => setForm(f => ({ ...f, senha: v }))}
                   disabled={isRO}
+                  onVisualizar={() => form.id && registrarAcesso(form.id, 'visualizar')}
+                  onCopiar={() => form.id && registrarAcesso(form.id, 'copiar')}
                 />
               </div>
             )}
@@ -548,6 +570,10 @@ export default function CofreSenhas({ newTrigger }) {
 
       {showHistorico && form.id && (
         <HistoricoSenhaModal credencialId={form.id} onFechar={() => setShowHistorico(false)} />
+      )}
+
+      {showLogAcesso && form.id && (
+        <LogAcessoModal credencialId={form.id} onFechar={() => setShowLogAcesso(false)} />
       )}
 
       {reusoDetectado && (

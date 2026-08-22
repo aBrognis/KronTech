@@ -177,6 +177,10 @@ const api = {
   cofreSenhaHistorico: {
     listar: (credencialId) => ipcRenderer.invoke('cofreSenhaHistorico:listar', credencialId),
   },
+  cofreSenhaAcesso: {
+    registrar: (opts)         => ipcRenderer.invoke('cofreSenhaAcesso:registrar', opts),
+    listar:    (credencialId) => ipcRenderer.invoke('cofreSenhaAcesso:listar', credencialId),
+  },
   funcoes: {
     listarScripts:      ()  => ipcRenderer.invoke('funcoes:listarScripts'),
     criarScript:        (d) => ipcRenderer.invoke('funcoes:criarScript', d),

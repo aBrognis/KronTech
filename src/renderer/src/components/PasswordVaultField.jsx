@@ -49,7 +49,7 @@ export function calcularForcaSenha(senha) {
 // Campo de senha reversível: mostrar/ocultar, copiar, gerador configurável
 // (comprimento + classes de caractere) e barra de força — usado tanto pelo
 // campo "senha_cofre" do FormBuilder quanto pela tela nativa Cofre de Senhas.
-export default function PasswordVaultField({ value, onChange, disabled, placeholder = 'Senha', semGerador = false, multilinha = false }) {
+export default function PasswordVaultField({ value, onChange, disabled, placeholder = 'Senha', semGerador = false, multilinha = false, onVisualizar, onCopiar }) {
   const [visivel, setVisivel]         = useState(false)
   const [copiado, setCopiado]         = useState(false)
   const [showGerador, setShowGerador] = useState(false)
@@ -70,7 +70,15 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
       await window.api.clipboard.write(value)
       setCopiado(true)
       setTimeout(() => setCopiado(false), 1500)
+      onCopiar?.()
     } catch (e) { console.error('copiar senha:', e) }
+  }
+
+  function toggleVisivel() {
+    setVisivel(v => {
+      if (!v) onVisualizar?.()
+      return !v
+    })
   }
 
   const nenhumaClasseAtiva = !Object.values(classes).some(Boolean)
@@ -103,7 +111,7 @@ export default function PasswordVaultField({ value, onChange, disabled, placehol
               style={{ height: 36, width: '100%', paddingRight: 32, fontFamily: visivel ? 'monospace' : undefined, letterSpacing: visivel ? undefined : 2 }}
             />
           )}
-          <button type="button" onClick={() => setVisivel(v => !v)} disabled={!value}
+          <button type="button" onClick={toggleVisivel} disabled={!value}
             style={{ position: 'absolute', right: 6, top: multilinha ? 10 : '50%', transform: multilinha ? 'none' : 'translateY(-50%)', background: 'none', border: 'none', cursor: value ? 'pointer' : 'default', color: 'var(--t3)', display: 'flex', padding: 2, opacity: value ? 1 : .4 }}
             title={visivel ? 'Ocultar' : 'Mostrar'}>
             {visivel ? <EyeOff size={15} /> : <Eye size={15} />}
