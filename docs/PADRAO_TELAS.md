@@ -136,6 +136,49 @@ Nunca escreva uma tela nova com `position:fixed` + overlay do zero para o
 
 ---
 
+## 3.1 Estado inicial de uma tela manual (regra de ouro)
+
+**Toda tela manual abre da mesma forma, sem exceção** — este padrão vem de
+`Arquivos.jsx`/`FormBuilderView.jsx` e é obrigatório em qualquer tela nova
+ou existente:
+
+1. `activeTab` inicia como `'cadastro'`, nunca `'acesso'`.
+2. Ao montar, a tela carrega a lista completa; se houver ao menos um
+   registro, carrega o **último** no formulário — sempre em **modo `view`
+   (consulta)**, nunca `'new'` ou `'edit'`.
+3. Se a lista estiver **vazia**, o formulário fica com os campos vazios,
+   ainda em modo `view` (campos desabilitados/readonly). **Nunca chame
+   `openNew()`/`handleIncluir()` automaticamente no carregamento** — isso é
+   uma ação que só o usuário dispara (botão "Incluir" do `FormToolbar`).
+
+O erro mais comum (encontrado e corrigido em `CofreSenhas.jsx` e
+`viagens/index.jsx`) é copiar um bloco `carregarTudo()` que faz
+`if (lista.length) { ...modo view... } else { openNew() }` — isso faz a tela
+abrir direto em modo de edição sempre que o cadastro está vazio, e ainda
+pula a aba Acesso para ir direto à aba Cadastro mesmo com dados. O padrão
+correto:
+
+```js
+const carregarTudo = useCallback(async () => {
+  setLoading(true)
+  try {
+    const res = await window.api.<modulo>.listar({})
+    const lista = res.ok ? res.data || [] : []
+    setRegistros(lista)
+    if (lista.length) {
+      const ultimo = lista.length - 1
+      setCurrentIdx(ultimo)
+      await carregarForm(lista[ultimo])
+    }
+    // lista vazia: não faz nada além do já ocorrido — form fica vazio, view
+  } finally {
+    setLoading(false)
+  }
+}, [])
+```
+
+---
+
 ## 4. Quando falta um componente genérico
 
 Se você (ou eu, ao implementar) perceber que uma tela manual precisa de um
@@ -171,6 +214,8 @@ fonte por funcionalidade, reusado em todo lugar.
       `<select>` que carrega tudo de uma vez sem busca.
 - [ ] A tela tem aba Acesso (listagem + filtros + paginação) e aba Cadastro
       (formulário), usando `.page-tabs`/`.page-content`.
+- [ ] Estado inicial segue a seção 3.1: abre em `activeTab='cadastro'`,
+      modo `view`, nunca dispara `openNew()` sozinha ao montar.
 - [ ] O rodapé de ações usa `FormToolbar`, não botões soltos reinventados.
 - [ ] Todo IPC novo segue `wrap()` e a convenção `modulo:acao`.
 - [ ] Nenhum componente genérico foi duplicado — se algo parecido já existe

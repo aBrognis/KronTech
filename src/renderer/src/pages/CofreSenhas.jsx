@@ -19,7 +19,7 @@ const CAMPOS_BUSCA = [
 ]
 
 export default function CofreSenhas({ newTrigger }) {
-  const [activeTab, setActiveTab] = useState('acesso')
+  const [activeTab, setActiveTab] = useState('cadastro')
 
   // Lista completa (não filtrada) — sempre carregada no mount, é a fonte
   // de verdade pra navegação (« ‹ N/total › ») e pro form, igual
@@ -63,8 +63,10 @@ export default function CofreSenhas({ newTrigger }) {
     if (res.ok) setCategorias(res.data)
   }, [])
 
-  // Ao abrir a tela, carrega a lista completa e entra direto no último
-  // registro (aba Cadastro) — ou em modo "novo" se ainda não há nenhum.
+  // Ao abrir a tela, carrega a lista completa e mostra o último registro em
+  // modo consulta (view) — mesmo padrão de Arquivos.jsx/Viagens.jsx. Nunca
+  // entra em modo "novo" sozinho, mesmo com a lista vazia (o form fica com
+  // os campos vazios, mas em view/readonly).
   const carregarTudo = useCallback(async () => {
     setLoading(true)
     try {
@@ -75,9 +77,6 @@ export default function CofreSenhas({ newTrigger }) {
         const ultimo = lista.length - 1
         setCurrentIdx(ultimo)
         await carregarForm(lista[ultimo])
-        setActiveTab('cadastro')
-      } else {
-        openNew()
       }
     } finally {
       setLoading(false)

@@ -20,7 +20,7 @@ const CAMPOS_BUSCA_DESPESA = [
 ]
 
 export default function Viagens({ sessao, newTrigger }) {
-  const [activeTab, setActiveTab] = useState('acesso')
+  const [activeTab, setActiveTab] = useState('cadastro')
 
   // Lista completa (não filtrada) — sempre carregada no mount, é a fonte
   // de verdade pra navegação (« ‹ N/total › ») e pro form, igual
@@ -65,8 +65,9 @@ export default function Viagens({ sessao, newTrigger }) {
     finally { setFLoading(false) }
   }, [filtros, buscaGeral])
 
-  // Ao abrir a tela, carrega a lista completa e entra direto no último
-  // registro (aba Cadastro) — ou em modo "novo" se ainda não há nenhum.
+  // Ao abrir a tela, carrega a lista completa e mostra o último registro em
+  // modo consulta (view) — mesmo padrão de Arquivos.jsx. Nunca entra em modo
+  // "novo" sozinho, mesmo com a lista vazia (form fica vazio, mas em view).
   const carregarTudo = useCallback(async () => {
     setLoading(true)
     try {
@@ -77,9 +78,6 @@ export default function Viagens({ sessao, newTrigger }) {
         const ultimo = lista.length - 1
         setCurrentIdx(ultimo)
         await carregarForm(lista[ultimo])
-        setActiveTab('cadastro')
-      } else {
-        openNew()
       }
     } finally {
       setLoading(false)
