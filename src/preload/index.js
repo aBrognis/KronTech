@@ -256,6 +256,7 @@ const api = {
   },
   lancarVersao: {
     gerarInstalador: () => ipcRenderer.invoke('lancarVersao:gerarInstalador'),
+    executar: (token) => ipcRenderer.invoke('lancarVersao:executar', token),
     onProgresso: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('lancarVersao:progresso', fn)

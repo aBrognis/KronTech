@@ -1,7 +1,13 @@
 import { spawn } from 'child_process'
-import { readFileSync } from 'fs'
+import { readFileSync, writeFileSync, createReadStream, statSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
+import { getDecryptedBancoProducaoConfig, getDecryptedGithubToken } from '../config'
+import { criarPoolProducao } from './importarBanco'
+import { validarToken, invalidarToken } from './tokenAutorizacaoService'
+
+const GITHUB_OWNER = 'aBrognis'
+const GITHUB_REPO  = 'KronTech'
 
 // Motor de "Lançar Versão" — automatiza o fluxo hoje feito manualmente no
 // terminal: bump de versão, build, empacotamento, commit/push e publicação
@@ -89,4 +95,110 @@ export async function gerarInstalador({ onProgresso }) {
 
   emitir('instalador_pronto', { versao: novaVersao, exePath })
   return { versaoAtual, novaVersao, distDir, exePath }
+}
+
+// Grava a nova versão em package.json e versiona via git — só chamado
+// DEPOIS que build+package (gerarInstalador) já terminaram com sucesso,
+// nunca antes (decisão de segurança: nunca deixar um commit publicado sem
+// instalador correspondente se o build quebrar no meio).
+async function versionarEPublicarGit(novaVersao, onLinha) {
+  const pkgPath = join(ROOT, 'package.json')
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
+  pkg.version = novaVersao
+  writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
+
+  await spawnAsync('git', ['add', 'package.json'], { cwd: ROOT, env: process.env }, onLinha)
+  await spawnAsync('git', ['commit', '-m', `chore: v${novaVersao}`], { cwd: ROOT, env: process.env }, onLinha)
+  await spawnAsync('git', ['push', 'origin', 'main'], { cwd: ROOT, env: process.env }, onLinha)
+}
+
+// Publica a release no GitHub via API REST direta (sem depender do gh CLI
+// instalado/autenticado na máquina) — usa o token cifrado guardado em
+// Configurações > Token do GitHub.
+async function publicarReleaseGithub(novaVersao, distDir, onLinha) {
+  const token = getDecryptedGithubToken()
+  if (!token) throw new Error('Token do GitHub não configurado. Configure em Configurações > Token do GitHub.')
+
+  const headers = {
+    Authorization: `token ${token}`,
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'KronTech-LancarVersao',
+  }
+
+  onLinha?.('Criando release no GitHub...')
+  const resCriar = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tag_name: `v${novaVersao}`,
+      name: `v${novaVersao}`,
+      body: `Versão ${novaVersao}, publicada via Lançar Versão.`,
+    }),
+  })
+  if (!resCriar.ok) {
+    const detalhe = await resCriar.text().catch(() => '')
+    throw new Error(`Falha ao criar release no GitHub (${resCriar.status}): ${detalhe.slice(0, 300)}`)
+  }
+  const release = await resCriar.json()
+  const uploadUrlBase = release.upload_url.replace(/\{.*\}$/, '')
+
+  const arquivos = [
+    { nome: `KronTech-Setup-${novaVersao}.exe`, tipo: 'application/octet-stream' },
+    { nome: `KronTech-Setup-${novaVersao}.exe.blockmap`, tipo: 'application/octet-stream' },
+    { nome: 'latest.yml', tipo: 'text/yaml' },
+  ]
+  for (const { nome, tipo } of arquivos) {
+    const caminho = join(distDir, nome)
+    const stat = statSync(caminho)
+    onLinha?.(`Enviando ${nome}...`)
+    const resUpload = await fetch(`${uploadUrlBase}?name=${encodeURIComponent(nome)}`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': tipo, 'Content-Length': String(stat.size) },
+      body: createReadStream(caminho),
+      duplex: 'half',
+    })
+    if (!resUpload.ok) {
+      const detalhe = await resUpload.text().catch(() => '')
+      throw new Error(`Falha ao enviar ${nome} (${resUpload.status}): ${detalhe.slice(0, 300)}`)
+    }
+  }
+
+  return release.html_url
+}
+
+// Pipeline completa: valida o token (escopo 'release', contra produção),
+// gera o instalador, versiona no git e publica no GitHub. O token só é
+// invalidado ao final (sucesso OU falha) — mesmo padrão de
+// services/importarBanco.js.
+export async function lancarNovaVersao({ onProgresso, token }) {
+  const emitir = (fase, extra = {}) => onProgresso?.({ fase, ...extra })
+  const bancoProd = getDecryptedBancoProducaoConfig()
+  if (!bancoProd.host || !bancoProd.database) {
+    throw new Error('Configure host e banco de produção em Configurações antes de lançar uma versão.')
+  }
+
+  let tokenId = null
+  const poolValidacao = criarPoolProducao(bancoProd)
+  try {
+    tokenId = await validarToken(poolValidacao, token, 'release')
+  } finally {
+    await poolValidacao.end().catch(() => {})
+  }
+
+  try {
+    const { novaVersao, distDir } = await gerarInstalador({ onProgresso })
+
+    emitir('versionando', { versao: novaVersao })
+    await versionarEPublicarGit(novaVersao, linha => emitir('versionando', { versao: novaVersao, linha }))
+
+    emitir('publicando', { versao: novaVersao })
+    const releaseUrl = await publicarReleaseGithub(novaVersao, distDir, linha => emitir('publicando', { versao: novaVersao, linha }))
+
+    emitir('concluido', { versao: novaVersao, releaseUrl })
+    return { novaVersao, releaseUrl }
+  } finally {
+    const poolInvalidacao = criarPoolProducao(bancoProd)
+    await invalidarToken(poolInvalidacao, tokenId)
+    await poolInvalidacao.end().catch(() => {})
+  }
 }
