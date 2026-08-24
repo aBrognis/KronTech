@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { getConfig, saveConfig, saveSectionConfig, getConfigForFrontend, INI_PATH } from './config'
+import { getConfig, saveConfig, saveSectionConfig, saveGithubToken, getConfigForFrontend, INI_PATH } from './config'
 
 import { query, queryOne, getPool } from './db'
 import { wrap, importLog, importCancelFlags, categoriaByExt, scanDir, hashCamposSenha } from './handlers/_shared'
@@ -36,7 +36,7 @@ export function registerHandlers() {
   registerClipboardHandlers({ ipcMain, wrap })
   registerEntidadeHandlers({ ipcMain })
   registerAuthHandlers({ ipcMain, query, queryOne })
-  registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, INI_PATH })
+  registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, saveGithubToken, INI_PATH })
   registerUpdateHandlers({ ipcMain, wrap })
   registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getConfig, importLog, importCancelFlags, categoriaByExt, scanDir })
   registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSenha, importLog, importCancelFlags, categoriaByExt, scanDir })

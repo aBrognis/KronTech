@@ -131,6 +131,7 @@ const api = {
     getIniPath:      ()                       => ipcRenderer.invoke('config:getIniPath'),
     selecionarPasta: (opts)                   => ipcRenderer.invoke('config:selecionarPasta', opts),
     selecionarArquivoIni: ()                  => ipcRenderer.invoke('config:selecionarArquivoIni'),
+    salvarGithubToken: (token)                => ipcRenderer.invoke('config:salvarGithubToken', token),
     onPersonalizacaoAlterada: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('config:personalizacaoAlterada', fn)

@@ -168,6 +168,10 @@ export default function Configuracoes() {
   const [escopoToken, setEscopoToken]   = useState('importacao')
   const [tokenCopiado, setTokenCopiado] = useState(false)
 
+  const [githubToken, setGithubToken]         = useState('')
+  const [salvandoGithubToken, setSalvandoGithubToken] = useState(false)
+  const [salvoGithubToken, setSalvoGithubToken] = useState(false)
+
   useEffect(() => {
     window.api.config.get().then(res => {
       const p = (res.ok ? res.data?.Personalizacao : null) || {}
@@ -337,6 +341,25 @@ export default function Configuracoes() {
     window.api.clipboard.write(tokenGerado.token)
     setTokenCopiado(true)
     setTimeout(() => setTokenCopiado(false), 2000)
+  }
+
+  async function salvarGithubTokenHandler() {
+    if (!githubToken.trim()) return
+    setSalvandoGithubToken(true)
+    try {
+      const res = await window.api.config.salvarGithubToken(githubToken.trim())
+      if (res.ok) {
+        setSalvoGithubToken(true)
+        setGithubToken('')
+        setTimeout(() => setSalvoGithubToken(false), 2000)
+      } else {
+        notificar.erro('Erro ao salvar token: ' + res.erro)
+      }
+    } catch (e) {
+      notificar.erro('Erro ao salvar token: ' + e.message)
+    } finally {
+      setSalvandoGithubToken(false)
+    }
   }
 
   // A cor só é aplicada ao sistema inteiro (sidebar, abas, badges) ao salvar
@@ -660,6 +683,31 @@ export default function Configuracoes() {
                       </button>
                     </>
                   )}
+                </div>
+              </div>
+            </SecCard>
+          )}
+
+          {/* Token do GitHub — só em dev, usado pelo botão "Lançar Versão"
+              pra publicar a release via API REST, sem depender do gh CLI
+              instalado na máquina. Cifrado com encryptCofre (config.js),
+              nunca devolvido em texto puro pro frontend. */}
+          {isDev && (
+            <SecCard icon={<KeyRound size={14} />} title="Token do GitHub" muted collapsible>
+              <div style={{ fontSize: 11.5, color: 'var(--t3)', marginBottom: 12, lineHeight: 1.5 }}>
+                Personal Access Token usado pelo botão <strong>Lançar Versão</strong> para publicar releases no GitHub. Cole aqui se precisar configurar ou trocar o token.
+              </div>
+              <div className="form-group">
+                <label className="form-label">Token</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input className="form-input" type="password" value={githubToken}
+                    onChange={e => setGithubToken(e.target.value)}
+                    placeholder="ghp_••••••••••••••••••••••••••••••••••••" style={{ flex: 1 }} />
+                  <button className="btn btn-primary" onClick={salvarGithubTokenHandler}
+                    disabled={salvandoGithubToken || !githubToken.trim()}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 38, flexShrink: 0 }}>
+                    {salvoGithubToken ? <><Check size={12} /> Salvo!</> : <><Save size={12} /> {salvandoGithubToken ? 'Salvando...' : 'Salvar'}</>}
+                  </button>
                 </div>
               </div>
             </SecCard>

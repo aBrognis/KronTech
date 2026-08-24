@@ -55,6 +55,14 @@ const DEFAULTS = {
   Seguranca: {
     chaveMestra: '',
   },
+  // Token de acesso pessoal do GitHub, usado por "Lançar Versão" pra
+  // publicar a release via API REST (sem depender do gh CLI instalado na
+  // máquina). Cifrado com encryptCofre (não o mecanismo SENSITIVE/DPAPI) —
+  // precisa ser portável entre reinstalações/trocas de máquina, igual ao
+  // resto dos segredos do Cofre de Senhas.
+  Deploy: {
+    githubToken: '',
+  },
 }
 
 // ── Parser INI ────────────────────────────────────────────────────────────────
@@ -233,6 +241,19 @@ export function hashLookupCofre(texto) {
   return createHmac('sha256', chave).update(String(texto), 'utf-8').digest('hex')
 }
 
+// Token do GitHub — cifrado com encryptCofre (não o mecanismo SENSITIVE
+// genérico, que é DPAPI/atado à máquina). Nunca devolvido em texto puro ao
+// frontend (ver getConfigForFrontend).
+export function saveGithubToken(token) {
+  const cfg = getConfig()
+  cfg.Deploy.githubToken = token ? encryptCofre(token) : ''
+  writeFileSync(INI_PATH, stringifyIni(cfg), 'utf-8')
+}
+
+export function getDecryptedGithubToken() {
+  return decryptCofre(getConfig().Deploy?.githubToken || '')
+}
+
 export function saveConfig(section, key, value) {
   const cfg = getConfig()
   if (!cfg[section]) cfg[section] = {}
@@ -255,7 +276,8 @@ export function saveSectionConfig(section, kvs) {
   writeFileSync(INI_PATH, stringifyIni(cfg), 'utf-8')
 }
 
-// Retorna config legível para o frontend (sem revelar valores ENC:)
+// Retorna config legível para o frontend (sem revelar valores ENC: nem o
+// token do GitHub cifrado com encryptCofre)
 export function getConfigForFrontend() {
   const cfg = getConfig()
   const result = JSON.parse(JSON.stringify(cfg))
@@ -266,6 +288,7 @@ export function getConfigForFrontend() {
       }
     }
   }
+  if (result.Deploy?.githubToken) result.Deploy.githubToken = '••••••••'
   return result
 }
 
