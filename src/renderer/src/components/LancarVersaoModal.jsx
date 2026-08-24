@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertTriangle, Loader2, CheckCircle2, XCircle, X, Rocket, KeyRound, Clipboard, ExternalLink } from 'lucide-react'
+import { AlertTriangle, Loader2, CheckCircle2, XCircle, X, Rocket, KeyRound, Clipboard, ExternalLink, Circle } from 'lucide-react'
 
 const TITULOS_FASE = {
   lendo_versao:      'Lendo versão atual',
@@ -13,6 +13,21 @@ const TITULOS_FASE = {
   erro:              'Erro ao lançar versão',
 }
 
+// Etapas visíveis na barra de progresso — cada uma mapeia pra uma ou mais
+// fases emitidas pelo backend (lendo_versao é rápida demais pra merecer
+// step própria, cai dentro de "Compilar").
+const ETAPAS = [
+  { id: 'buildando',   label: 'Compilar',  fases: ['lendo_versao', 'buildando'] },
+  { id: 'empacotando', label: 'Empacotar', fases: ['empacotando', 'instalador_pronto'] },
+  { id: 'versionando', label: 'Versionar', fases: ['versionando'] },
+  { id: 'publicando',  label: 'Publicar',  fases: ['publicando', 'concluido'] },
+]
+
+function indiceEtapaAtual(faseAtual) {
+  const idx = ETAPAS.findIndex(e => e.fases.includes(faseAtual))
+  return idx === -1 ? 0 : idx
+}
+
 // Mesmo padrão visual de ImportarBancoModal.jsx (sem <ModalProgresso>
 // compartilhado no projeto). Fluxo: token -> confirmação (mostra a versão
 // que vai ser lançada) -> progresso -> sucesso/erro. A ação é pública e
@@ -22,8 +37,14 @@ export default function LancarVersaoModal({ open, onClose }) {
   const [fase, setFase]           = useState('token') // token | confirmacao | progresso | sucesso | erro
   const [token, setToken]         = useState('')
   const [progresso, setProgresso] = useState({ fase: '', linha: '' })
+  const [historico, setHistorico] = useState([]) // últimas linhas de log, mais recente por último
   const [resultado, setResultado] = useState(null)
   const [erro, setErro]           = useState('')
+  const consoleRef = useRef(null)
+
+  useEffect(() => {
+    if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight
+  }, [historico])
 
   if (!open) return null
 
@@ -31,6 +52,7 @@ export default function LancarVersaoModal({ open, onClose }) {
     setFase('token')
     setToken('')
     setProgresso({ fase: '', linha: '' })
+    setHistorico([])
     setResultado(null)
     setErro('')
   }
@@ -42,7 +64,11 @@ export default function LancarVersaoModal({ open, onClose }) {
 
   async function iniciarLancamento() {
     setFase('progresso')
-    const unsub = window.api.lancarVersao.onProgresso(p => setProgresso(p))
+    setHistorico([])
+    const unsub = window.api.lancarVersao.onProgresso(p => {
+      setProgresso(p)
+      if (p.linha) setHistorico(h => [...h.slice(-199), p.linha])
+    })
     try {
       const res = await window.api.lancarVersao.executar(token)
       if (!res.ok) {
@@ -62,6 +88,7 @@ export default function LancarVersaoModal({ open, onClose }) {
 
   const emProgresso = fase === 'progresso'
   const podeFechar = !emProgresso
+  const etapaAtualIdx = indiceEtapaAtual(progresso.fase)
 
   return createPortal(
     <div
@@ -147,7 +174,7 @@ export default function LancarVersaoModal({ open, onClose }) {
         )}
 
         {(fase === 'progresso' || fase === 'sucesso' || fase === 'erro') && (
-          <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {fase === 'sucesso'
                 ? <CheckCircle2 size={22} color="var(--green)" />
@@ -161,13 +188,46 @@ export default function LancarVersaoModal({ open, onClose }) {
                     : fase === 'erro' ? TITULOS_FASE.erro
                     : (TITULOS_FASE[progresso.fase] || 'Processando...')}
                 </div>
-                {emProgresso && progresso.linha && (
-                  <div style={{ fontSize: 10.5, color: 'var(--t3)', marginTop: 3, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {progresso.linha}
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Barra de etapas — cada bolinha vira check quando a etapa fica
+                pra trás; a etapa atual pulsa. */}
+            {fase !== 'erro' && (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {ETAPAS.map((etapa, idx) => {
+                  const concluida = fase === 'sucesso' || idx < etapaAtualIdx
+                  const atual = fase !== 'sucesso' && idx === etapaAtualIdx
+                  const cor = concluida || atual ? 'var(--or)' : 'var(--bd2)'
+                  return (
+                    <div key={etapa.id} style={{ display: 'flex', alignItems: 'center', flex: idx < ETAPAS.length - 1 ? 1 : 'none' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                        {concluida
+                          ? <CheckCircle2 size={16} color="var(--or)" />
+                          : <Circle size={16} color={cor} fill={atual ? 'var(--or)' : 'none'} style={atual ? { animation: 'pulse 1.4s ease-in-out infinite' } : undefined} />
+                        }
+                        <span style={{ fontSize: 9.5, color: cor, fontWeight: atual ? 700 : 500, whiteSpace: 'nowrap' }}>{etapa.label}</span>
+                      </div>
+                      {idx < ETAPAS.length - 1 && (
+                        <div style={{ flex: 1, height: 2, background: idx < etapaAtualIdx || fase === 'sucesso' ? 'var(--or)' : 'var(--bd2)', marginBottom: 14 }} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Console de saída — últimas linhas dos processos filhos (git,
+                electron-vite, electron-builder), já sem códigos ANSI. */}
+            {emProgresso && historico.length > 0 && (
+              <div ref={consoleRef} style={{
+                background: 'var(--s3)', border: '1px solid var(--bd)', borderRadius: 8,
+                padding: '10px 12px', height: 130, overflowY: 'auto',
+                fontFamily: 'monospace', fontSize: 10.5, color: 'var(--t3)', lineHeight: 1.6,
+              }}>
+                {historico.map((linha, i) => <div key={i} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{linha}</div>)}
+              </div>
+            )}
 
             {fase === 'sucesso' && resultado && (
               <div style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.6 }}>

@@ -33,27 +33,53 @@ function proximaVersaoPatch(versaoAtual) {
   return partes.join('.')
 }
 
+// Remove sequências de escape ANSI (cores/estilo de terminal) que
+// electron-vite/electron-builder imprimem no stdout — sem isso, a UI
+// mostrava lixo tipo "[32m" junto do texto.
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b\[[0-9;]*m/g
+function limparAnsi(texto) {
+  return texto.replace(ANSI_RE, '')
+}
+
 // Roda um processo filho assíncrono, repassando cada linha de
 // stdout/stderr via `onLinha` (sem parsear progresso percentual — só
-// mostra atividade). Rejeita se o exit code não for 0.
-function spawnAsync(cmd, args, opts, onLinha) {
+// mostra atividade). Rejeita se o exit code não for 0. `timeoutMs` mata o
+// processo se ele ficar sem emitir nenhuma linha por tempo demais — evita
+// a UI travar pra sempre num "Empacotando..." se o processo filho ficar
+// esperando algo silenciosamente (ex.: um prompt interativo do Windows).
+function spawnAsync(cmd, args, opts, onLinha, timeoutMs = 10 * 60 * 1000) {
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, { ...opts, shell: false })
     let stderrBuf = ''
+    let watchdog = setTimeout(() => {
+      proc.kill()
+      reject(new Error(`${cmd} ${args.join(' ')} sem atividade por mais de ${Math.round(timeoutMs / 60000)} min — processo encerrado.`))
+    }, timeoutMs)
+    const resetWatchdog = () => {
+      clearTimeout(watchdog)
+      watchdog = setTimeout(() => {
+        proc.kill()
+        reject(new Error(`${cmd} ${args.join(' ')} sem atividade por mais de ${Math.round(timeoutMs / 60000)} min — processo encerrado.`))
+      }, timeoutMs)
+    }
     proc.stdout?.on('data', chunk => {
-      for (const linha of chunk.toString('utf-8').split(/\r?\n/)) {
+      resetWatchdog()
+      for (const linha of limparAnsi(chunk.toString('utf-8')).split(/\r?\n/)) {
         if (linha.trim()) onLinha?.(linha.trim())
       }
     })
     proc.stderr?.on('data', chunk => {
-      const texto = chunk.toString('utf-8')
+      resetWatchdog()
+      const texto = limparAnsi(chunk.toString('utf-8'))
       stderrBuf += texto
       for (const linha of texto.split(/\r?\n/)) {
         if (linha.trim()) onLinha?.(linha.trim())
       }
     })
-    proc.on('error', reject)
+    proc.on('error', err => { clearTimeout(watchdog); reject(err) })
     proc.on('close', code => {
+      clearTimeout(watchdog)
       if (code === 0) resolve()
       else reject(new Error(`${cmd} ${args.join(' ')} falhou (código ${code}).${stderrBuf ? ' ' + stderrBuf.slice(-500) : ''}`))
     })
@@ -66,28 +92,51 @@ function lerVersaoAtual() {
   return { pkgPath, pkg, versaoAtual: pkg.version }
 }
 
+// Diretório de build ISOLADO do "Lançar Versão" — nunca out/, que é o
+// diretório que o próprio npm run dev está usando ao vivo (o app aberto
+// agora é o processo que dispara este pipeline). electron-vite build
+// escrevendo em cima de out/main/index.js enquanto esse mesmo arquivo está
+// carregado em memória pelo processo Electron atual trava/corrompe a
+// cópia que o electron-builder tenta empacotar depois — foi a causa real
+// do pipeline travar sem nunca terminar "Empacotando...".
+const OUT_DIR_RELEASE = 'out-release'
+
 // Fases 1-3 do plano: lê versão, builda, empacota — sem tocar git nem
 // GitHub. Retorna a versão calculada e o caminho do instalador gerado.
 export async function gerarInstalador({ onProgresso }) {
   const emitir = (fase, extra = {}) => onProgresso?.({ fase, ...extra })
 
   emitir('lendo_versao')
-  const { versaoAtual } = lerVersaoAtual()
+  const { pkgPath, pkg, versaoAtual } = lerVersaoAtual()
   const novaVersao = proximaVersaoPatch(versaoAtual)
 
   emitir('buildando', { versao: novaVersao })
   const eviteBin = join(ROOT, 'node_modules', 'electron-vite', 'bin', 'electron-vite.js')
-  await spawnAsync(process.execPath, [eviteBin, 'build'], { cwd: ROOT, env: process.env },
+  await spawnAsync(process.execPath, [eviteBin, 'build', '--outDir', OUT_DIR_RELEASE], { cwd: ROOT, env: process.env },
     linha => emitir('buildando', { versao: novaVersao, linha }))
 
-  emitir('empacotando', { versao: novaVersao })
-  const builderBin = join(ROOT, 'node_modules', 'electron-builder', 'cli.js')
-  const envPkg = { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
-  delete envPkg.WIN_CSC_LINK
-  delete envPkg.CSC_LINK
-  delete envPkg.CSC_KEY_PASSWORD
-  await spawnAsync(process.execPath, [builderBin, '--win', '--config.npmRebuild=false'], { cwd: ROOT, env: envPkg },
-    linha => emitir('empacotando', { versao: novaVersao, linha }))
+  // electron-builder resolve o ponto de entrada do app a partir de
+  // package.json "main" — normalmente "out/main/index.js" (o que o dev
+  // usa). Aponta temporariamente pro build isolado só durante o
+  // empacotamento, sempre restaurando o valor original depois (mesmo se
+  // o empacotamento falhar) — nunca deixa o package.json sujo no meio de
+  // um erro.
+  const mainOriginal = pkg.main
+  const mainRelease = `${OUT_DIR_RELEASE}/main/index.js`
+  try {
+    writeFileSync(pkgPath, JSON.stringify({ ...pkg, main: mainRelease }, null, 2) + '\n', 'utf-8')
+
+    emitir('empacotando', { versao: novaVersao })
+    const builderBin = join(ROOT, 'node_modules', 'electron-builder', 'cli.js')
+    const envPkg = { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+    delete envPkg.WIN_CSC_LINK
+    delete envPkg.CSC_LINK
+    delete envPkg.CSC_KEY_PASSWORD
+    await spawnAsync(process.execPath, [builderBin, '--win', '--config.npmRebuild=false'], { cwd: ROOT, env: envPkg },
+      linha => emitir('empacotando', { versao: novaVersao, linha }))
+  } finally {
+    writeFileSync(pkgPath, JSON.stringify({ ...pkg, main: mainOriginal }, null, 2) + '\n', 'utf-8')
+  }
 
   const distDir = join(ROOT, 'dist')
   const exeName = `KronTech-Setup-${novaVersao}.exe`
