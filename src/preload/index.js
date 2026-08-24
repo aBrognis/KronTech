@@ -254,6 +254,14 @@ const api = {
       return () => ipcRenderer.removeListener('importarBanco:progresso', fn)
     },
   },
+  lancarVersao: {
+    gerarInstalador: () => ipcRenderer.invoke('lancarVersao:gerarInstalador'),
+    onProgresso: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('lancarVersao:progresso', fn)
+      return () => ipcRenderer.removeListener('lancarVersao:progresso', fn)
+    },
+  },
   tokenImportacao: {
     gerar: (escopo) => ipcRenderer.invoke('tokenImportacao:gerar', escopo),
   },

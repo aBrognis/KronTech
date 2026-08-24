@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound, Copy as CopyIcon } from 'lucide-react'
+import { Palette, User, Save, RotateCcw, Pencil, Check, X, LayoutDashboard, Bell, Search, DatabaseZap, FolderOpen, Loader2, ChevronDown, KeyRound, Copy as CopyIcon, Rocket } from 'lucide-react'
 import { notificar } from '../components/Notificacao'
 import ImportarBancoModal from '../components/ImportarBancoModal'
+import LancarVersaoModal from '../components/LancarVersaoModal'
 
 const CORES = [
   { nome: 'KronTech',  hex: '#D95218' },
@@ -154,6 +155,7 @@ export default function Configuracoes() {
   const [testandoConexao, setTestandoConexao] = useState(false)
   const [resultadoTeste, setResultadoTeste] = useState(null) // { ok, mensagem }
   const [importBancoOpen, setImportBancoOpen] = useState(false)
+  const [lancarVersaoOpen, setLancarVersaoOpen] = useState(false)
 
   const [editandoBancoDev, setEditandoBancoDev] = useState(false)
   const [savedBancoDev, setSavedBancoDev] = useState(VAZIO_BANCO_DEV)
@@ -661,6 +663,10 @@ export default function Configuracoes() {
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
                         <DatabaseZap size={12} /> Importar Banco
                       </button>
+                      <button className="btn btn-danger" onClick={() => setLancarVersaoOpen(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
+                        <Rocket size={12} /> Lançar Versão
+                      </button>
                       <button className="btn btn-primary" onClick={() => setEditandoBancoProd(true)}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '0 14px', height: 32 }}>
                         <Pencil size={12} /> Alterar
@@ -884,6 +890,7 @@ export default function Configuracoes() {
       </div>
 
       <ImportarBancoModal open={importBancoOpen} onClose={() => setImportBancoOpen(false)} />
+      <LancarVersaoModal open={lancarVersaoOpen} onClose={() => setLancarVersaoOpen(false)} />
     </div>
   )
 }

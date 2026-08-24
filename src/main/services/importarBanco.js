@@ -289,7 +289,7 @@ async function restaurarNaTransacao(client, tabelasOrdenadas, dumpProducao, sche
 
 // ── Pool de produção (não é singleton — cada importação abre/fecha o seu) ──
 
-function criarPoolProducao(banco) {
+export function criarPoolProducao(banco) {
   const isRemote = banco.host !== 'localhost' && banco.host !== '127.0.0.1'
   return new Pool({
     host: banco.host, port: banco.port, database: banco.database,
