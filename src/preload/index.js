@@ -254,7 +254,7 @@ const api = {
     },
   },
   tokenImportacao: {
-    gerar: () => ipcRenderer.invoke('tokenImportacao:gerar'),
+    gerar: (escopo) => ipcRenderer.invoke('tokenImportacao:gerar', escopo),
   },
   viagens: {
     listar:            (filtros) => ipcRenderer.invoke('viagens:listar', filtros),

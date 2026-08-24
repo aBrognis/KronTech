@@ -165,6 +165,7 @@ export default function Configuracoes() {
 
   const [gerandoToken, setGerandoToken] = useState(false)
   const [tokenGerado, setTokenGerado]   = useState(null) // { token, expira_em }
+  const [escopoToken, setEscopoToken]   = useState('importacao')
   const [tokenCopiado, setTokenCopiado] = useState(false)
 
   useEffect(() => {
@@ -321,7 +322,7 @@ export default function Configuracoes() {
     setTokenGerado(null)
     setTokenCopiado(false)
     try {
-      const res = await window.api.tokenImportacao.gerar()
+      const res = await window.api.tokenImportacao.gerar(escopoToken)
       if (res.ok) setTokenGerado(res.data)
       else notificar.erro('Erro ao gerar token: ' + res.erro)
     } catch (e) {
@@ -485,14 +486,23 @@ export default function Configuracoes() {
             <Campo label="Nome do sistema" value={form.nomeSistema} onChange={v => set('nomeSistema', v)} placeholder="KronTech" disabled={!editando} />
           </SecCard>
 
-          {/* Token de Importação — só em PRODUÇÃO (oposto dos cards de banco,
-              que são dev-only). Gera a autorização de uso único que alguém
-              precisa colar no modal "Importar Banco" rodando em dev — sem
-              esse token válido, a importação não roda. */}
+          {/* Token de Autorização — só em PRODUÇÃO (oposto dos cards de
+              banco, que são dev-only). Gera a autorização de uso único que
+              alguém precisa colar em dev pra liberar uma ação sensível
+              (Importar Banco ou Lançar Versão) — sem esse token válido, a
+              ação não roda. */}
           {!isDev && (
-            <SecCard icon={<KeyRound size={14} />} title="Token de Importação" subtitle="Autoriza 'Importar Banco' em ambiente de dev" collapsible>
+            <SecCard icon={<KeyRound size={14} />} title="Token de Autorização" subtitle="Autoriza ações sensíveis em ambiente de dev" collapsible>
               <div style={{ fontSize: 11.5, color: 'var(--t3)', marginBottom: 14, lineHeight: 1.6 }}>
-                Gere um token aqui e cole no modal "Importar Banco" do ambiente de desenvolvimento. Vale por 10 minutos e só pode ser usado uma vez, mesmo se a importação falhar.
+                Gere um token aqui e cole na tela correspondente do ambiente de desenvolvimento. Vale por 10 minutos e só pode ser usado uma vez, mesmo se a ação falhar.
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Gerar token para</label>
+                <select className="form-select" value={escopoToken} onChange={e => setEscopoToken(e.target.value)}>
+                  <option value="importacao">Importar Banco</option>
+                  <option value="release">Lançar Versão</option>
+                </select>
               </div>
 
               {tokenGerado ? (

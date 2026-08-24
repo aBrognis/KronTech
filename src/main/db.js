@@ -1215,10 +1215,13 @@ export async function initDb() {
     `, [bcrypt.hashSync('admin.dev', 10)]).catch(e => console.warn('[migration] seed admin.dev (startup):', e.message))
   }
 
-  // Tokens de autorização de "Importar Banco" — gerados manualmente em
-  // produção (tela Configurações) e colados em dev pra liberar a
-  // importação. Existe nos dois bancos por padrão de schema, mas só
-  // produção grava e só dev lê (via BancoProducao) na prática.
+  // Tokens de autorização — gerados manualmente em produção (tela
+  // Configurações) e colados em dev pra liberar uma ação sensível
+  // (Importar Banco, Lançar Versão). Existe nos dois bancos por padrão de
+  // schema, mas só produção grava e só dev lê (via BancoProducao) na
+  // prática. `escopo` evita que um token gerado pra uma ação sirva pra
+  // outra (ex: colar por engano um token de Importar Banco no fluxo de
+  // Lançar Versão).
   await query(`
     CREATE TABLE IF NOT EXISTS kr_tokens_importacao_001 (
       id         SERIAL PRIMARY KEY,
@@ -1228,6 +1231,11 @@ export async function initDb() {
       usado_em   TIMESTAMP
     )
   `).catch(e => console.warn('[migration] criar kr_tokens_importacao_001 (startup):', e.message))
+
+  await query(`
+    ALTER TABLE kr_tokens_importacao_001
+      ADD COLUMN IF NOT EXISTS escopo VARCHAR(20) NOT NULL DEFAULT 'importacao'
+  `).catch(e => console.warn('[migration] alter kr_tokens_importacao_001 escopo (startup):', e.message))
 
   // Sincroniza sequências a cada startup (protege contra restore de backup)
   await syncSequencias()

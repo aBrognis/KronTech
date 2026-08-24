@@ -6,6 +6,7 @@ import {
   lerSecaoDeArquivoIni, saveSectionConfig, INI_PATH,
 } from '../config'
 import { getPool, syncSequencias } from '../db'
+import { validarToken, invalidarToken } from './tokenAutorizacaoService'
 
 // Motor de "Importar Banco" — espelha o banco de PRODUÇÃO para o ambiente de
 // DEV, em JS puro via node-postgres (sem depender de pg_dump/pg_restore, que
@@ -297,28 +298,6 @@ function criarPoolProducao(banco) {
   })
 }
 
-// ── Token de autorização (gerado em produção, colado em dev) ───────────────
-// Validação e consumo rodam contra o banco de PRODUÇÃO (não dev) — é lá que
-// o token foi criado, por alguém com acesso real ao ambiente. O token só é
-// invalidado ao final da importação (sucesso OU falha), nunca no momento de
-// colar/validar — assim uma importação que falhe no meio não deixa o token
-// "meio usado", mas também não permite reaproveitar o mesmo token depois de
-// uma tentativa (sucesso ou não).
-async function validarToken(pool, token) {
-  if (!token || !token.trim()) throw new Error('Cole o token de autorização gerado em produção.')
-  const { rows } = await pool.query(
-    `SELECT id FROM kr_tokens_importacao_001
-     WHERE token = $1 AND usado_em IS NULL AND expira_em > NOW()`,
-    [token.trim()]
-  )
-  if (!rows.length) throw new Error('Token inválido, já usado ou expirado. Gere um novo token em produção.')
-  return rows[0].id
-}
-
-async function invalidarToken(pool, tokenId) {
-  await pool.query(`UPDATE kr_tokens_importacao_001 SET usado_em = NOW() WHERE id = $1`, [tokenId]).catch(() => {})
-}
-
 export async function testarConexaoProducao() {
   const banco = getDecryptedBancoProducaoConfig()
   if (!banco.host || !banco.database) throw new Error('Preencha os dados de conexão do banco de produção antes de testar.')
@@ -373,7 +352,7 @@ export async function importarBancoDeProducao({ onProgresso, BrowserWindow, toke
     // Token conferido com o pool inteiro (não uma transação read-only já
     // aberta), porque invalidarToken() precisa escrever nele mais tarde —
     // read-only bloquearia esse UPDATE final.
-    tokenId = await validarToken(poolProd, token)
+    tokenId = await validarToken(poolProd, token, 'importacao')
 
     clientProd = await poolProd.connect()
     // Somente leitura garantida em nível de banco — se algum bug futuro
