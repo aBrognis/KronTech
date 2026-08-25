@@ -1,6 +1,6 @@
 {
   "name": "krontech",
-  "version": "1.2.39",
+  "version": "1.2.40",
   "description": "KronTech — Ordem no caos do dia a dia.",
   "main": "out/main/index.js",
   "scripts": {
@@ -20,6 +20,7 @@
     "lucide-react": "^1.17.0",
     "node-pg-migrate": "^9.0.0",
     "otplib": "^12.0.1",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.11.0",
     "qrcode": "^1.5.4",
     "react-grid-layout": "^2.2.3"
