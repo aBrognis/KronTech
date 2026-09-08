@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 dist/
+dist-check/
 out/
 out-release/
 out-release-link/
