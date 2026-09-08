@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "electron-vite build",
+    "postbuild": "node scripts/sync-devcache.js",
     "preview": "electron-vite preview",
-    "package": "node scripts/build.js"
+    "package": "node scripts/build.js",
+    "sync-devcache": "node scripts/sync-devcache.js"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

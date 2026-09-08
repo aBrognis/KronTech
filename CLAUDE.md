@@ -47,15 +47,22 @@ O botão **"Lançar Versão"** dentro do app é o fluxo real de release (ver §7
   `unset ELECTRON_RUN_AS_NODE` antes de rodar build/package pela linha de
   comando. O `scripts/dev.js` já trata isso sozinho.
 
-- **Devcache** — para testar o **app empacotado** (não o `npm run dev`), ele
-  roda de `C:\devcache\KronTech`, paralelo ao OneDrive. Depois de todo
-  `build`, sincronizar:
-  ```bash
-  cp -ru src/. C:/devcache/KronTech/src/
-  cp -ru migrations/. C:/devcache/KronTech/migrations/
-  ```
-  **Se um bug parecer "impossível" dado o código, o bundle está velho ou o
-  app não reiniciou.** Não reabra a investigação sem checar isso primeiro.
+- **Devcache** — o app roda a partir de `C:\devcache\KronTech` (o `out/` do
+  projeto é um symlink para lá; o Node resolve `require()` a partir desse
+  caminho, usando `C:\devcache\KronTech\node_modules`). O `npm run dev`
+  recompila do projeto, mas o código-fonte copiado (`src/`, `migrations/`)
+  precisa estar atualizado no devcache para o build empacotado e para as
+  migrations do boot.
+  - **`npm run build` já sincroniza sozinho** (hook `postbuild` →
+    `scripts/sync-devcache.js`). O `npm run package` também.
+  - Sincronização manual, se precisar: `npm run sync-devcache`.
+  - **Instalar dependência nova**: além do `npm install` no projeto, copiar
+    `package.json` + `package-lock.json` para `C:\devcache\KronTech`, rodar
+    `npm install` lá (SEM `--omit=dev`, já apagou o `electron` do devcache
+    uma vez), depois apagar os dois manifests copiados.
+  - **Se um bug parecer "impossível" dado o código, o bundle está velho ou o
+    app não reiniciou.** Não reabra a investigação sem rodar `npm run build`
+    (que sincroniza) e reiniciar o app.
 
 - **3 bancos Postgres** coexistem:
   - `krontech` — produção

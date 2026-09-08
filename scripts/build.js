@@ -15,6 +15,9 @@ const build = spawnSync(process.execPath, [eviteBin, 'build'], {
 })
 if (build.status !== 0) process.exit(build.status)
 
+// mantem C:\devcache\KronTech em dia (o app roda de la) — no-op se nao existir
+spawnSync(process.execPath, [path.resolve(__dirname, 'sync-devcache.js')], { stdio: 'inherit', cwd: root })
+
 console.log('\n📦 Gerando instalador...')
 const builderBin = path.resolve(root, 'node_modules/electron-builder/cli.js')
 // npmRebuild=false: bcrypt já publica prebuilds N-API (ABI estável entre
