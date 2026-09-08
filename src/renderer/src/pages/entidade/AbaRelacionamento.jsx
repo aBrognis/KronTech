@@ -3,10 +3,11 @@ import { Plus, Phone, Mail, MapPin, Users, MessageSquare, StickyNote, Trash2 } f
 import { FormGrid, Secao, CampoTexto, CampoSelect } from '../../components/cadastroPadrao/TelaCadastroPadrao'
 import InputData from '../../components/InputData'
 import { notificar } from '../../components/Notificacao'
+import { fmtDataBR, fmtDataHoraBR } from '../../lib/utils/data.js'
 import { TIPO_INTERACAO, RESULTADO_INTERACAO } from './utils'
 
 const ICONE = { ligacao: Phone, email: Mail, visita: MapPin, reuniao: Users, whatsapp: MessageSquare, nota: StickyNote }
-const fmtDataHora = (iso) => { try { return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)) } catch { return String(iso || '') } }
+const fmtDataHora = (iso) => fmtDataHoraBR(iso, '')
 const tipoLabel = (t) => TIPO_INTERACAO.find((x) => x.valor === t)?.label || t
 
 export default function AbaRelacionamento({ form, setForm, isRO }) {
@@ -66,7 +67,7 @@ export default function AbaRelacionamento({ form, setForm, isRO }) {
                         {it.resultado && <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 8, background: 'var(--s2)', color: 'var(--t2)' }}>{RESULTADO_INTERACAO.find((r) => r.valor === it.resultado)?.label}</span>}
                       </div>
                       {it.descricao && <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 3, whiteSpace: 'pre-wrap' }}>{it.descricao}</div>}
-                      {it.proximo_contato && <div style={{ fontSize: 11, color: 'var(--or)', marginTop: 3 }}>Próximo contato: {String(it.proximo_contato).slice(0, 10).split('-').reverse().join('/')}</div>}
+                      {it.proximo_contato && <div style={{ fontSize: 11, color: 'var(--or)', marginTop: 3 }}>Próximo contato: {fmtDataBR(it.proximo_contato, '')}</div>}
                     </div>
                     {!isRO && (
                       <button className="btn btn-ghost" style={{ height: 24, padding: '0 6px', color: 'var(--red)', flexShrink: 0 }} onClick={() => remover(it.id)}>

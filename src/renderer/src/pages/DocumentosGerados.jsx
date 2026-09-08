@@ -1,23 +1,37 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, Bot, ImagePlus, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search, FileDown, Settings, Mail, Copy, History } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Plus, Trash2, Bot, ImagePlus, ChevronDown, ChevronUp, RotateCcw, FileDown, Settings, Mail, Copy, History } from 'lucide-react'
 import '../App.css'
 import FormToolbar from '../components/FormToolbar'
-import SeletorBusca from '../components/SeletorBusca'
 import SeletorEntidade from '../components/SeletorEntidade'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import PaginacaoBar from '../components/PaginacaoBar.jsx'
+import PainelFiltrosGrid from '../components/PainelFiltrosGrid'
+import TabelaResultados from '../components/TabelaResultados'
 import { notificar } from '../components/Notificacao'
 import ComposerModal from './email/ComposerModal'
 import MenuContextoGrid from '../components/MenuContextoGrid'
 import { SecaoHeader } from '../components/SecaoForm.jsx'
 
-const CAMPOS_CLIENTE = [{ nome_campo: 'nome', label: 'Nome' }]
 const CAMPOS_BUSCA_DOCUMENTO = [
   { nome_campo: 'titulo',       label: 'Título'  },
   { nome_campo: 'cliente_nome', label: 'Cliente' },
   { nome_campo: 'autor',        label: 'Autor'   },
 ]
-const FILTROS_VAZIOS = { cliente: '', documentoTipoId: '', status: '' }
+
+const STATUS_OPCOES = [
+  { valor: 'rascunho', label: 'Rascunho' },
+  { valor: 'nao_impresso', label: 'Não Impresso' },
+  { valor: 'impresso', label: 'Impresso' },
+  { valor: 'assinado', label: 'Assinado' },
+  { valor: 'enviado', label: 'Enviado' },
+]
+
+function fmtDataCol(iso) {
+  if (!iso) return '-'
+  try {
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso))
+  } catch { return String(iso) }
+}
 
 const EMPTY_FORM = {
   id: null, codigo: '', documentoTipoId: null, titulo: '', status: '',
@@ -36,6 +50,33 @@ const STATUS_META = {
   enviado:      { label: 'Enviado',       classe: 'badge-green'  },
 }
 const STATUS_ORDEM = ['rascunho', 'nao_impresso', 'impresso', 'assinado', 'enviado']
+
+// Aba de Acesso — consulta completa (docs CLAUDE.md §4). Uma coluna de
+// resultado para cada campo consultável, incluindo os dados relacionados
+// da entidade cliente trazidos pelo LEFT JOIN.
+const COLUNAS_RESULTADO = [
+  { chave: 'codigo', label: 'Código', largura: 70, sticky: true,
+    render: (r) => <span style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo || '-'}</span> },
+  { chave: 'titulo', label: 'Título', sticky: true },
+  { chave: 'tipo_nome', label: 'Tipo', largura: 150, padrao: true },
+  { chave: 'cliente_nome', label: 'Cliente', largura: 220, padrao: true },
+  { chave: 'autor', label: 'Autor', largura: 150, padrao: true },
+  { chave: 'status', label: 'Status', largura: 110, padrao: true,
+    render: (r) => <span className={`badge ${STATUS_META[r.status]?.classe}`}>{STATUS_META[r.status]?.label || r.status}</span> },
+  { chave: 'nome_referencia', label: 'Nome de referência', largura: 200 },
+  { chave: 'entidade_documento', label: 'CNPJ/CPF do cliente', largura: 150, render: (r) => r.entidade_documento || '-' },
+  { chave: 'entidade_email', label: 'E-mail do cliente', largura: 200, render: (r) => r.entidade_email || '-' },
+  { chave: 'entidade_cidade', label: 'Cidade do cliente', largura: 150, render: (r) => r.entidade_cidade || '-' },
+  { chave: 'entidade_uf', label: 'UF do cliente', largura: 70, align: 'center', render: (r) => r.entidade_uf || '-' },
+  { chave: 'qtd_participantes', label: 'Participantes', largura: 100, align: 'center', render: (r) => r.qtd_participantes ?? 0 },
+  { chave: 'qtd_imagens', label: 'Imagens', largura: 90, align: 'center', render: (r) => r.qtd_imagens ?? 0 },
+  { chave: 'qtd_versoes', label: 'Versões', largura: 90, align: 'center', render: (r) => r.qtd_versoes ?? 0 },
+  { chave: 'tem_pdf', label: 'PDF', largura: 70, align: 'center', render: (r) => (r.tem_pdf ? 'Sim' : 'Não') },
+  { chave: 'pdf_caminho', label: 'Caminho do PDF', largura: 320, render: (r) => r.pdf_caminho || '-' },
+  { chave: 'criado_por', label: 'Criado por', largura: 150, render: (r) => r.criado_por || '-' },
+  { chave: 'criado_em', label: 'Criado em', largura: 110, render: (r) => fmtDataCol(r.criado_em) },
+  { chave: 'atualizado_em', label: 'Atualizado em', largura: 110, render: (r) => fmtDataCol(r.atualizado_em) },
+]
 
 export default function DocumentosGerados() {
   const [activeTab, setActiveTab] = useState('cadastro') // acesso | cadastro | gerado
@@ -69,10 +110,26 @@ export default function DocumentosGerados() {
   //   - já salvo (carregado do banco): tem arquivo, sem base64
   const [imagens, setImagens] = useState([])
 
-  const [filtrosAbertos, setFiltrosAbertos] = useState(true)
-  const [filtros, setFiltros]         = useState(FILTROS_VAZIOS)
+  const [busca, setBusca]             = useState('')
+  const [filtrosCol, setFiltrosCol]   = useState({})
   const [fResultados, setFResultados] = useState(null)
   const [fLoading, setFLoading]       = useState(false)
+
+  // Filtros da aba Acesso — um por coluna consultável (docs CLAUDE.md §4).
+  // O tipo de documento vira dropdown com as opções vindas do banco.
+  const COLUNAS_FILTRO = useMemo(() => [
+    { chave: 'codigo', label: 'Código', tipo: 'texto' },
+    { chave: 'titulo', label: 'Título', tipo: 'texto' },
+    { chave: 'nome_referencia', label: 'Nome de referência', tipo: 'texto' },
+    { chave: 'cliente_nome', label: 'Cliente', tipo: 'texto' },
+    { chave: 'autor', label: 'Autor', tipo: 'texto' },
+    { chave: 'criado_por', label: 'Criado por', tipo: 'texto' },
+    { chave: 'documento_tipo_id', label: 'Tipo de documento', tipo: 'exato',
+      opcoes: tipos.map((t) => ({ valor: String(t.id), label: t.nome })) },
+    { chave: 'status', label: 'Status', tipo: 'exato', opcoes: STATUS_OPCOES },
+    { chave: 'criado_em', label: 'Criado em', tipo: 'data' },
+    { chave: 'atualizado_em', label: 'Atualizado em', tipo: 'data' },
+  ], [tipos])
   const [pagina, setPagina]     = useState(1)
   const [porPagina, setPorPagina] = useState(25)
   // Selecao em massa na aba Acesso: ids marcados no checkbox "Sel" +
@@ -192,20 +249,22 @@ export default function DocumentosGerados() {
     }
   }
 
-  const carregarAcesso = useCallback(async (f = filtros) => {
+  const carregarAcesso = useCallback(async (b = busca, fc = filtrosCol) => {
     setFLoading(true)
     try {
       const params = {}
-      if (f.cliente.trim())  params.cliente = f.cliente.trim()
-      if (f.documentoTipoId) params.documentoTipoId = f.documentoTipoId
-      if (f.status)          params.status = f.status
+      if (b && b.trim()) params.busca = b.trim()
+      const limpo = Object.fromEntries(Object.entries(fc || {}).filter(([, v]) => v != null))
+      if (Object.keys(limpo).length) params.filtros = limpo
       const res = await window.api.documentoGerado.listar(params)
       setFResultados(res.ok ? res.data || [] : [])
       setSelecionados(new Set())
       setPagina(1)
     } catch { setFResultados([]) }
     finally { setFLoading(false) }
-  }, [filtros])
+  }, [busca, filtrosCol])
+
+  const setFiltroCol = (chave, f) => setFiltrosCol((prev) => ({ ...prev, [chave]: f }))
 
   async function carregarForm(reg) {
     const res = await window.api.documentoGerado.obter(reg.id)
@@ -257,10 +316,10 @@ export default function DocumentosGerados() {
   useEffect(() => { carregarTudo() }, [carregarTudo])
 
   function limparFiltros() {
-    setFiltros(FILTROS_VAZIOS)
+    setBusca('')
+    setFiltrosCol({})
   }
 
-  const qtdFiltrosAtivos = Object.values(filtros).filter(Boolean).length
   const totalFiltrado = fResultados?.length || 0
   const totalPaginas = Math.max(1, Math.ceil(totalFiltrado / porPagina))
   const registrosPagina = (fResultados || []).slice((pagina - 1) * porPagina, pagina * porPagina)
@@ -690,111 +749,39 @@ export default function DocumentosGerados() {
 
         {activeTab === 'acesso' && (
           <>
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', boxShadow: 'var(--sh-xs)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setFiltrosAbertos(a => !a)}>
-                <SlidersHorizontal size={13} color="var(--t2)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
-                {qtdFiltrosAtivos > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>
-                    {qtdFiltrosAtivos} ativo{qtdFiltrosAtivos !== 1 ? 's' : ''}
-                  </span>
-                )}
-                <div style={{ flex: 1 }} />
-                {qtdFiltrosAtivos > 0 && (
-                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
-                    onClick={e => { e.stopPropagation(); limparFiltros() }}>
-                    <RotateCcw size={11} /> Limpar
-                  </button>
-                )}
-                {filtrosAbertos ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
-              </div>
-
-              {filtrosAbertos && (
-                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={e => e.key === 'Enter' && carregarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Cliente</label>
-                      <input className="form-input form-input-sm"
-                        value={filtros.cliente} onChange={e => setFiltros(f => ({ ...f, cliente: e.target.value }))}
-                        placeholder="Nome do cliente" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Tipo de documento</label>
-                      <select className="form-select form-input-sm"
-                        value={filtros.documentoTipoId} onChange={e => setFiltros(f => ({ ...f, documentoTipoId: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {tipos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Status</label>
-                      <select className="form-select form-input-sm"
-                        value={filtros.status} onChange={e => setFiltros(f => ({ ...f, status: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {STATUS_ORDEM.map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={() => carregarAcesso()} disabled={fLoading}>
-                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
-                  </button>
-                </div>
-              )}
-            </div>
+            <PainelFiltrosGrid
+              colunas={COLUNAS_FILTRO}
+              valores={filtrosCol}
+              onChange={setFiltroCol}
+              onBuscar={() => carregarAcesso()}
+              onLimpar={limparFiltros}
+              fLoading={fLoading}
+              busca={busca}
+              onBusca={setBusca}
+            />
 
             {fResultados === null ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
                 <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
             ) : (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                      <tr>
-                        <Th style={{ width: 40, textAlign: 'center' }}>
-                          <input type="checkbox" checked={todosSelecionados} onChange={toggleSelecionarTodos}
-                            title="Selecionar todos" style={{ cursor: 'pointer' }} />
-                        </Th>
-                        <Th style={{ width: 70 }}>Código</Th>
-                        <Th>Título</Th><Th>Tipo</Th><Th>Cliente</Th><Th>Autor</Th><Th>Status</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {registrosPagina.map(r => {
-                        const marcado = selecionados.has(r.id)
-                        return (
-                          <tr key={r.id} onDoubleClick={() => { selecionarLinha(r); setActiveTab('cadastro') }}
-                            onContextMenu={e => abrirMenuLinha(e, r.id)}
-                            style={{ cursor: 'pointer', background: marcado ? 'var(--or4, var(--s2))' : 'transparent' }}
-                            onMouseEnter={e => { if (!marcado) e.currentTarget.style.background = 'var(--s2)' }}
-                            onMouseLeave={e => { if (!marcado) e.currentTarget.style.background = 'transparent' }}>
-                            <Td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              <input type="checkbox" checked={marcado} onChange={() => toggleSelecionado(r.id)}
-                                style={{ cursor: 'pointer' }} />
-                            </Td>
-                            <Td style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo}</Td>
-                            <Td>{r.titulo}</Td>
-                            <Td>{r.tipo_nome}</Td>
-                            <Td>{r.cliente_nome}</Td>
-                            <Td>{r.autor}</Td>
-                            <Td><span className={`badge ${STATUS_META[r.status]?.classe}`}>{STATUS_META[r.status]?.label}</span></Td>
-                          </tr>
-                        )
-                      })}
-                      {!fLoading && registrosPagina.length === 0 && (
-                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
-                          Nenhum registro encontrado
-                        </td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 8 }}>
+                <TabelaResultados
+                  colunas={COLUNAS_RESULTADO}
+                  registros={registrosPagina}
+                  prefKey="documentos-gerados-acesso"
+                  selecao={{
+                    has: (id) => selecionados.has(id),
+                    toggle: toggleSelecionado,
+                    todos: todosSelecionados,
+                    toggleTodos: toggleSelecionarTodos,
+                  }}
+                  onLinhaDuploClique={(r) => { selecionarLinha(r); setActiveTab('cadastro') }}
+                  onLinhaMenu={abrirMenuLinha}
+                  vazio={fLoading ? 'Buscando...' : 'Nenhum registro encontrado'}
+                />
                 {selecionados.size > 0 && (
-                  <div style={{ padding: '6px 14px', borderTop: '1px solid var(--bd)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ padding: '6px 14px', border: '1px solid var(--bd)', borderRadius: 8, background: 'var(--s1)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>{selecionados.size} selecionado{selecionados.size !== 1 ? 's' : ''}. Clique com o botao direito na lista para alterar o status.</span>
                     <button className="btn btn-ghost" style={{ height: 22, fontSize: 10.5, padding: '0 8px' }} onClick={() => setSelecionados(new Set())}>Limpar selecao</button>
                   </div>

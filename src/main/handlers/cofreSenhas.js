@@ -1,5 +1,15 @@
 import { encryptCofre, decryptCofre, hashLookupCofre } from '../config'
 import { gerarCodigoAtual, gerarQrCodeDataUrl } from '../services/totpService'
+import { montarFiltro } from '../services/filtroSqlGenerico'
+
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4).
+const TIPOS_FILTRO_COFRE = {
+  codigo: 'texto', sistema: 'texto', categoria: 'texto', url: 'texto', usuario: 'texto',
+  observacoes: 'texto', tags: 'texto',
+  nivel_seguranca: 'exato', tipo_credencial: 'exato',
+  dt_validade: 'data', favorito: 'booleano',
+  criado_em: 'data', alterado_em: 'data',
+}
 
 // senha_hash_lookup só se aplica a tipos que representam uma credencial de
 // acesso reutilizável (login/senha, token de API) — nota segura é texto
@@ -40,20 +50,33 @@ function linhaParaFrontend(row) {
 export function registerCofreSenhasHandlers({ ipcMain, wrap, query, queryOne }) {
 
   ipcMain.handle('cofreSenhas:listar', wrap(async (_, filtros = {}) => {
-    const { busca, categoria, apenasFavoritos, apenasVencidas } = filtros
+    const { busca, categoria, apenasFavoritos, apenasVencidas, filtros: fCol } = filtros
     const conds = ['ativo = TRUE']
     const params = []
     if (busca) {
       params.push(`%${busca}%`)
-      conds.push(`(sistema ILIKE $${params.length} OR usuario ILIKE $${params.length} OR categoria ILIKE $${params.length} OR tags ILIKE $${params.length})`)
+      conds.push(`(sistema ILIKE $${params.length} OR usuario ILIKE $${params.length} OR categoria ILIKE $${params.length} OR url ILIKE $${params.length} OR tags ILIKE $${params.length})`)
     }
+    // compat: filtros diretos antigos
     if (categoria) { params.push(categoria); conds.push(`categoria = $${params.length}`) }
     if (apenasFavoritos) conds.push('favorito = TRUE')
     if (apenasVencidas)  conds.push(`dt_validade IS NOT NULL AND dt_validade < CURRENT_DATE`)
+    // filtros por coluna (painel novo) — docs CLAUDE.md §4
+    if (fCol && Object.keys(fCol).length) {
+      const r = montarFiltro(fCol, TIPOS_FILTRO_COFRE)
+      if (r.where) {
+        const base = params.length
+        conds.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`))
+        params.push(...r.params)
+      }
+    }
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
     // Lista não devolve a senha em texto puro — só o suficiente pra listagem.
     return query(
-      `SELECT id, codigo, sistema, categoria, url, usuario, nivel_seguranca, dt_validade, tags, favorito, criado_em, alterado_em, tipo_credencial
+      `SELECT id, codigo, sistema, categoria, url, usuario, nivel_seguranca, dt_validade,
+              tags, favorito, observacoes, tipo_credencial, criado_em, alterado_em,
+              (dt_validade IS NOT NULL AND dt_validade < CURRENT_DATE) AS vencida,
+              (nota_segura <> '') AS tem_nota, (totp_secret <> '') AS tem_totp
        FROM cofre_senha_001 ${where} ORDER BY favorito DESC, sistema`,
       params
     )

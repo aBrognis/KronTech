@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, FileDown, FileX, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search, Settings, Paperclip, Mail } from 'lucide-react'
+import { Plus, Trash2, FileDown, FileX, Settings, Paperclip, Mail, LayoutGrid, Table as TableIcon } from 'lucide-react'
 import '../../App.css'
 import FormToolbar from '../../components/FormToolbar'
 import SeletorBusca from '../../components/SeletorBusca'
 import SeletorEntidade from '../../components/SeletorEntidade'
 import PesquisaPadraoModal from '../../components/PesquisaPadraoModal.jsx'
+import PainelFiltrosGrid from '../../components/PainelFiltrosGrid'
+import TabelaResultados from '../../components/TabelaResultados'
 import InputData from '../../components/InputData'
 import { notificar } from '../../components/Notificacao'
 import PaginacaoBar from '../../components/PaginacaoBar.jsx'
@@ -14,14 +16,63 @@ import { SecaoHeader } from '../../components/SecaoForm.jsx'
 import InputCidade from '../../components/InputCidade.jsx'
 import { EMPTY_FORM, STATUS_ORDEM, STATUS_META, MEIOS_TRANSPORTE, diaDaSemana, fmtDataBR, fmtMoeda, novoItem } from './utils'
 
-const CAMPOS_CLIENTE = [{ nome_campo: 'nome', label: 'Nome' }]
 const CAMPOS_CONSULTOR = [{ nome_campo: 'nome', label: 'Nome' }]
-const FILTROS_VAZIOS = { clienteId: '', clienteNome: '', consultorId: '', consultorNome: '', status: '', dataIni: '', dataFim: '' }
 const CAMPOS_BUSCA_DESPESA = [
   { nome_campo: 'codigo',         label: 'Código'    },
   { nome_campo: 'consultor_nome', label: 'Consultor' },
   { nome_campo: 'cliente_nome',   label: 'Cliente'   },
   { nome_campo: 'status',         label: 'Status'    },
+]
+
+const STATUS_OPCOES = STATUS_ORDEM.map((s) => ({ valor: s, label: STATUS_META[s].label }))
+const MEIOS_OPCOES = MEIOS_TRANSPORTE.map((m) => ({ valor: m, label: m }))
+
+// Aba de Acesso — consulta completa (docs CLAUDE.md §4). Um filtro por
+// coluna consultável de despesa_001.
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'consultor_nome', label: 'Consultor', tipo: 'texto' },
+  { chave: 'cliente_nome', label: 'Cliente', tipo: 'texto' },
+  { chave: 'local_partida', label: 'Local de partida', tipo: 'texto' },
+  { chave: 'local_destino', label: 'Local de destino', tipo: 'texto' },
+  { chave: 'meio_transporte', label: 'Meio de transporte', tipo: 'exato', opcoes: MEIOS_OPCOES },
+  { chave: 'veiculo_numero', label: 'Nº do veículo', tipo: 'texto' },
+  { chave: 'veiculo_placa', label: 'Placa', tipo: 'texto' },
+  { chave: 'observacoes', label: 'Observações', tipo: 'texto' },
+  { chave: 'status', label: 'Status', tipo: 'exato', opcoes: STATUS_OPCOES },
+  { chave: 'total_despesas', label: 'Total (R$)', tipo: 'numero' },
+  { chave: 'data_inicio', label: 'Período de', tipo: 'data' },
+  { chave: 'data_fim', label: 'Período até', tipo: 'data' },
+  { chave: 'criado_em', label: 'Criado em', tipo: 'data' },
+  { chave: 'alterado_em', label: 'Alterado em', tipo: 'data' },
+]
+
+const COLUNAS_RESULTADO = [
+  { chave: 'codigo', label: 'Código', largura: 70, sticky: true,
+    render: (r) => <span style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo || '-'}</span> },
+  { chave: 'consultor_nome', label: 'Consultor', sticky: true },
+  { chave: 'cliente_nome', label: 'Cliente', largura: 220, padrao: true, render: (r) => r.cliente_nome || 'Nenhum' },
+  { chave: 'periodo', label: 'Período', largura: 180, padrao: true,
+    render: (r) => `${fmtDataBR(r.data_inicio)} a ${fmtDataBR(r.data_fim)}` },
+  { chave: 'dias_viagem', label: 'Dias', largura: 60, align: 'center', padrao: true, render: (r) => r.dias_viagem ?? '-' },
+  { chave: 'status', label: 'Status', largura: 120, padrao: true,
+    render: (r) => <span className={`badge ${(STATUS_META[r.status] || STATUS_META.rascunho).classe}`}>{(STATUS_META[r.status] || STATUS_META.rascunho).label}</span> },
+  { chave: 'total_despesas', label: 'Total', largura: 110, align: 'right', padrao: true,
+    render: (r) => <span style={{ fontWeight: 600 }}>{fmtMoeda(r.total_despesas)}</span> },
+  { chave: 'qtd_itens', label: 'Itens', largura: 70, align: 'center', render: (r) => r.qtd_itens ?? 0 },
+  { chave: 'qtd_comprovantes', label: 'Comprovantes', largura: 110, align: 'center', render: (r) => r.qtd_comprovantes ?? 0 },
+  { chave: 'meio_transporte', label: 'Transporte', largura: 150, render: (r) => r.meio_transporte || '-' },
+  { chave: 'veiculo_numero', label: 'Nº veículo', largura: 90, render: (r) => r.veiculo_numero || '-' },
+  { chave: 'veiculo_placa', label: 'Placa', largura: 100, render: (r) => r.veiculo_placa || '-' },
+  { chave: 'local_partida', label: 'Partida', largura: 160, render: (r) => r.local_partida || '-' },
+  { chave: 'local_destino', label: 'Destino', largura: 160, render: (r) => r.local_destino || '-' },
+  { chave: 'entidade_documento', label: 'CNPJ/CPF cliente', largura: 150, render: (r) => r.entidade_documento || '-' },
+  { chave: 'entidade_email', label: 'E-mail cliente', largura: 200, render: (r) => r.entidade_email || '-' },
+  { chave: 'entidade_cidade', label: 'Cidade cliente', largura: 150, render: (r) => r.entidade_cidade || '-' },
+  { chave: 'entidade_uf', label: 'UF cliente', largura: 70, align: 'center', render: (r) => r.entidade_uf || '-' },
+  { chave: 'observacoes', label: 'Observações', largura: 260, render: (r) => r.observacoes || '-' },
+  { chave: 'criado_em', label: 'Criado em', largura: 140, render: (r) => fmtDataBR(r.criado_em) || '-' },
+  { chave: 'alterado_em', label: 'Alterado em', largura: 140, render: (r) => fmtDataBR(r.alterado_em) || '-' },
 ]
 
 export default function Viagens({ sessao, newTrigger }) {
@@ -44,11 +95,13 @@ export default function Viagens({ sessao, newTrigger }) {
 
   // Filtros da aba Acesso — resultado fica em fResultados, null até buscar
   // (mesmo padrão de Arquivos.jsx), nunca mexe em `registros`.
-  const [filtrosAbertos, setFiltrosAbertos] = useState(true)
-  const [filtros, setFiltros]         = useState(FILTROS_VAZIOS)
   const [buscaGeral, setBuscaGeral]   = useState('')
+  const [filtrosCol, setFiltrosCol]   = useState({})
   const [fResultados, setFResultados] = useState(null)
   const [fLoading, setFLoading]       = useState(false)
+  // Tabela é o padrão (consulta completa com seletor de colunas, docs
+  // CLAUDE.md §4); cards são a alternativa de leitura rápida.
+  const [modoVisao, setModoVisao]     = useState('tabela') // 'tabela' | 'cards'
   const [pagina, setPagina]     = useState(1)
   const [porPagina, setPorPagina] = useState(25)
   const [pastaExportacoes, setPastaExportacoes] = useState('')
@@ -65,23 +118,22 @@ export default function Viagens({ sessao, newTrigger }) {
   const [emailContas, setEmailContas] = useState([])
   const [preparandoEmail, setPreparandoEmail] = useState(false)
 
-  const carregarAcesso = useCallback(async (f = filtros, b = buscaGeral) => {
+  const carregarAcesso = useCallback(async (b = buscaGeral, fc = filtrosCol) => {
     setFLoading(true)
     try {
       const params = {}
-      if (f.clienteId)   params.clienteId   = f.clienteId
-      if (f.consultorId) params.consultorId = f.consultorId
-      if (f.status)      params.status      = f.status
-      if (f.dataIni)     params.dataIni     = f.dataIni
-      if (f.dataFim)     params.dataFim     = f.dataFim
-      if (b.trim())       params.busca       = b.trim()
+      if (b && b.trim()) params.busca = b.trim()
+      const limpo = Object.fromEntries(Object.entries(fc || {}).filter(([, v]) => v != null))
+      if (Object.keys(limpo).length) params.filtros = limpo
       const res = await window.api.viagens.listar(params)
       setFResultados(res.ok ? res.data || [] : [])
       setSelecionados(new Set())
       setPagina(1)
     } catch { setFResultados([]) }
     finally { setFLoading(false) }
-  }, [filtros, buscaGeral])
+  }, [buscaGeral, filtrosCol])
+
+  const setFiltroCol = (chave, f) => setFiltrosCol((prev) => ({ ...prev, [chave]: f }))
 
   // Ao abrir a tela, carrega a lista completa e mostra o último registro em
   // modo consulta (view) — mesmo padrão de Arquivos.jsx. Nunca entra em modo
@@ -213,11 +265,10 @@ export default function Viagens({ sessao, newTrigger }) {
   }
 
   function limparFiltros() {
-    setFiltros(FILTROS_VAZIOS)
+    setFiltrosCol({})
     setBuscaGeral('')
   }
 
-  const qtdFiltrosAtivos = Object.values(filtros).filter(Boolean).length + (buscaGeral.trim() ? 1 : 0)
   const totalFiltrado = fResultados?.length || 0
   const totalPaginas = Math.max(1, Math.ceil(totalFiltrado / porPagina))
   const registrosPagina = (fResultados || []).slice((pagina - 1) * porPagina, pagina * porPagina)
@@ -493,144 +544,111 @@ export default function Viagens({ sessao, newTrigger }) {
 
         {activeTab === 'acesso' && (
           <>
-            {/* Painel de filtros retrátil, mesmo padrão do FormBuilder */}
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', boxShadow: 'var(--sh-xs)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setFiltrosAbertos(a => !a)}>
-                <SlidersHorizontal size={13} color="var(--t2)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
-                {qtdFiltrosAtivos > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>
-                    {qtdFiltrosAtivos} ativo{qtdFiltrosAtivos !== 1 ? 's' : ''}
-                  </span>
-                )}
-                <div style={{ flex: 1 }} />
-                {qtdFiltrosAtivos > 0 && (
-                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
-                    onClick={e => { e.stopPropagation(); limparFiltros() }}>
-                    <RotateCcw size={11} /> Limpar
-                  </button>
-                )}
-                {filtrosAbertos ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
-              </div>
+            <PainelFiltrosGrid
+              colunas={COLUNAS_FILTRO}
+              valores={filtrosCol}
+              onChange={setFiltroCol}
+              onBuscar={() => carregarAcesso()}
+              onLimpar={limparFiltros}
+              fLoading={fLoading}
+              busca={buscaGeral}
+              onBusca={setBuscaGeral}
+            />
 
-              {filtrosAbertos && (
-                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={e => e.key === 'Enter' && carregarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10, marginBottom: 12 }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Busca geral</label>
-                      <input className="form-input form-input-sm"
-                        value={buscaGeral} onChange={e => setBuscaGeral(e.target.value)}
-                        placeholder="consultor, cliente, local..." />
-                    </div>
-                    <SeletorEntidade
-                      label="Cliente"
-                      placeholder="Todos"
-                      height={32}
-                      papel="cliente"
-                      value={filtros.clienteNome}
-                      onClear={() => setFiltros(f => ({ ...f, clienteId: '', clienteNome: '' }))}
-                      onSelect={r => setFiltros(f => ({ ...f, clienteId: String(r.id), clienteNome: r.nome }))}
-                    />
-                    <SeletorBusca
-                      label="Consultor"
-                      placeholder="Todos"
-                      height={32}
-                      valorExibido={filtros.consultorNome}
-                      onLimpar={() => setFiltros(f => ({ ...f, consultorId: '', consultorNome: '' }))}
-                      titulo="Pesquisa Padrão · consultores"
-                      campos={CAMPOS_CONSULTOR}
-                      colunasExibidas={CAMPOS_CONSULTOR}
-                      campoInicial="nome"
-                      onBuscar={buscarConsultores}
-                      onSelecionar={r => setFiltros(f => ({ ...f, consultorId: r.id, consultorNome: r.nome }))}
-                    />
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Status</label>
-                      <select className="form-select form-input-sm"
-                        value={filtros.status} onChange={e => setFiltros(f => ({ ...f, status: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {STATUS_ORDEM.map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Período de</label>
-                      <InputData className="form-input form-input-sm"
-                        value={filtros.dataIni} onChange={v => setFiltros(f => ({ ...f, dataIni: v }))}
-                        onRange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim }))} />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Período até</label>
-                      <InputData className="form-input form-input-sm"
-                        value={filtros.dataFim} onChange={v => setFiltros(f => ({ ...f, dataFim: v }))}
-                        onRange={(ini, fim) => setFiltros(f => ({ ...f, dataIni: ini, dataFim: fim }))} />
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={() => carregarAcesso()} disabled={fLoading}>
-                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
+            {fResultados !== null && !fLoading && fResultados.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, color: 'var(--t3)', flex: 1 }}>
+                  {totalFiltrado} despesa{totalFiltrado !== 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' }}>
+                  <button type="button"
+                    className={`btn ${modoVisao === 'tabela' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ height: 28, fontSize: 11, padding: '0 10px', borderRadius: 0 }}
+                    onClick={() => setModoVisao('tabela')}>
+                    <TableIcon size={12} /> Tabela
+                  </button>
+                  <button type="button"
+                    className={`btn ${modoVisao === 'cards' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ height: 28, fontSize: 11, padding: '0 10px', borderRadius: 0 }}
+                    onClick={() => setModoVisao('cards')}>
+                    <LayoutGrid size={12} /> Cards
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {fResultados === null ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
                 <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
-            ) : (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                      <tr>
-                        <Th style={{ width: 40, textAlign: 'center' }}>
-                          <input type="checkbox" checked={todosSelecionados} onChange={toggleSelecionarTodos}
-                            title="Selecionar todos" style={{ cursor: 'pointer' }} />
-                        </Th>
-                        <Th style={{ textAlign: 'center', width: 36 }}>#</Th>
-                        <Th>Consultor</Th><Th>Cliente</Th><Th>Período</Th><Th>Status</Th><Th style={{ textAlign: 'right' }}>Total</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {registrosPagina.map((r, ri) => {
-                        const idxAbsoluto = (pagina - 1) * porPagina + ri
-                        const meta = STATUS_META[r.status] || STATUS_META.rascunho
-                        const marcado = selecionados.has(r.id)
-                        return (
-                          <tr key={r.id} onDoubleClick={() => selecionarLinha(r)}
-                            onContextMenu={e => abrirMenuLinha(e, r.id)}
-                            style={{ cursor: 'pointer', background: marcado ? 'var(--or4, var(--s2))' : 'transparent' }}
-                            onMouseEnter={e => { if (!marcado) e.currentTarget.style.background = 'var(--s2)' }}
-                            onMouseLeave={e => { if (!marcado) e.currentTarget.style.background = 'transparent' }}>
-                            <Td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                              <input type="checkbox" checked={marcado} onChange={() => toggleSelecionado(r.id)}
-                                style={{ cursor: 'pointer' }} />
-                            </Td>
-                            <Td style={{ textAlign: 'center', color: 'var(--t3)', fontSize: 10 }}>{idxAbsoluto + 1}</Td>
-                            <Td>{r.consultor_nome}</Td>
-                            <Td>{r.cliente_nome || 'Nenhum'}</Td>
-                            <Td>{fmtDataBR(r.data_inicio)} a {fmtDataBR(r.data_fim)}</Td>
-                            <Td><span className={`badge ${meta.classe}`}>{meta.label}</span></Td>
-                            <Td style={{ textAlign: 'right', fontWeight: 600 }}>{fmtMoeda(r.total_despesas)}</Td>
-                          </tr>
-                        )
-                      })}
-                      {!fLoading && registrosPagina.length === 0 && (
-                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
-                          Nenhum registro encontrado
-                        </td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+            ) : modoVisao === 'tabela' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 8 }}>
+                <TabelaResultados
+                  colunas={COLUNAS_RESULTADO}
+                  registros={registrosPagina}
+                  prefKey="viagens-acesso"
+                  selecao={{
+                    has: (id) => selecionados.has(id),
+                    toggle: toggleSelecionado,
+                    todos: todosSelecionados,
+                    toggleTodos: toggleSelecionarTodos,
+                  }}
+                  onLinhaDuploClique={selecionarLinha}
+                  onLinhaMenu={abrirMenuLinha}
+                  vazio={fLoading ? 'Buscando...' : 'Nenhum registro encontrado'}
+                />
                 {selecionados.size > 0 && (
-                  <div style={{ padding: '6px 14px', borderTop: '1px solid var(--bd)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ padding: '6px 14px', border: '1px solid var(--bd)', borderRadius: 8, background: 'var(--s1)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>{selecionados.size} selecionada{selecionados.size !== 1 ? 's' : ''}. Clique com o botao direito na lista para alterar o status.</span>
                     <button className="btn btn-ghost" style={{ height: 22, fontSize: 10.5, padding: '0 8px' }} onClick={() => setSelecionados(new Set())}>Limpar selecao</button>
                   </div>
                 )}
+                <PaginacaoBar pagina={pagina} totalPaginas={totalPaginas} total={totalFiltrado} porPagina={porPagina}
+                  onPagina={p => setPagina(p)} onPorPagina={n => { setPorPagina(n); setPagina(1) }} />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', flex: 1 }}>
+                  {registrosPagina.map((r) => {
+                    const meta = STATUS_META[r.status] || STATUS_META.rascunho
+                    return (
+                      <div key={r.id} onDoubleClick={() => selecionarLinha(r)}
+                        onContextMenu={(e) => abrirMenuLinha(e, r.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 14,
+                          background: 'var(--s1)', border: '1.5px solid var(--bd)', borderRadius: 12,
+                          padding: '12px 16px', boxShadow: 'var(--sh-xs)', cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--bd2)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--bd)')}>
+                        <div style={{ width: 44, textAlign: 'center', fontFamily: 'monospace', fontWeight: 700, color: 'var(--or)', flexShrink: 0 }}>{r.codigo}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {r.consultor_nome}
+                            </span>
+                            <span className={`badge ${meta.classe}`}>{meta.label}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: 'var(--t3)', flexWrap: 'wrap' }}>
+                            <span>{r.cliente_nome || 'Nenhum'}</span>
+                            <span>{fmtDataBR(r.data_inicio)} a {fmtDataBR(r.data_fim)}</span>
+                            {r.meio_transporte && <span>{r.meio_transporte}</span>}
+                            <span>{r.qtd_itens ?? 0} ite{(r.qtd_itens ?? 0) === 1 ? 'm' : 'ns'}</span>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5 }}>Total</div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--t1)' }}>{fmtMoeda(r.total_despesas)}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {!fLoading && registrosPagina.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
+                      Nenhum registro encontrado
+                    </div>
+                  )}
+                </div>
                 <PaginacaoBar pagina={pagina} totalPaginas={totalPaginas} total={totalFiltrado} porPagina={porPagina}
                   onPagina={p => setPagina(p)} onPorPagina={n => { setPorPagina(n); setPagina(1) }} />
               </div>

@@ -1,15 +1,16 @@
 import { FormGrid, Secao } from '../../components/cadastroPadrao/TelaCadastroPadrao'
 import GridFilho from '../../components/cadastroPadrao/GridFilho'
+import { fmtDataHoraBR } from '../../lib/utils/data.js'
 import { TIPO_DOCUMENTO } from './utils'
 
-const fmtDataHora = (iso) => { try { return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)) } catch { return String(iso || '') } }
-const fmtData = (v) => (v ? String(v).slice(0, 10).split('-').reverse().join('/') : '')
+const fmtDataHora = (iso) => fmtDataHoraBR(iso, '')
 const acaoLabel = { criou: 'Criou', alterou: 'Alterou', status: 'Mudou status', limite: 'Alterou limite', anexo: 'Anexo', excluiu: 'Excluiu' }
 
 function diasAte(validade) {
   if (!validade) return null
-  const d = Math.ceil((new Date(String(validade).slice(0, 10)) - new Date()) / 86400000)
-  return d
+  const base = validade instanceof Date ? validade : new Date(String(validade).slice(0, 10))
+  if (Number.isNaN(base.getTime())) return null
+  return Math.ceil((base - new Date()) / 86400000)
 }
 
 export default function AbaHistorico({ form, setForm, isRO }) {

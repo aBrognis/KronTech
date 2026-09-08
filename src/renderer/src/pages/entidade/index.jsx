@@ -6,6 +6,7 @@ import MenuContextoGrid from '../../components/MenuContextoGrid'
 import PainelFiltrosGrid from '../../components/PainelFiltrosGrid'
 import TabelaResultados from '../../components/TabelaResultados'
 import { notificar } from '../../components/Notificacao'
+import { fmtDataBR } from '../../lib/utils/data.js'
 import {
   EMPTY_FORM, paraForm, paraPayload, STATUS, PAPEIS, TIPOS_PESSOA, REGIMES,
   statusMeta, papelLabel,
@@ -71,7 +72,7 @@ const COLUNAS_FILTRO = [
 ]
 
 const fmtR$ = (v) => (v == null ? '-' : (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
-const fmtData = (v) => (v ? String(v).slice(0, 10).split('-').reverse().join('/') : '-')
+const fmtData = (v) => fmtDataBR(v)
 
 // Colunas da TABELA de resultados. O SQL traz tudo (entidade + FKs + endereço
 // principal + comercial + crédito); aqui so o que aparece e como. `sticky`:

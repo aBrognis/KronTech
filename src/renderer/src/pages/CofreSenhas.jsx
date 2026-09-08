@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Plus, Trash2, SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search,
   Star, Lock, ExternalLink, Copy, Check, Calendar, AlertTriangle, FolderOpen, History, ScrollText,
+  LayoutGrid, Table as TableIcon,
 } from 'lucide-react'
 import '../App.css'
 import FormToolbar from '../components/FormToolbar'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
+import PainelFiltrosGrid from '../components/PainelFiltrosGrid'
+import TabelaResultados from '../components/TabelaResultados'
 import PasswordVaultField from '../components/PasswordVaultField.jsx'
 import InputData from '../components/InputData'
-import { notificar } from '../components/Notificacao'
 import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
 import LogAcessoModal from '../components/cofre/LogAcessoModal.jsx'
 import AnexosPainel from '../components/cofre/AnexosPainel.jsx'
@@ -16,11 +17,61 @@ import TotpField from '../components/cofre/TotpField.jsx'
 import { SecaoHeader } from '../components/SecaoForm.jsx'
 import { NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
-const FILTROS_VAZIOS = { busca: '', categoria: '', apenasFavoritos: false, apenasVencidas: false }
 const CAMPOS_BUSCA = [
   { nome_campo: 'codigo',   label: 'Código'  },
   { nome_campo: 'sistema',  label: 'Sistema' },
   { nome_campo: 'usuario',  label: 'Usuário' },
+]
+
+const NIVEIS_OPCOES = [
+  { valor: 'Fraca', label: 'Fraca' },
+  { valor: 'Média', label: 'Média' },
+  { valor: 'Forte', label: 'Forte' },
+  { valor: 'Muito forte', label: 'Muito forte' },
+]
+
+// Aba de Acesso — consulta completa (docs CLAUDE.md §4). Um filtro por
+// coluna consultável de cofre_senha_001.
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'sistema', label: 'Sistema', tipo: 'texto' },
+  { chave: 'categoria', label: 'Categoria', tipo: 'texto' },
+  { chave: 'usuario', label: 'Usuário / E-mail', tipo: 'texto' },
+  { chave: 'url', label: 'URL', tipo: 'texto' },
+  { chave: 'tags', label: 'Tags', tipo: 'texto' },
+  { chave: 'observacoes', label: 'Observações', tipo: 'texto' },
+  { chave: 'tipo_credencial', label: 'Tipo de credencial', tipo: 'exato', opcoes: TIPOS_CREDENCIAL },
+  { chave: 'nivel_seguranca', label: 'Nível de segurança', tipo: 'exato', opcoes: NIVEIS_OPCOES },
+  { chave: 'favorito', label: 'Favorito', tipo: 'booleano' },
+  { chave: 'dt_validade', label: 'Válido até', tipo: 'data' },
+  { chave: 'criado_em', label: 'Criado em', tipo: 'data' },
+  { chave: 'alterado_em', label: 'Alterado em', tipo: 'data' },
+]
+
+const rotuloTipoCred = (v) => TIPOS_CREDENCIAL.find((t) => t.valor === v)?.label || v || '-'
+
+const COLUNAS_RESULTADO = [
+  { chave: 'codigo', label: 'Código', largura: 70, sticky: true,
+    render: (r) => <span style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo || '-'}</span> },
+  { chave: 'sistema', label: 'Sistema', sticky: true },
+  { chave: 'usuario', label: 'Usuário', largura: 200, padrao: true, render: (r) => r.usuario || '-' },
+  { chave: 'categoria', label: 'Categoria', largura: 150, padrao: true, render: (r) => r.categoria || '-' },
+  { chave: 'tipo_credencial', label: 'Tipo', largura: 150, padrao: true, render: (r) => rotuloTipoCred(r.tipo_credencial) },
+  { chave: 'nivel_seguranca', label: 'Nível', largura: 110, padrao: true,
+    render: (r) => (r.nivel_seguranca ? <span className={`badge ${NIVEL_META[r.nivel_seguranca]?.classe || ''}`}>{r.nivel_seguranca}</span> : '-') },
+  { chave: 'dt_validade', label: 'Válido até', largura: 110, padrao: true,
+    render: (r) => (r.dt_validade
+      ? <span style={{ color: r.vencida ? 'var(--or)' : undefined }}>{fmtDataBR(r.dt_validade)}{r.vencida ? ' (vencida)' : ''}</span>
+      : '-') },
+  { chave: 'favorito', label: 'Fav.', largura: 60, align: 'center', padrao: true,
+    render: (r) => (r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : '-') },
+  { chave: 'url', label: 'URL', largura: 240, render: (r) => r.url || '-' },
+  { chave: 'tags', label: 'Tags', largura: 180, render: (r) => r.tags || '-' },
+  { chave: 'observacoes', label: 'Observações', largura: 260, render: (r) => r.observacoes || '-' },
+  { chave: 'tem_nota', label: 'Nota segura', largura: 100, align: 'center', render: (r) => (r.tem_nota ? 'Sim' : 'Não') },
+  { chave: 'tem_totp', label: '2FA (TOTP)', largura: 100, align: 'center', render: (r) => (r.tem_totp ? 'Sim' : 'Não') },
+  { chave: 'criado_em', label: 'Criado em', largura: 140, render: (r) => fmtDataBR(r.criado_em) || '-' },
+  { chave: 'alterado_em', label: 'Alterado em', largura: 140, render: (r) => fmtDataBR(r.alterado_em) || '-' },
 ]
 
 export default function CofreSenhas({ newTrigger, sessao }) {
@@ -45,25 +96,29 @@ export default function CofreSenhas({ newTrigger, sessao }) {
   const [showHistorico, setShowHistorico] = useState(false)
   const [showLogAcesso, setShowLogAcesso] = useState(false)
 
-  const [filtrosAbertos, setFiltrosAbertos] = useState(true)
-  const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
+  const [busca, setBusca] = useState('')
+  const [filtrosCol, setFiltrosCol] = useState({})
   const [fResultados, setFResultados] = useState(null)
   const [fLoading, setFLoading] = useState(false)
   const [copiadoId, setCopiadoId] = useState(null)
+  // Cofre usa cards por padrão (navegação visual); tabela é a alternativa
+  // para consulta completa com seletor de colunas (docs CLAUDE.md §4).
+  const [modoVisao, setModoVisao] = useState('cards') // 'cards' | 'tabela'
 
-  const carregarAcesso = useCallback(async (f = filtros) => {
+  const carregarAcesso = useCallback(async (b = busca, fc = filtrosCol) => {
     setFLoading(true)
     try {
       const params = {}
-      if (f.busca.trim())     params.busca = f.busca.trim()
-      if (f.categoria)        params.categoria = f.categoria
-      if (f.apenasFavoritos)  params.apenasFavoritos = true
-      if (f.apenasVencidas)   params.apenasVencidas = true
+      if (b && b.trim()) params.busca = b.trim()
+      const limpo = Object.fromEntries(Object.entries(fc || {}).filter(([, v]) => v != null))
+      if (Object.keys(limpo).length) params.filtros = limpo
       const res = await window.api.cofreSenhas.listar(params)
       setFResultados(res.ok ? res.data || [] : [])
     } catch { setFResultados([]) }
     finally { setFLoading(false) }
-  }, [filtros])
+  }, [busca, filtrosCol])
+
+  const setFiltroCol = (chave, f) => setFiltrosCol((prev) => ({ ...prev, [chave]: f }))
 
   const carregarCategorias = useCallback(async () => {
     const res = await window.api.cofreSenhas.listarCategorias()
@@ -99,10 +154,9 @@ export default function CofreSenhas({ newTrigger, sessao }) {
   }, [newTrigger])
 
   function limparFiltros() {
-    setFiltros(FILTROS_VAZIOS)
+    setBusca('')
+    setFiltrosCol({})
   }
-
-  const qtdFiltrosAtivos = [filtros.busca.trim(), filtros.categoria, filtros.apenasFavoritos, filtros.apenasVencidas].filter(Boolean).length
 
   async function carregarForm(reg) {
     const res = await window.api.cofreSenhas.obter(reg.id)
@@ -255,64 +309,38 @@ export default function CofreSenhas({ newTrigger, sessao }) {
 
         {activeTab === 'acesso' && (
           <>
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', boxShadow: 'var(--sh-xs)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setFiltrosAbertos(a => !a)}>
-                <SlidersHorizontal size={13} color="var(--t2)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
-                {qtdFiltrosAtivos > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>
-                    {qtdFiltrosAtivos} ativo{qtdFiltrosAtivos !== 1 ? 's' : ''}
-                  </span>
-                )}
-                <div style={{ flex: 1 }} />
-                {qtdFiltrosAtivos > 0 && (
-                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
-                    onClick={e => { e.stopPropagation(); limparFiltros() }}>
-                    <RotateCcw size={11} /> Limpar
-                  </button>
-                )}
-                {filtrosAbertos ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
-              </div>
+            <PainelFiltrosGrid
+              colunas={COLUNAS_FILTRO}
+              valores={filtrosCol}
+              onChange={setFiltroCol}
+              onBuscar={() => carregarAcesso()}
+              onLimpar={limparFiltros}
+              fLoading={fLoading}
+              busca={busca}
+              onBusca={setBusca}
+            />
 
-              {filtrosAbertos && (
-                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={e => e.key === 'Enter' && carregarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Busca geral</label>
-                      <input className="form-input form-input-sm"
-                        value={filtros.busca} onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
-                        placeholder="sistema, usuário, tag..." />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Categoria</label>
-                      <select className="form-select form-input-sm"
-                        value={filtros.categoria} onChange={e => setFiltros(f => ({ ...f, categoria: e.target.value }))}>
-                        <option value="">Todas</option>
-                        {categorias.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, paddingBottom: 6 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 11.5, color: 'var(--t2)' }}>
-                        <input type="checkbox" checked={filtros.apenasFavoritos}
-                          onChange={e => setFiltros(f => ({ ...f, apenasFavoritos: e.target.checked }))} />
-                        Favoritos
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', fontSize: 11.5, color: 'var(--t2)' }}>
-                        <input type="checkbox" checked={filtros.apenasVencidas}
-                          onChange={e => setFiltros(f => ({ ...f, apenasVencidas: e.target.checked }))} />
-                        Vencidas
-                      </label>
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={() => carregarAcesso()} disabled={fLoading}>
-                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
+            {fResultados !== null && !fLoading && fResultados.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, color: 'var(--t3)', flex: 1 }}>
+                  {fResultados.length} registro{fResultados.length !== 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' }}>
+                  <button type="button"
+                    className={`btn ${modoVisao === 'cards' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ height: 28, fontSize: 11, padding: '0 10px', borderRadius: 0 }}
+                    onClick={() => setModoVisao('cards')}>
+                    <LayoutGrid size={12} /> Cards
+                  </button>
+                  <button type="button"
+                    className={`btn ${modoVisao === 'tabela' ? 'btn-primary' : 'btn-ghost'}`}
+                    style={{ height: 28, fontSize: 11, padding: '0 10px', borderRadius: 0 }}
+                    onClick={() => setModoVisao('tabela')}>
+                    <TableIcon size={12} /> Tabela
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {fResultados === null ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>
@@ -329,6 +357,16 @@ export default function CofreSenhas({ newTrigger, sessao }) {
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)' }}>Nenhum acesso encontrado</div>
                 <div style={{ fontSize: 12, color: 'var(--t3)', maxWidth: 280, lineHeight: 1.6 }}>Ajuste os filtros ou cadastre um novo acesso.</div>
+              </div>
+            ) : modoVisao === 'tabela' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                <TabelaResultados
+                  colunas={COLUNAS_RESULTADO}
+                  registros={fResultados}
+                  prefKey="cofre-senhas-acesso"
+                  onLinhaDuploClique={selecionarLinha}
+                  vazio="Nenhum acesso encontrado"
+                />
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

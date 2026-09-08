@@ -1,4 +1,5 @@
 import { query, queryOne } from '../db'
+import { montarFiltro } from './filtroSqlGenerico'
 import { SCHEMAS_POR_LAYOUT, schemaComLegendas } from './documentoTemplates/schemas'
 import { obterPromptPorCodigo } from './promptIaService'
 import { gerarEstruturado } from './iaService'
@@ -140,18 +141,50 @@ export async function listarTipos() {
   return query('SELECT id, codigo, nome, layout_renderer, prompt_ia_codigo FROM documento_tipo_001 WHERE ativo = true ORDER BY nome')
 }
 
-export async function listarDocumentos({ cliente, documentoTipoId, status, limite = 50, offset = 0 } = {}) {
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4). alias 'dg'.
+const TIPOS_FILTRO_DOC = {
+  codigo: 'texto', titulo: 'texto', cliente_nome: 'texto', autor: 'texto',
+  criado_por: 'texto', nome_referencia: 'texto', cliente_id: 'numero',
+  status: 'exato', documento_tipo_id: 'exato',
+  criado_em: 'data', atualizado_em: 'data',
+}
+
+export async function listarDocumentos({ cliente, documentoTipoId, status, busca, filtros, limite = 2000, offset = 0 } = {}) {
   const condicoes = []
   const params = []
+  if (busca && String(busca).trim()) {
+    params.push(`%${busca.trim()}%`)
+    condicoes.push(`(dg.titulo ILIKE $${params.length} OR dg.cliente_nome ILIKE $${params.length} OR dg.autor ILIKE $${params.length} OR dg.codigo ILIKE $${params.length})`)
+  }
+  // compat: filtros diretos antigos
   if (cliente) { params.push(`%${cliente}%`); condicoes.push(`dg.cliente_nome ILIKE $${params.length}`) }
-  if (documentoTipoId) { params.push(documentoTipoId); condicoes.push(`documento_tipo_id = $${params.length}`) }
+  if (documentoTipoId) { params.push(documentoTipoId); condicoes.push(`dg.documento_tipo_id = $${params.length}`) }
   if (status) { params.push(status); condicoes.push(`dg.status = $${params.length}`) }
+  // filtros por coluna (painel novo)
+  if (filtros && Object.keys(filtros).length) {
+    const r = montarFiltro(filtros, TIPOS_FILTRO_DOC, { alias: 'dg' })
+    if (r.where) {
+      const base = params.length
+      condicoes.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`))
+      params.push(...r.params)
+    }
+  }
   const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : ''
   params.push(limite, offset)
   return query(
-    `SELECT dg.*, dt.nome AS tipo_nome
+    `SELECT dg.*, dt.nome AS tipo_nome, dt.codigo AS tipo_codigo, dt.layout_renderer,
+       cli.nome     AS entidade_nome,
+       cli.documento AS entidade_documento,
+       cli.email    AS entidade_email,
+       cli.cidade   AS entidade_cidade,
+       cli.uf       AS entidade_uf,
+       jsonb_array_length(COALESCE(dg.participantes, '[]'::jsonb)) AS qtd_participantes,
+       jsonb_array_length(COALESCE(dg.imagens, '[]'::jsonb))       AS qtd_imagens,
+       (dg.pdf_caminho IS NOT NULL AND dg.pdf_caminho <> '')       AS tem_pdf,
+       (SELECT count(*) FROM documento_gerado_historico_001 h WHERE h.documento_id = dg.id) AS qtd_versoes
      FROM documento_gerado_001 dg
      JOIN documento_tipo_001 dt ON dt.id = dg.documento_tipo_id
+     LEFT JOIN entidade_001 cli ON cli.id = dg.cliente_id
      ${where}
      ORDER BY dg.criado_em DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,

@@ -1,3 +1,7 @@
+// fmtDataBR mora em lib/utils/data.js (fonte única). Re-exportado aqui só
+// pra não quebrar os imports existentes desta tela.
+export { fmtDataBR } from '../../lib/utils/data.js'
+
 export const NIVEL_META = {
   'Fraca':       { classe: 'badge-orange' },
   'Média':       { classe: 'badge-yellow' },
@@ -18,13 +22,11 @@ export const EMPTY_FORM = {
   tipo_credencial: 'login_senha', nota_segura: '', totp_secret: '',
 }
 
-export function fmtDataBR(iso) {
-  if (!iso) return ''
-  const [ano, mes, dia] = String(iso).slice(0, 10).split('-')
-  return `${dia}/${mes}/${ano}`
-}
-
 export function estaVencida(dtValidade) {
   if (!dtValidade) return false
-  return String(dtValidade).slice(0, 10) < new Date().toISOString().slice(0, 10)
+  const iso = dtValidade instanceof Date
+    ? dtValidade.toISOString().slice(0, 10)
+    : String(dtValidade).slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false
+  return iso < new Date().toISOString().slice(0, 10)
 }

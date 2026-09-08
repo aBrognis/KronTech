@@ -301,6 +301,18 @@ Quando um filtro de `status`/`ativo` é usado, o service **deixa de forçar
 Cadastro trivial de 2-3 colunas (sem `colunasFiltro`) cai no modo antigo de
 "busca geral" simples — só aceitável aí.
 
+**4. Telas que hoje mostram cards (Cofre de Senhas, Despesas de Viagem):**
+mantêm os cards para leitura rápida, mas ganham um **alternador Cards / Tabela**
+no topo da lista (`modoVisao` `'cards' | 'tabela'`, botões `LayoutGrid` /
+`Table`). A visão Tabela usa o mesmo `TabelaResultados` + `COLUNAS_RESULTADO`
+de todas as outras — é ali que mora a consulta completa (seletor de colunas,
+todos os campos do SQL). Os cards nunca são a única forma de ver os dados.
+Aplica-se a qualquer tela nativa cuja aba de Acesso liste em cards.
+
+O SQL dessas telas segue a regra 1: `viagens:listar` traz contagem de itens e
+comprovantes, dias de viagem e os dados da entidade cliente; `cofreSenhas:listar`
+traz `vencida`, `tem_nota`, `tem_totp` além de todos os campos escalares.
+
 ### Estado inicial — regra de ouro
 
 **Toda tela manual abre da mesma forma, sem exceção:**

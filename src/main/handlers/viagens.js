@@ -5,8 +5,20 @@ import { BrowserWindow, dialog } from 'electron'
 import { gerarExcelViagem } from '../services/exportViagem.js'
 import { pastaExportacaoAutomatica, resolverBaseExportacao } from '../services/exportPaths.js'
 import { getConfig } from '../config.js'
+import { montarFiltro } from '../services/filtroSqlGenerico.js'
 
 export const STATUS_VALIDOS = ['rascunho', 'nao_enviado', 'enviado', 'reembolsado']
+
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4). alias 'd'.
+const TIPOS_FILTRO_DESPESA = {
+  codigo: 'texto', consultor_nome: 'texto', cliente_nome: 'texto',
+  local_partida: 'texto', local_destino: 'texto', meio_transporte: 'texto',
+  veiculo_numero: 'texto', veiculo_placa: 'texto', observacoes: 'texto',
+  consultor_id: 'numero', cliente_id: 'numero',
+  status: 'exato',
+  data_inicio: 'data', data_fim: 'data', criado_em: 'data', alterado_em: 'data',
+  total_despesas: 'numero',
+}
 
 function normalizarItens(itens) {
   if (!Array.isArray(itens)) return []
@@ -52,19 +64,33 @@ function removerArquivos(paths) {
 
 export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
 
+  // Consulta rica da aba Acesso (docs CLAUDE.md §4): total e contagem dos
+  // itens, comprovantes anexados, e os dados da entidade cliente.
   const SELECT_LISTA = `
-    SELECT d.*, COALESCE(it.total_despesas, 0) AS total_despesas
+    SELECT d.*,
+           COALESCE(it.total_despesas, 0) AS total_despesas,
+           COALESCE(it.qtd_itens, 0)      AS qtd_itens,
+           COALESCE(it.qtd_comprovantes, 0) AS qtd_comprovantes,
+           (d.data_fim - d.data_inicio + 1) AS dias_viagem,
+           cli.documento AS entidade_documento,
+           cli.email     AS entidade_email,
+           cli.cidade    AS entidade_cidade,
+           cli.uf        AS entidade_uf
     FROM despesa_001 d
     LEFT JOIN LATERAL (
-      SELECT SUM(valor) AS total_despesas
+      SELECT SUM(valor) AS total_despesas,
+             COUNT(*)   AS qtd_itens,
+             COUNT(*) FILTER (WHERE arquivo_path IS NOT NULL AND arquivo_path <> '') AS qtd_comprovantes
       FROM despesa_item_001 WHERE despesa_id = d.id
     ) it ON true
+    LEFT JOIN entidade_001 cli ON cli.id = d.cliente_id
   `
 
   ipcMain.handle('viagens:listar', wrap(async (_, filtros = {}) => {
-    const { clienteId, consultorId, status, dataIni, dataFim, busca } = filtros
+    const { clienteId, consultorId, status, dataIni, dataFim, busca, filtros: fCol } = filtros
     const conds = []
     const params = []
+    // Compat: filtros diretos antigos.
     if (clienteId)   { params.push(clienteId);   conds.push(`d.cliente_id = $${params.length}`) }
     if (consultorId) { params.push(consultorId); conds.push(`d.consultor_id = $${params.length}`) }
     if (status)      { params.push(status);      conds.push(`d.status = $${params.length}`) }
@@ -72,7 +98,27 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     if (dataFim)     { params.push(dataFim);     conds.push(`d.data_inicio <= $${params.length}`) }
     if (busca) {
       params.push(`%${busca}%`)
-      conds.push(`(d.consultor_nome ILIKE $${params.length} OR d.cliente_nome ILIKE $${params.length} OR d.local_partida ILIKE $${params.length} OR d.local_destino ILIKE $${params.length})`)
+      conds.push(`(d.codigo ILIKE $${params.length} OR d.consultor_nome ILIKE $${params.length} OR d.cliente_nome ILIKE $${params.length} OR d.local_partida ILIKE $${params.length} OR d.local_destino ILIKE $${params.length})`)
+    }
+    // Filtros por coluna (painel novo) — docs CLAUDE.md §4. total_despesas
+    // não é coluna da tabela; filtra via HAVING-like subquery.
+    if (fCol && Object.keys(fCol).length) {
+      const { total_despesas, ...semTotal } = fCol
+      const r = montarFiltro(semTotal, TIPOS_FILTRO_DESPESA, { alias: 'd' })
+      if (r.where) {
+        const base = params.length
+        conds.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_m, n) => `$${base + Number(n)}`))
+        params.push(...r.params)
+      }
+      if (total_despesas) {
+        const soma = `(SELECT COALESCE(SUM(valor), 0) FROM despesa_item_001 WHERE despesa_id = d.id)`
+        if (total_despesas.valor != null && total_despesas.valor !== '') {
+          params.push(Number(total_despesas.valor)); conds.push(`${soma} >= $${params.length}`)
+        }
+        if (total_despesas.valor2 != null && total_despesas.valor2 !== '') {
+          params.push(Number(total_despesas.valor2)); conds.push(`${soma} <= $${params.length}`)
+        }
+      }
     }
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
     return query(`${SELECT_LISTA} ${where} ORDER BY d.data_inicio DESC, d.id DESC`, params)

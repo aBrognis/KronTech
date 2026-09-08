@@ -1,3 +1,7 @@
+// fmtDataBR mora em lib/utils/data.js (fonte única). Re-exportado aqui só
+// pra não quebrar os imports existentes desta tela.
+export { fmtDataBR } from '../../lib/utils/data.js'
+
 export const STATUS_META = {
   rascunho:    { label: 'Rascunho',     classe: 'badge-orange' },
   nao_enviado: { label: 'Não Enviado',  classe: 'badge-yellow' },
@@ -19,11 +23,6 @@ export function fmtMoeda(valor) {
   return (Number(valor) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export function fmtDataBR(dataISO) {
-  if (!dataISO) return ''
-  const [ano, mes, dia] = String(dataISO).slice(0, 10).split('-')
-  return `${dia}/${mes}/${ano}`
-}
 
 export function novoItem() {
   return {

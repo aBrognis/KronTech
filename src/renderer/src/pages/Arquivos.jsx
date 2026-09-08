@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  Star, Search, FolderOpen, File, FileText, FileImage, FileCode,
-  ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  Plus, Save, X, Trash2, Edit2, RotateCcw, ExternalLink, Upload,
+  Star, FolderOpen, File, FileText, FileImage, FileCode,
+  X, ExternalLink, Upload,
   Settings, FolderInput, CheckCircle2, XCircle, Loader2,
-  Download, Clipboard, Check, SlidersHorizontal, ChevronDown, ChevronUp,
+  Download, Clipboard, Check,
 } from 'lucide-react'
 import '../App.css'
-import { thS, tdS } from './formBuilderView/gridStyles.js'
 import PaginacaoBar from '../components/PaginacaoBar.jsx'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
+import PainelFiltrosGrid from '../components/PainelFiltrosGrid'
+import TabelaResultados from '../components/TabelaResultados'
 import FormToolbar from '../components/FormToolbar.jsx'
 import { SecaoHeader } from '../components/SecaoForm.jsx'
 import { notificar } from '../components/Notificacao'
@@ -30,6 +30,43 @@ const CAMPOS_BUSCA = [
   { val: 'pasta',     label: 'Pasta'     },
   { val: 'tags',      label: 'Tags'      },
   { val: 'arquivo_ext', label: 'Extensão' },
+]
+
+// Aba de Acesso — consulta completa (docs CLAUDE.md §4). Um filtro por
+// coluna consultável de arq_001.
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'nome', label: 'Nome', tipo: 'texto' },
+  { chave: 'categoria', label: 'Categoria', tipo: 'texto' },
+  { chave: 'pasta', label: 'Pasta', tipo: 'texto' },
+  { chave: 'tags', label: 'Tags', tipo: 'texto' },
+  { chave: 'descricao', label: 'Descrição', tipo: 'texto' },
+  { chave: 'arquivo_nome', label: 'Nome do arquivo', tipo: 'texto' },
+  { chave: 'arquivo_ext', label: 'Extensão', tipo: 'texto' },
+  { chave: 'arquivo_path', label: 'Caminho', tipo: 'texto' },
+  { chave: 'arquivo_tamanho', label: 'Tamanho (bytes)', tipo: 'numero' },
+  { chave: 'favorito', label: 'Favorito', tipo: 'booleano' },
+  { chave: 'dt_criacao', label: 'Criado em', tipo: 'data' },
+  { chave: 'dt_atualizacao', label: 'Atualizado em', tipo: 'data' },
+]
+
+const COLUNAS_RESULTADO = [
+  { chave: 'codigo', label: 'Código', largura: 70, sticky: true,
+    render: (r) => <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{r.codigo || '-'}</span> },
+  { chave: 'nome', label: 'Nome', sticky: true },
+  { chave: 'categoria', label: 'Categoria', largura: 130, padrao: true, render: (r) => r.categoria || '-' },
+  { chave: 'pasta', label: 'Pasta', largura: 160, padrao: true, render: (r) => r.pasta || '-' },
+  { chave: 'arquivo_ext', label: 'Ext.', largura: 70, align: 'center', padrao: true,
+    render: (r) => <span style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}>{r.arquivo_ext || '-'}</span> },
+  { chave: 'arquivo_tamanho', label: 'Tamanho', largura: 100, align: 'right', padrao: true, render: (r) => fmtSize(r.arquivo_tamanho) || '-' },
+  { chave: 'favorito', label: 'Fav.', largura: 60, align: 'center', padrao: true,
+    render: (r) => (r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : '-') },
+  { chave: 'tags', label: 'Tags', largura: 200, render: (r) => r.tags || '-' },
+  { chave: 'descricao', label: 'Descrição', largura: 260, render: (r) => r.descricao || '-' },
+  { chave: 'arquivo_nome', label: 'Nome do arquivo', largura: 220, render: (r) => r.arquivo_nome || '-' },
+  { chave: 'arquivo_path', label: 'Caminho', largura: 320, render: (r) => r.arquivo_path || '-' },
+  { chave: 'dt_criacao', label: 'Criado em', largura: 140, render: (r) => fmtDate(r.dt_criacao) || '-' },
+  { chave: 'dt_atualizacao', label: 'Atualizado em', largura: 140, render: (r) => fmtDate(r.dt_atualizacao) || '-' },
 ]
 
 const COLUNAS_MODAL_ARQUIVOS = [
@@ -98,17 +135,15 @@ export default function Arquivos({ newTrigger }) {
   const [showConsulta, setShowConsulta] = useState(false)
 
   // Filtros aba Acesso (server-side, paginado, só roda ao clicar Buscar)
-  const [fCategoria,  setFCategoria]  = useState('')
-  const [fPasta,      setFPasta]      = useState('')
-  const [fNome,       setFNome]       = useState('')
-  const [fTags,       setFTags]       = useState('')
-  const [fPainelAberto, setFPainelAberto] = useState(true)
+  const [fBusca,      setFBusca]      = useState('')
+  const [fFiltrosCol, setFFiltrosCol] = useState({})
   const [fResultados, setFResultados] = useState(null) // { registros, total, totalPaginas } | null
   const [fLoading,    setFLoading]    = useState(false)
   const [fPagina,     setFPagina]     = useState(1)
   const [fPorPagina,  setFPorPagina]  = useState(50)
-  const [fOrdenar,    setFOrdenar]    = useState('dt_criacao')
-  const [fDirecao,    setFDirecao]    = useState('DESC')
+  // Ordenação fixa na aba Acesso (favoritos primeiro, mais recentes no topo).
+  const fOrdenar = 'dt_criacao'
+  const fDirecao = 'DESC'
 
   const [pastaAtual,  setPastaAtual]  = useState('')
 
@@ -264,11 +299,11 @@ export default function Arquivos({ newTrigger }) {
   async function executarConsultaAcesso(overrides = {}) {
     setFLoading(true)
     try {
+      const fc = overrides.fFiltrosCol ?? fFiltrosCol
+      const limpo = Object.fromEntries(Object.entries(fc || {}).filter(([, v]) => v != null))
       const res = await window.api.arquivos.listarFiltrado({
-        nome: overrides.fNome ?? fNome,
-        categoria: overrides.fCategoria ?? fCategoria,
-        pasta: overrides.fPasta ?? fPasta,
-        tags: overrides.fTags ?? fTags,
+        busca: (overrides.fBusca ?? fBusca).trim(),
+        filtros: Object.keys(limpo).length ? limpo : null,
         pagina: overrides.fPagina ?? fPagina,
         porPagina: overrides.fPorPagina ?? fPorPagina,
         ordenar: overrides.fOrdenar !== undefined ? overrides.fOrdenar : fOrdenar,
@@ -288,9 +323,11 @@ export default function Arquivos({ newTrigger }) {
     executarConsultaAcesso({ fPagina: 1 })
   }
 
+  const setFiltroCol = (chave, f) => setFFiltrosCol((prev) => ({ ...prev, [chave]: f }))
+
   // Só limpa os campos, mantém os registros já exibidos, sem reconsultar.
   function limparFiltros() {
-    setFCategoria(''); setFPasta(''); setFNome(''); setFTags('')
+    setFBusca(''); setFFiltrosCol({})
   }
 
   function irParaPaginaAcesso(p) {
@@ -304,13 +341,6 @@ export default function Arquivos({ newTrigger }) {
     setFPorPagina(n)
     setFPagina(1)
     executarConsultaAcesso({ fPorPagina: n, fPagina: 1 })
-  }
-
-  function setOrdenacaoAcesso(campo) {
-    const novaDir = fOrdenar === campo && fDirecao === 'ASC' ? 'DESC' : 'ASC'
-    setFOrdenar(campo)
-    setFDirecao(novaDir)
-    executarConsultaAcesso({ fOrdenar: campo, fDirecao: novaDir })
   }
 
   function selecionarDaConsulta(item) {
@@ -406,63 +436,16 @@ export default function Arquivos({ newTrigger }) {
         {/* ════ ABA ACESSO ════ */}
         {activeTab === 'acesso' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 10 }}>
-            {/* Painel de filtros, retrátil */}
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', overflow: 'hidden', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setFPainelAberto(a => !a)}>
-                <SlidersHorizontal size={13} color="var(--t2)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
-                {(fCategoria || fPasta || fNome || fTags) && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>ativo</span>
-                )}
-                <div style={{ flex: 1 }} />
-                {(fCategoria || fPasta || fNome || fTags) && (
-                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
-                    onClick={e => { e.stopPropagation(); limparFiltros() }}>
-                    <RotateCcw size={11} /> Limpar
-                  </button>
-                )}
-                {fPainelAberto ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
-              </div>
-
-              {fPainelAberto && (
-                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={e => e.key === 'Enter' && handleBuscarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 12 }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Nome</label>
-                      <input className="form-input form-input-sm"
-                        value={fNome} onChange={e => setFNome(e.target.value)} placeholder="filtrar por nome..." autoFocus />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Categoria</label>
-                      <select className="form-select form-input-sm"
-                        value={fCategoria} onChange={e => setFCategoria(e.target.value)}>
-                        <option value="">Todas</option>
-                        {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Pasta</label>
-                      <select className="form-select form-input-sm"
-                        value={fPasta} onChange={e => setFPasta(e.target.value)}>
-                        <option value="">Todas</option>
-                        {pastas.map(p => <option key={p}>{p}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Tags</label>
-                      <input className="form-input form-input-sm"
-                        value={fTags} onChange={e => setFTags(e.target.value)} placeholder="filtrar por tag..." />
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={handleBuscarAcesso} disabled={fLoading}>
-                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
-                  </button>
-                </div>
-              )}
-            </div>
+            <PainelFiltrosGrid
+              colunas={COLUNAS_FILTRO}
+              valores={fFiltrosCol}
+              onChange={setFiltroCol}
+              onBuscar={handleBuscarAcesso}
+              onLimpar={limparFiltros}
+              fLoading={fLoading}
+              busca={fBusca}
+              onBusca={setFBusca}
+            />
 
             {/* Estado inicial, aguardando consulta */}
             {fResultados === null ? (
@@ -470,54 +453,14 @@ export default function Arquivos({ newTrigger }) {
                 <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
             ) : (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, minHeight: 100 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--s1)' }}>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                      <tr>
-                        <th style={{ ...thS, textAlign: 'center', width: 36 }}>#</th>
-                        <th style={{ ...thS, textAlign: 'center', width: 60, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('codigo')}>Código</th>
-                        <th style={{ ...thS, width: '33%', cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('nome')}>Nome</th>
-                        <th style={{ ...thS, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('categoria')}>Categoria</th>
-                        <th style={{ ...thS, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('pasta')}>Pasta</th>
-                        <th style={{ ...thS, textAlign: 'center', cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('arquivo_ext')}>Ext.</th>
-                        <th style={{ ...thS, cursor: 'pointer' }} onClick={() => setOrdenacaoAcesso('arquivo_tamanho')}>Tamanho</th>
-                        <th style={{ ...thS, textAlign: 'center' }}>Fav.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(fResultados.registros ?? []).map((r, ri) => {
-                        return (
-                          <tr key={r.id}
-                            onDoubleClick={() => selecionarDaConsulta(r)}
-                            onClick={() => { const idx = items.findIndex(i => i.id === r.id); if (idx >= 0) { setCurrentIdx(idx); loadForm(r) } }}
-                            style={{ cursor: 'pointer', background: 'var(--s1)' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--s2)' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--s1)' }}
-                          >
-                            <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
-                            <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, width: 60 }}>{r.codigo || ''}</td>
-                            <td style={{ ...tdS, color: 'var(--t1)' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                <ExtIcon ext={r.arquivo_ext} size={13} />{r.nome}
-                              </span>
-                            </td>
-                            <td style={tdS}>{r.categoria || ''}</td>
-                            <td style={tdS}>{r.pasta || ''}</td>
-                            <td style={{ ...tdS, textAlign: 'center', fontFamily: 'monospace', fontSize: 11, textTransform: 'uppercase' }}>{r.arquivo_ext || ''}</td>
-                            <td style={tdS}>{fmtSize(r.arquivo_tamanho)}</td>
-                            <td style={{ ...tdS, textAlign: 'center' }}>
-                              {r.favorito ? <Star size={12} fill="var(--or)" color="var(--or)" /> : <span style={{ color: 'var(--bd2)' }}></span>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                      {!fLoading && (fResultados.registros ?? []).length === 0 && (
-                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum arquivo encontrado</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 8 }}>
+                <TabelaResultados
+                  colunas={COLUNAS_RESULTADO}
+                  registros={fResultados.registros ?? []}
+                  prefKey="arquivos-acesso"
+                  onLinhaDuploClique={selecionarDaConsulta}
+                  vazio={fLoading ? 'Buscando...' : 'Nenhum arquivo encontrado'}
+                />
                 <PaginacaoBar pagina={fPagina} totalPaginas={fResultados.totalPaginas} total={fResultados.total} porPagina={fPorPagina}
                   onPagina={irParaPaginaAcesso} onPorPagina={mudarPorPaginaAcesso} />
               </div>

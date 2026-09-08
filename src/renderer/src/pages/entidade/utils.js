@@ -192,7 +192,15 @@ export function normalizarStatus(v) {
   return 'ativo'
 }
 
-const dia = (v) => (v ? String(v).slice(0, 10) : '')
+// Normaliza para 'YYYY-MM-DD' (o que o InputData espera). O pg devolve
+// colunas date como objeto Date pelo IPC (structured clone), então
+// String(Date).slice não serve.
+const dia = (v) => {
+  if (!v) return ''
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10)
+  const s = String(v)
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : ''
+}
 
 // entidades antigas podem nao ter os 4 tipos padrao — completa
 function completarEnderecos(lista) {

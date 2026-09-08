@@ -72,10 +72,20 @@ export default function TabelaResultados({
         {menuAberto && (
           <div ref={menuRef} style={{
             position: 'absolute', top: '100%', right: 10, zIndex: 40, marginTop: 4,
-            minWidth: 220, maxHeight: 360, overflowY: 'auto',
+            minWidth: 240, maxHeight: 380, overflowY: 'auto',
             background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 8, boxShadow: 'var(--sh-lg)',
-            padding: '6px 0',
+            padding: '4px 0',
           }}>
+            <div style={{ display: 'flex', gap: 6, padding: '4px 12px 6px', borderBottom: '1px solid var(--bd)' }}>
+              <button className="btn btn-ghost" style={{ height: 22, fontSize: 10.5, padding: '0 8px', flex: 1 }}
+                onClick={() => setVisiveis(new Set(opcionais.map((c) => c.chave)))}>
+                Marcar todas
+              </button>
+              <button className="btn btn-ghost" style={{ height: 22, fontSize: 10.5, padding: '0 8px', flex: 1 }}
+                onClick={() => setVisiveis(new Set())}>
+                Desmarcar todas
+              </button>
+            </div>
             {opcionais.map((c) => (
               <label key={c.chave} style={{
                 display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px',

@@ -3,6 +3,18 @@ import { readFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync
 import { join, extname, basename, dirname, relative } from 'path'
 import { execSync } from 'child_process'
 import { resolverBaseAnexos } from '../config'
+import { montarFiltro } from '../services/filtroSqlGenerico'
+
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4). Sem alias (query
+// numa tabela só).
+const TIPOS_FILTRO_ARQ = {
+  codigo: 'texto', nome: 'texto', categoria: 'texto', pasta: 'texto',
+  tags: 'texto', descricao: 'texto', arquivo_nome: 'texto', arquivo_path: 'texto',
+  arquivo_ext: 'exato',
+  arquivo_tamanho: 'numero',
+  favorito: 'booleano',
+  dt_criacao: 'data', dt_atualizacao: 'data',
+}
 
 // Seleção + cópia física genérica (dialog nativo → copia pra
 // baseDir/subpasta, resolve colisão de nome, não grava nada no banco — o
@@ -65,7 +77,7 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
   // ignorados e a condição é montada dinamicamente sobre a coluna escolhida.
   ipcMain.handle('arquivos:listarFiltrado', wrap(async (_, {
     nome = '', categoria = '', pasta = '', tags = '', ext = '',
-    campo = '', modo = 'contendo', busca = '',
+    campo = '', modo = 'contendo', busca = '', filtros = null,
     pagina = 1, porPagina = 50, ordenar = 'dt_criacao', direcao = 'DESC',
   } = {}) => {
     const COLS_ORDENAVEIS = new Set(['codigo', 'nome', 'categoria', 'pasta', 'arquivo_ext', 'arquivo_tamanho', 'dt_criacao', 'dt_atualizacao'])
@@ -73,15 +85,32 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
     const conds = []
 
     if (campo && COLS_ORDENAVEIS.has(campo) && busca.trim()) {
+      // Caminho do modal "Pesquisa Padrão" (campo + modo sobre uma coluna).
       if (modo === 'iniciando')  { params.push(`${busca.trim()}%`);  conds.push(`CAST(${campo} AS TEXT) ILIKE $${params.length}`) }
       else if (modo === 'igual') { params.push(busca.trim());        conds.push(`CAST(${campo} AS TEXT) = $${params.length}`) }
       else /* contendo */        { params.push(`%${busca.trim()}%`); conds.push(`CAST(${campo} AS TEXT) ILIKE $${params.length}`) }
     } else {
+      // Busca geral da aba Acesso (varre os campos de texto).
+      if (!campo && busca.trim()) {
+        params.push(`%${busca.trim()}%`)
+        const p = params.length
+        conds.push(`(nome ILIKE $${p} OR codigo ILIKE $${p} OR categoria ILIKE $${p} OR pasta ILIKE $${p} OR tags ILIKE $${p} OR descricao ILIKE $${p} OR arquivo_nome ILIKE $${p})`)
+      }
+      // Filtros diretos antigos (compat).
       if (nome.trim())      { params.push(`%${nome.trim()}%`);      conds.push(`nome ILIKE $${params.length}`) }
       if (categoria)         { params.push(categoria);               conds.push(`categoria = $${params.length}`) }
       if (pasta)              { params.push(pasta);                    conds.push(`pasta = $${params.length}`) }
       if (tags.trim())      { params.push(`%${tags.trim()}%`);      conds.push(`tags ILIKE $${params.length}`) }
       if (ext)                { params.push(ext);                      conds.push(`arquivo_ext = $${params.length}`) }
+      // Filtros por coluna (painel novo) — docs CLAUDE.md §4.
+      if (filtros && Object.keys(filtros).length) {
+        const r = montarFiltro(filtros, TIPOS_FILTRO_ARQ)
+        if (r.where) {
+          const base = params.length
+          conds.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_m, n) => `$${base + Number(n)}`))
+          params.push(...r.params)
+        }
+      }
     }
 
     const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
