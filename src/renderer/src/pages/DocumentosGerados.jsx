@@ -7,7 +7,7 @@ import SeletorEntidade from '../components/SeletorEntidade'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import PaginacaoBar from '../components/PaginacaoBar.jsx'
 import { notificar } from '../components/Notificacao'
-import ComposerModal from './Email/ComposerModal'
+import ComposerModal from './email/ComposerModal'
 import MenuContextoGrid from '../components/MenuContextoGrid'
 import { SecaoHeader } from '../components/SecaoForm.jsx'
 
