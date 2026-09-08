@@ -30,6 +30,24 @@ const FORMAS = [
 ]
 const somaPct = (parcelas) => (parcelas || []).reduce((s, p) => s + (Number(p.percentual) || 0), 0)
 
+// Filtros da aba Acesso, abrangente (docs CLAUDE.md §4).
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'descricao', label: 'Descrição', tipo: 'texto' },
+  { chave: 'tipo', label: 'Tipo', tipo: 'exato', opcoes: TIPOS },
+  { chave: 'base_prazo', label: 'Base do prazo', tipo: 'exato', opcoes: BASES },
+  { chave: 'papel_permitido', label: 'Papel permitido', tipo: 'exato', opcoes: PAPEIS.filter((p) => p.valor) },
+  { chave: 'forma_padrao', label: 'Forma padrão', tipo: 'exato', opcoes: FORMAS },
+  { chave: 'dias_uteis', label: 'Dias úteis', tipo: 'booleano' },
+  { chave: 'multa_percentual', label: 'Multa %', tipo: 'numero' },
+  { chave: 'juros_mes_percentual', label: 'Juros %/mês', tipo: 'numero' },
+  { chave: 'desconto_percentual', label: 'Desconto %', tipo: 'numero' },
+  { chave: 'valor_minimo', label: 'Valor mínimo', tipo: 'numero' },
+  { chave: 'max_parcelas', label: 'Máx. parcelas', tipo: 'numero' },
+  { chave: 'ativo', label: 'Ativo', tipo: 'booleano' },
+  { chave: 'criado_em', label: 'Cadastrado em', tipo: 'data' },
+]
+
 function ChipsFormas({ ctx }) {
   const { form, setForm, isRO } = ctx
   return (
@@ -62,6 +80,7 @@ export default function CondicoesPagamento({ newTrigger }) {
       newTrigger={newTrigger}
       tituloSingular="condição de pagamento"
       buscaPlaceholder="descrição..."
+      colunasFiltro={COLUNAS_FILTRO}
       config={{
         api: window.api.condicaoPagamento,
         emptyForm: EMPTY,

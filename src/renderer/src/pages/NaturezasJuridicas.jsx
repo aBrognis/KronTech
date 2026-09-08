@@ -29,12 +29,28 @@ const REGIMES = [
 ]
 const rotuloGrupo = (g) => GRUPOS.find((x) => x.valor === g)?.label || g || '-'
 
+// Filtros da aba Acesso — abrangente (docs CLAUDE.md §4): toda coluna
+// consultavel da tabela vira um filtro tipado.
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'codigo_receita', label: 'Cód. Receita', tipo: 'texto' },
+  { chave: 'descricao', label: 'Descrição', tipo: 'texto' },
+  { chave: 'grupo', label: 'Grupo', tipo: 'exato', opcoes: GRUPOS },
+  { chave: 'tipo_pessoa', label: 'Tipo de pessoa', tipo: 'exato', opcoes: TIPOS_PESSOA },
+  { chave: 'regime_sugerido', label: 'Regime sugerido', tipo: 'exato', opcoes: REGIMES.filter((r) => r.valor) },
+  { chave: 'exige_ie', label: 'Exige IE', tipo: 'booleano' },
+  { chave: 'contribuinte_icms_padrao', label: 'Contribuinte ICMS', tipo: 'booleano' },
+  { chave: 'ativo', label: 'Ativo', tipo: 'booleano' },
+  { chave: 'criado_em', label: 'Criado em', tipo: 'data' },
+]
+
 export default function NaturezasJuridicas({ newTrigger }) {
   return (
     <TelaCadastroPadrao
       newTrigger={newTrigger}
       tituloSingular="natureza jurídica"
       buscaPlaceholder="descrição, código Receita..."
+      colunasFiltro={COLUNAS_FILTRO}
       config={{
         api: window.api.naturezaJuridica,
         emptyForm: EMPTY,

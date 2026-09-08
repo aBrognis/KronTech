@@ -1,6 +1,18 @@
 import { query, queryOne } from '../db'
+import { montarFiltro } from './filtroSqlGenerico'
 
 // CRUD de Condicoes de Pagamento + grids-filho (parcelas, formas aceitas).
+
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4). alias 'c'.
+const TIPOS_FILTRO = {
+  codigo: 'texto', descricao: 'texto', tipo: 'exato', base_prazo: 'exato',
+  dias_uteis: 'booleano', empurrar_dia_util: 'booleano', dia_fixo_mes: 'numero',
+  multa_percentual: 'numero', juros_mes_percentual: 'numero',
+  desconto_percentual: 'numero', desconto_ate_dias: 'numero',
+  acrescimo_parcelamento_percentual: 'numero', valor_minimo: 'numero',
+  max_parcelas: 'numero', papel_permitido: 'exato', forma_padrao: 'exato',
+  ativo: 'booleano', criado_em: 'data',
+}
 
 const COLS = [
   'descricao', 'tipo', 'base_prazo', 'dias_uteis', 'empurrar_dia_util', 'dia_fixo_mes',
@@ -12,20 +24,32 @@ const FORMAS_VALIDAS = ['boleto', 'pix', 'cartao', 'transferencia', 'dinheiro', 
 
 function up(v) { return typeof v === 'string' ? v.trim().toUpperCase() : v }
 
-export async function listar({ busca } = {}) {
-  const cond = ['ativo IS DISTINCT FROM false']
+export async function listar({ busca, filtros } = {}) {
+  const cond = []
   const params = []
+  if (!(filtros && filtros.ativo != null)) cond.push('c.ativo IS DISTINCT FROM false')
+
   if (busca && String(busca).trim()) {
     params.push(`%${busca.trim()}%`)
-    cond.push(`(descricao ILIKE $1 OR codigo ILIKE $1)`)
+    cond.push(`(c.descricao ILIKE $${params.length} OR c.codigo ILIKE $${params.length})`)
   }
+
+  if (filtros && Object.keys(filtros).length) {
+    const r = montarFiltro(filtros, TIPOS_FILTRO, { alias: 'c' })
+    if (r.where) {
+      const base = params.length
+      cond.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`))
+      params.push(...r.params)
+    }
+  }
+
   return query(
     `SELECT c.*,
        (SELECT count(*) FROM condicao_parcela_001 p WHERE p.condicao_id = c.id) AS qtd_parcelas,
        (SELECT json_agg(f.forma) FROM condicao_forma_001 f WHERE f.condicao_id = c.id) AS formas
      FROM condicao_pagamento_001 c
-     WHERE ${cond.join(' AND ')}
-     ORDER BY codigo ASC LIMIT 1000`,
+     ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''}
+     ORDER BY codigo ASC LIMIT 2000`,
     params
   )
 }

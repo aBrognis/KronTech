@@ -5,6 +5,7 @@ import {
 import FormToolbar from '../FormToolbar'
 import PaginacaoBar from '../PaginacaoBar.jsx'
 import MenuContextoGrid from '../MenuContextoGrid'
+import PainelFiltrosGrid from '../PainelFiltrosGrid'
 import { useCadastroPadrao } from './useCadastroPadrao'
 
 /**
@@ -33,6 +34,11 @@ export default function TelaCadastroPadrao({
   buscaPlaceholder = 'código, descrição...',
   statusEmMassa = null,
   newTrigger,
+  // Filtros da aba Acesso: [{ chave, label, tipo, opcoes? }].
+  // OBRIGATORIO ser abrangente (docs CLAUDE.md §4) — se a tela tem a coluna,
+  // o filtro tem que existir. Sem isto, cai no modo antigo de "busca geral"
+  // simples, so aceitavel em cadastro trivial de 2-3 colunas.
+  colunasFiltro = null,
 }) {
   const c = useCadastroPadrao(config)
 
@@ -96,39 +102,52 @@ export default function TelaCadastroPadrao({
 
         {aba === 'acesso' && (
           <>
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', boxShadow: 'var(--sh-xs)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => c.setFiltrosAbertos((a) => !a)}>
-                <SlidersHorizontal size={13} color="var(--t2)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
-                {c.buscaGeral.trim() && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>1 ativo</span>
-                )}
-                <div style={{ flex: 1 }} />
-                {c.buscaGeral.trim() && (
-                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
-                    onClick={(e) => { e.stopPropagation(); c.setBuscaGeral('') }}>
-                    <RotateCcw size={11} /> Limpar
-                  </button>
-                )}
-                {c.filtrosAbertos ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
-              </div>
-              {c.filtrosAbertos && (
-                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={(e) => e.key === 'Enter' && c.carregarAcesso()}>
-                  <div className="form-group" style={{ margin: 0, marginBottom: 12, maxWidth: 380 }}>
-                    <label className="form-label">Busca geral</label>
-                    <input className="form-input form-input-sm"
-                      value={c.buscaGeral} onChange={(e) => c.setBuscaGeral(e.target.value)}
-                      placeholder={buscaPlaceholder} />
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={() => c.carregarAcesso()} disabled={c.fLoading}>
-                    <Search size={13} /> {c.fLoading ? 'Buscando...' : 'Buscar'}
-                  </button>
+            {colunasFiltro && colunasFiltro.length ? (
+              <PainelFiltrosGrid
+                colunas={colunasFiltro}
+                valores={c.filtrosCol}
+                onChange={c.setFiltroCol}
+                onBuscar={() => c.carregarAcesso()}
+                onLimpar={c.limparFiltros}
+                fLoading={c.fLoading}
+                busca={c.buscaGeral}
+                onBusca={c.setBuscaGeral}
+              />
+            ) : (
+              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', boxShadow: 'var(--sh-xs)', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
+                  onClick={() => c.setFiltrosAbertos((a) => !a)}>
+                  <SlidersHorizontal size={13} color="var(--t2)" />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
+                  {c.buscaGeral.trim() && (
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>1 ativo</span>
+                  )}
+                  <div style={{ flex: 1 }} />
+                  {c.buscaGeral.trim() && (
+                    <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                      onClick={(e) => { e.stopPropagation(); c.setBuscaGeral('') }}>
+                      <RotateCcw size={11} /> Limpar
+                    </button>
+                  )}
+                  {c.filtrosAbertos ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
                 </div>
-              )}
-            </div>
+                {c.filtrosAbertos && (
+                  <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
+                    onKeyDown={(e) => e.key === 'Enter' && c.carregarAcesso()}>
+                    <div className="form-group" style={{ margin: 0, marginBottom: 12, maxWidth: 380 }}>
+                      <label className="form-label">Busca geral</label>
+                      <input className="form-input form-input-sm"
+                        value={c.buscaGeral} onChange={(e) => c.setBuscaGeral(e.target.value)}
+                        placeholder={buscaPlaceholder} />
+                    </div>
+                    <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
+                      onClick={() => c.carregarAcesso()} disabled={c.fLoading}>
+                      <Search size={13} /> {c.fLoading ? 'Buscando...' : 'Buscar'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {c.fResultados === null ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>

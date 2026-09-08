@@ -2,6 +2,7 @@ import { existsSync, rmSync, mkdirSync, copyFileSync, statSync } from 'fs'
 import { join, extname } from 'path'
 import { query, queryOne, getPool } from '../db'
 import { resolverBaseAnexos } from '../config'
+import { montarFiltro } from './filtroSqlGenerico'
 
 // CRUD da Entidade completa (nivel ERP) + grids-filho.
 // entidade_001 mantem o nome. Ver docs/PLANO_ENTIDADE_COMPLETA.md.
@@ -56,21 +57,64 @@ const norm = (obj) => {
 const nula = (v) => (v === '' || v === undefined ? null : v)
 
 // ── LISTAR (aba Acesso) ─────────────────────────────────────────────────
-export async function listar({ busca, papel, status, uf } = {}) {
-  const cond = ['e.ativo IS DISTINCT FROM false']
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4): se a entidade tem a
+// coluna, existe filtro para ela. `papeis` fica de fora do montarFiltro
+// generico porque e string com virgula (usa ILIKE), tratado a mao.
+const TIPOS_FILTRO_ENTIDADE = {
+  codigo: 'texto', nome: 'texto', apelido: 'texto', cnpj: 'texto', ie_rg: 'texto',
+  inscricao_estadual: 'texto', inscricao_municipal: 'texto',
+  status: 'exato', tipo_pessoa: 'exato',
+  telefone: 'texto', celular: 'texto', email: 'texto', site: 'texto',
+  cep: 'texto', logradouro: 'texto', bairro: 'texto', cidade: 'texto', uf: 'exato',
+  porte: 'texto', situacao_cadastral: 'texto', cnae: 'texto',
+  regime_tributario: 'exato', contribuinte_icms: 'booleano', optante_simples: 'booleano',
+  natureza_juridica_id: 'exato', condicao_pagamento_id: 'exato', banco_id: 'exato',
+  limite_credito: 'numero', dia_vencimento: 'numero',
+  origem: 'texto', segmento: 'texto', grupo_economico: 'texto',
+  data_nascimento: 'data', data_fundacao: 'data', data_primeiro_contato: 'data',
+  criado_em: 'data', alterado_em: 'data',
+}
+
+export async function listar({ busca, filtros, papel, status, uf } = {}) {
+  const cond = []
   const params = []
+  // "so ativos" e o default; sai quando o usuario filtra por status/ativo
+  // explicitamente (para poder ver inativos/bloqueados).
+  const filtrouStatus = status || (filtros && (filtros.status || filtros.ativo))
+  if (!filtrouStatus) cond.push('e.ativo IS DISTINCT FROM false')
+
   if (busca && String(busca).trim()) {
     params.push(`%${busca.trim()}%`)
     cond.push(`(e.nome ILIKE $${params.length} OR e.apelido ILIKE $${params.length} OR e.cnpj ILIKE $${params.length} OR e.cidade ILIKE $${params.length})`)
   }
+
+  // compat: filtros diretos antigos (papel/status/uf soltos)
   if (papel)  { params.push(`%${papel}%`); cond.push(`e.papeis ILIKE $${params.length}`) }
   if (status) { params.push(status);       cond.push(`e.status = $${params.length}`) }
   if (uf)     { params.push(uf);           cond.push(`e.uf = $${params.length}`) }
+
+  // filtros por coluna (painel novo)
+  if (filtros && Object.keys(filtros).length) {
+    // papeis: string com virgula -> ILIKE, nao vai pelo montarFiltro
+    if (filtros.papeis && filtros.papeis.valor) {
+      params.push(`%${filtros.papeis.valor}%`)
+      cond.push(`e.papeis ILIKE $${params.length}`)
+    }
+    const semPapeis = { ...filtros }
+    delete semPapeis.papeis
+    const r = montarFiltro(semPapeis, TIPOS_FILTRO_ENTIDADE, { alias: 'e' })
+    if (r.where) {
+      const base = params.length
+      cond.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`))
+      params.push(...r.params)
+    }
+  }
+
   return query(
     `SELECT e.*,
        (SELECT count(*) FROM entidade_contato_001 c WHERE c.entidade_id = e.id) AS qtd_contatos
      FROM entidade_001 e
-     WHERE ${cond.join(' AND ')}
+     ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''}
      ORDER BY e.nome ASC LIMIT 2000`,
     params
   )

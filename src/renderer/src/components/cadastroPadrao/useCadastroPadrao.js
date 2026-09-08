@@ -43,6 +43,8 @@ export function useCadastroPadrao(config) {
   // ── Aba Acesso (busca independente, so roda ao clicar Buscar) ────────
   const [filtrosAbertos, setFiltrosAbertos] = useState(true)
   const [buscaGeral, setBuscaGeral] = useState('')
+  // filtros por coluna: { <chave>: { op, valor, valor2 } | null }
+  const [filtrosCol, setFiltrosCol] = useState({})
   const [fResultados, setFResultados] = useState(null)
   const [fLoading, setFLoading] = useState(false)
   const [pagina, setPagina] = useState(1)
@@ -77,10 +79,13 @@ export function useCadastroPadrao(config) {
 
   useEffect(() => { carregarTudo() }, [carregarTudo])
 
-  const carregarAcesso = useCallback(async (b = buscaGeral) => {
+  const carregarAcesso = useCallback(async (b = buscaGeral, fc = filtrosCol) => {
     setFLoading(true)
     try {
-      const params = b.trim() ? { busca: b.trim() } : {}
+      const params = {}
+      if (b.trim()) params.busca = b.trim()
+      const fcLimpo = Object.fromEntries(Object.entries(fc || {}).filter(([, v]) => v))
+      if (Object.keys(fcLimpo).length) params.filtros = fcLimpo
       const res = await api.listar(params)
       setFResultados(res.ok ? res.data || [] : [])
       setSelecionados(new Set())
@@ -90,7 +95,15 @@ export function useCadastroPadrao(config) {
     } finally {
       setFLoading(false)
     }
-  }, [api, buscaGeral])
+  }, [api, buscaGeral, filtrosCol])
+
+  function setFiltroCol(chave, filtroOuNull) {
+    setFiltrosCol((prev) => ({ ...prev, [chave]: filtroOuNull }))
+  }
+  function limparFiltros() {
+    setBuscaGeral('')
+    setFiltrosCol({})
+  }
 
   // ── Navegacao no form ───────────────────────────────────────────────
   function navTo(idx) {
@@ -194,6 +207,7 @@ export function useCadastroPadrao(config) {
     confirmExcluir,
     // aba acesso
     filtrosAbertos, setFiltrosAbertos, buscaGeral, setBuscaGeral,
+    filtrosCol, setFiltroCol, limparFiltros,
     fResultados, fLoading, pagina, setPagina, porPagina, setPorPagina,
     totalFiltrado, totalPaginas, registrosPagina,
     // selecao

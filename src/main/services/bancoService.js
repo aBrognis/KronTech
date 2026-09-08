@@ -1,4 +1,13 @@
 import { query, queryOne } from '../db'
+import { montarFiltro } from './filtroSqlGenerico'
+
+// Filtros por coluna da aba Acesso (docs CLAUDE.md §4). alias 'b' porque o
+// SELECT usa "FROM banco_001 b".
+const TIPOS_FILTRO = {
+  codigo: 'texto', compe: 'texto', ispb: 'texto', nome: 'texto', nome_curto: 'texto',
+  tipo: 'exato', site: 'texto', telefone_sac: 'texto', pais: 'texto',
+  situacao_bacen: 'exato', ativo: 'booleano', criado_em: 'data',
+}
 
 // CRUD de Bancos + grids-filho (agencias, convenios de cobranca).
 // Padrao: pai + diff dos filhos (insere novos, atualiza alterados, remove
@@ -15,20 +24,33 @@ const COLS_CONVENIO = [
 
 function up(v) { return typeof v === 'string' ? v.trim().toUpperCase() : v }
 
-export async function listar({ busca } = {}) {
-  const cond = ['ativo IS DISTINCT FROM false']
+export async function listar({ busca, filtros } = {}) {
+  const cond = []
   const params = []
+  // somente ativos por default; some se o filtro por coluna `ativo` for usado
+  if (!(filtros && filtros.ativo != null)) cond.push('b.ativo IS DISTINCT FROM false')
+
   if (busca && String(busca).trim()) {
     params.push(`%${busca.trim()}%`)
-    cond.push(`(nome ILIKE $1 OR nome_curto ILIKE $1 OR compe ILIKE $1 OR codigo ILIKE $1)`)
+    cond.push(`(b.nome ILIKE $${params.length} OR b.nome_curto ILIKE $${params.length} OR b.compe ILIKE $${params.length} OR b.codigo ILIKE $${params.length})`)
   }
+
+  if (filtros && Object.keys(filtros).length) {
+    const r = montarFiltro(filtros, TIPOS_FILTRO, { alias: 'b' })
+    if (r.where) {
+      const base = params.length
+      cond.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`))
+      params.push(...r.params)
+    }
+  }
+
   return query(
     `SELECT b.*,
        (SELECT count(*) FROM banco_agencia_001 a WHERE a.banco_id = b.id)  AS qtd_agencias,
        (SELECT count(*) FROM banco_convenio_001 c WHERE c.banco_id = b.id)  AS qtd_convenios
      FROM banco_001 b
-     WHERE ${cond.join(' AND ')}
-     ORDER BY nome ASC LIMIT 1000`,
+     ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''}
+     ORDER BY nome ASC LIMIT 2000`,
     params
   )
 }

@@ -50,4 +50,15 @@ export function registerJanelaHandlers({ ipcMain, wrap }) {
   }))
   ipcMain.handle('win:close', wrap((e) => { BrowserWindow.fromWebContents(e.sender)?.close() }))
   ipcMain.handle('win:isMaximized', wrap((e) => BrowserWindow.fromWebContents(e.sender)?.isMaximized() ?? false))
+
+  // Abre um link no navegador padrao do sistema. Usado por qualquer conteudo
+  // que possa conter <a href> nao confiavel (corpo de e-mail, notas...).
+  // So permite http/https/mailto/tel; qualquer outro esquema (file:, javascript:)
+  // e recusado silenciosamente.
+  ipcMain.handle('sistema:abrirLink', wrap((_e, url) => {
+    const u = String(url || '').trim()
+    if (!/^(https?:|mailto:|tel:)/i.test(u)) return { ignorado: true }
+    shell.openExternal(u)
+    return { ok: true }
+  }))
 }

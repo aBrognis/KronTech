@@ -227,6 +227,58 @@ Classes estruturais obrigatórias (em `App.css`): `.page-with-footer`,
 `.page-footer`. Nunca escrever `position:fixed` + overlay do zero para o
 corpo da página.
 
+### Aba de Acesso — filtros ABRANGENTES (OBRIGATÓRIO)
+
+A aba de Acesso é onde o usuário **consulta tudo** de uma tela. Ela **não
+pode** ter só "os filtros básicos" (nome + status + uma UF). Regra:
+
+> **Se a tabela tem a coluna, a aba de Acesso tem um filtro para ela.**
+> Um punhado de filtros escolhidos "na mão" é violação do padrão.
+
+Fonte única: **`components/PainelFiltrosGrid.jsx`** — painel retrátil, um
+filtro por coluna, tipado, em grade responsiva, mais busca geral. Filtros só
+aplicam ao clicar "Buscar" (ou Enter). Reusa os `Filter*` do FormBuilder
+(`pages/formBuilderView/filters/`) — que já são genéricos.
+
+**Tela via `TelaCadastroPadrao`:** passe a prop `colunasFiltro`:
+
+```jsx
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'tipo', label: 'Tipo', tipo: 'exato', opcoes: TIPOS },
+  { chave: 'ativo', label: 'Ativo', tipo: 'booleano' },
+  { chave: 'valor_minimo', label: 'Valor mínimo', tipo: 'numero' },
+  { chave: 'criado_em', label: 'Cadastrado em', tipo: 'data' },
+  // ...uma entrada por coluna consultável da tabela
+]
+<TelaCadastroPadrao colunasFiltro={COLUNAS_FILTRO} ... />
+```
+
+E na config do backend (`criarCadastroPadrao` ou o service próprio), declare
+`colunasFiltro: [{ chave, tipo }]` — o factory monta o `WHERE` sozinho via
+`services/filtroSqlGenerico.js` (`montarFiltro`).
+
+**Tela React dedicada (Entidade etc.):** monte `COLUNAS_FILTRO` do mesmo
+jeito, renderize `<PainelFiltrosGrid colunas={...} valores={...} onChange={...}
+onBuscar={...} onLimpar={...} busca={...} onBusca={...} />`, e no service use
+`montarFiltro(filtros, TIPOS_POR_COLUNA, { alias })`.
+
+Tipos de filtro:
+
+| tipo | controle | operador |
+|---|---|---|
+| `texto` | input "contém" | `ILIKE '%...%'` |
+| `numero` | de / até | `>= AND <=` |
+| `data` | de / até (date) | `>= AND <=` |
+| `booleano` | Todos / Sim / Não | `= true/false` |
+| `exato` | dropdown (precisa de `opcoes: [{valor,label}]`) | `=` |
+
+Quando um filtro de `status`/`ativo` é usado, o service **deixa de forçar
+"só ativos"** — o usuário pode querer ver inativos/bloqueados.
+
+Cadastro trivial de 2-3 colunas (sem `colunasFiltro`) cai no modo antigo de
+"busca geral" simples — só aceitável aí.
+
 ### Estado inicial — regra de ouro
 
 **Toda tela manual abre da mesma forma, sem exceção:**
@@ -312,6 +364,8 @@ parecido. Um único componente-fonte por funcionalidade.
       `InputLookup`), não `<select>` que carrega tudo.
 - [ ] Tem aba Acesso (listagem + filtros + paginação) e aba Cadastro, usando
       `.page-tabs` / `.page-content`.
+- [ ] A aba Acesso usa `PainelFiltrosGrid` com **um filtro por coluna
+      consultável** da tabela, não só 3-4 filtros escolhidos na mão.
 - [ ] Estado inicial: abre em `activeTab='cadastro'`, modo `view`, nunca
       dispara `openNew()` sozinha.
 - [ ] Rodapé usa `FormToolbar`, não botões soltos.

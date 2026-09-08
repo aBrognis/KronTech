@@ -29,6 +29,21 @@ const CNAB = [{ valor: '240', label: 'CNAB 240' }, { valor: '400', label: 'CNAB 
 const ACEITE = [{ valor: 'N', label: 'Não' }, { valor: 'A', label: 'Sim' }]
 const rotuloTipo = (t) => TIPOS.find((x) => x.valor === t)?.label || t
 
+// Filtros da aba Acesso, abrangente (docs CLAUDE.md §4).
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'compe', label: 'Compe', tipo: 'texto' },
+  { chave: 'ispb', label: 'ISPB', tipo: 'texto' },
+  { chave: 'nome', label: 'Nome', tipo: 'texto' },
+  { chave: 'nome_curto', label: 'Nome curto', tipo: 'texto' },
+  { chave: 'tipo', label: 'Tipo', tipo: 'exato', opcoes: TIPOS },
+  { chave: 'situacao_bacen', label: 'Situação no BACEN', tipo: 'exato', opcoes: SITUACOES },
+  { chave: 'pais', label: 'País', tipo: 'texto' },
+  { chave: 'telefone_sac', label: 'Telefone / SAC', tipo: 'texto' },
+  { chave: 'ativo', label: 'Ativo', tipo: 'booleano' },
+  { chave: 'criado_em', label: 'Cadastrado em', tipo: 'data' },
+]
+
 export default function Bancos({ newTrigger }) {
   const [recarregar, setRecarregar] = useState(0)
 
@@ -48,6 +63,7 @@ export default function Bancos({ newTrigger }) {
       newTrigger={newTrigger}
       tituloSingular="banco"
       buscaPlaceholder="nome, código Compe..."
+      colunasFiltro={COLUNAS_FILTRO}
       config={{
         api: window.api.banco,
         emptyForm: EMPTY,

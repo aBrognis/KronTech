@@ -1,4 +1,5 @@
 import { query, queryOne } from '../db'
+import { montarFiltro } from './filtroSqlGenerico'
 
 // Factory de CRUD para tabelas de cadastro simples do KronTech (uma tabela,
 // codigo sequencial de 4 digitos, colunas de texto/boolean). Gera listar/
@@ -12,6 +13,8 @@ import { query, queryOne } from '../db'
 //   tabela        'banco_001'
 //   colunas       ['nome','compe','ispb','site']   (colunas gravaveis; sem id/codigo/ativo/timestamps)
 //   colunasBusca  ['nome','compe']                 (usadas no filtro `busca` da aba Acesso)
+//   colunasFiltro [{chave:'compe',tipo:'texto'}]   (filtro por coluna da aba Acesso; ver docs CLAUDE.md §4)
+//                                                   tipo: 'texto'|'numero'|'data'|'booleano'|'exato'
 //   ordem         'nome ASC'                       (default: 'codigo ASC')
 //   temAtivo      true                             (default: true — usa coluna `ativo`)
 //   temCodigoSeq  true                             (default: true — gera codigo via <tabela>_codigo_seq)
@@ -22,11 +25,14 @@ export function criarCadastroPadrao(config) {
     tabela,
     colunas,
     colunasBusca = colunas.slice(0, 2),
+    colunasFiltro = [],
     ordem = 'codigo ASC',
     temAtivo = true,
     temCodigoSeq = true,
     normalizar = (d) => d,
   } = config
+
+  const tiposFiltro = Object.fromEntries(colunasFiltro.map((c) => [c.chave, c.tipo]))
 
   const ident = (s) => {
     if (!/^[a-z_][a-z0-9_]*$/i.test(s)) throw new Error(`identificador invalido: ${s}`)
@@ -35,23 +41,40 @@ export function criarCadastroPadrao(config) {
   ident(tabela)
   colunas.forEach(ident)
 
-  async function listar({ busca } = {}) {
+  async function listar({ busca, filtros, incluirInativos } = {}) {
     const cond = []
     const params = []
-    if (temAtivo) cond.push('ativo IS DISTINCT FROM false')
+    // "somente ativos" continua o default; o filtro por coluna `ativo` (quando
+    // configurado em colunasFiltro) permite ver inativos explicitamente.
+    const temFiltroAtivo = filtros && filtros.ativo != null
+    if (temAtivo && !incluirInativos && !temFiltroAtivo) cond.push('ativo IS DISTINCT FROM false')
+
     if (busca && String(busca).trim()) {
       const termo = `%${String(busca).trim()}%`
       const ors = colunasBusca.map((c) => {
         params.push(termo)
         return `${ident(c)} ILIKE $${params.length}`
       })
-      // codigo tambem entra na busca livre
       params.push(termo)
       ors.push(`codigo ILIKE $${params.length}`)
       cond.push(`(${ors.join(' OR ')})`)
     }
+
+    let whereFiltro = ''
+    if (filtros && Object.keys(filtros).length) {
+      const r = montarFiltro(filtros, tiposFiltro)
+      whereFiltro = r.where.replace(/^ AND /, '') // vira uma cond a mais
+      if (whereFiltro) {
+        // reindexa os $N do montarFiltro para depois dos params atuais
+        let base = params.length
+        whereFiltro = whereFiltro.replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`)
+        params.push(...r.params)
+        cond.push(`(${whereFiltro})`)
+      }
+    }
+
     const where = cond.length ? `WHERE ${cond.join(' AND ')}` : ''
-    return query(`SELECT * FROM ${tabela} ${where} ORDER BY ${ordem} LIMIT 1000`, params)
+    return query(`SELECT * FROM ${tabela} ${where} ORDER BY ${ordem} LIMIT 2000`, params)
   }
 
   async function obter(id) {

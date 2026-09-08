@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { SlidersHorizontal, ChevronDown, ChevronUp, RotateCcw, Search } from 'lucide-react'
 import '../../App.css'
 import FormToolbar from '../../components/FormToolbar'
 import PaginacaoBar from '../../components/PaginacaoBar.jsx'
 import MenuContextoGrid from '../../components/MenuContextoGrid'
+import PainelFiltrosGrid from '../../components/PainelFiltrosGrid'
 import { notificar } from '../../components/Notificacao'
 import {
-  EMPTY_FORM, paraForm, paraPayload, STATUS, PAPEIS, statusMeta, papelLabel,
+  EMPTY_FORM, paraForm, paraPayload, STATUS, PAPEIS, TIPOS_PESSOA, REGIMES,
+  statusMeta, papelLabel,
 } from './utils'
 import AbaDadosGerais from './AbaDadosGerais'
 import AbaEnderecos from './AbaEnderecos'
@@ -28,9 +29,45 @@ const ABAS_FORM = [
   { id: 'documentos', label: 'Documentos', Comp: AbaDocumentos },
 ]
 
-const FILTROS_VAZIOS = { busca: '', papel: '', status: '', uf: '', cidade: '' }
-
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+
+// Filtros da aba Acesso, abrangente (docs CLAUDE.md §4): toda coluna
+// consultavel de entidade_001 tem um filtro tipado aqui.
+const COLUNAS_FILTRO = [
+  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'nome', label: 'Nome / Razão Social', tipo: 'texto' },
+  { chave: 'apelido', label: 'Apelido / Fantasia', tipo: 'texto' },
+  { chave: 'cnpj', label: 'CPF / CNPJ', tipo: 'texto' },
+  { chave: 'papeis', label: 'Papel', tipo: 'exato', opcoes: PAPEIS },
+  { chave: 'status', label: 'Status', tipo: 'exato', opcoes: STATUS },
+  { chave: 'tipo_pessoa', label: 'Tipo de pessoa', tipo: 'exato', opcoes: TIPOS_PESSOA },
+  { chave: 'inscricao_estadual', label: 'Inscrição Estadual', tipo: 'texto' },
+  { chave: 'inscricao_municipal', label: 'Inscrição Municipal', tipo: 'texto' },
+  { chave: 'telefone', label: 'Telefone', tipo: 'texto' },
+  { chave: 'celular', label: 'Celular', tipo: 'texto' },
+  { chave: 'email', label: 'E-mail', tipo: 'texto' },
+  { chave: 'site', label: 'Site', tipo: 'texto' },
+  { chave: 'cidade', label: 'Cidade', tipo: 'texto' },
+  { chave: 'uf', label: 'UF', tipo: 'exato', opcoes: UFS.map((u) => ({ valor: u, label: u })) },
+  { chave: 'bairro', label: 'Bairro', tipo: 'texto' },
+  { chave: 'cep', label: 'CEP', tipo: 'texto' },
+  { chave: 'logradouro', label: 'Logradouro', tipo: 'texto' },
+  { chave: 'porte', label: 'Porte', tipo: 'texto' },
+  { chave: 'cnae', label: 'CNAE', tipo: 'texto' },
+  { chave: 'situacao_cadastral', label: 'Situação cadastral', tipo: 'texto' },
+  { chave: 'regime_tributario', label: 'Regime tributário', tipo: 'exato', opcoes: REGIMES.filter((r) => r.valor) },
+  { chave: 'contribuinte_icms', label: 'Contribuinte ICMS', tipo: 'booleano' },
+  { chave: 'optante_simples', label: 'Optante Simples', tipo: 'booleano' },
+  { chave: 'limite_credito', label: 'Limite de crédito', tipo: 'numero' },
+  { chave: 'dia_vencimento', label: 'Dia de vencimento', tipo: 'numero' },
+  { chave: 'origem', label: 'Origem', tipo: 'texto' },
+  { chave: 'segmento', label: 'Segmento', tipo: 'texto' },
+  { chave: 'grupo_economico', label: 'Grupo econômico', tipo: 'texto' },
+  { chave: 'data_fundacao', label: 'Data de fundação', tipo: 'data' },
+  { chave: 'data_nascimento', label: 'Data de nascimento', tipo: 'data' },
+  { chave: 'data_primeiro_contato', label: 'Primeiro contato', tipo: 'data' },
+  { chave: 'criado_em', label: 'Cadastrado em', tipo: 'data' },
+]
 
 export default function Entidade({ newTrigger, sessao }) {
   // lista completa (fonte da navegacao no form) — padrao Viagens/Cofre
@@ -53,8 +90,8 @@ export default function Entidade({ newTrigger, sessao }) {
   const setAbaForm = (a) => setAba(a)
 
   // aba Acesso — filtros independentes, so roda ao clicar Buscar
-  const [filtrosAbertos, setFiltrosAbertos] = useState(true)
-  const [filtros, setFiltros] = useState(FILTROS_VAZIOS)
+  const [busca, setBusca] = useState('')
+  const [filtrosCol, setFiltrosCol] = useState({}) // { chave: {op,valor,valor2} | null }
   const [fResultados, setFResultados] = useState(null)
   const [fLoading, setFLoading] = useState(false)
   const [pagina, setPagina] = useState(1)
@@ -113,21 +150,15 @@ export default function Entidade({ newTrigger, sessao }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newTrigger])
 
-  const carregarAcesso = useCallback(async (f = filtros) => {
+  const carregarAcesso = useCallback(async () => {
     setFLoading(true)
     try {
       const params = {}
-      if (f.busca.trim()) params.busca = f.busca.trim()
-      if (f.papel)  params.papel = f.papel
-      if (f.status) params.status = f.status
-      if (f.uf)     params.uf = f.uf
+      if (busca.trim()) params.busca = busca.trim()
+      const fc = Object.fromEntries(Object.entries(filtrosCol).filter(([, v]) => v))
+      if (Object.keys(fc).length) params.filtros = fc
       const res = await window.api.entidade.listar(params)
-      let lista = res.ok ? res.data || [] : []
-      if (f.cidade.trim()) {
-        const c = f.cidade.trim().toLowerCase()
-        lista = lista.filter((r) => String(r.cidade || '').toLowerCase().includes(c))
-      }
-      setFResultados(lista)
+      setFResultados(res.ok ? res.data || [] : [])
       setSelecionados(new Set())
       setPagina(1)
     } catch {
@@ -135,10 +166,10 @@ export default function Entidade({ newTrigger, sessao }) {
     } finally {
       setFLoading(false)
     }
-  }, [filtros])
+  }, [busca, filtrosCol])
 
-  function limparFiltros() { setFiltros(FILTROS_VAZIOS) }
-  const qtdFiltrosAtivos = Object.values(filtros).filter(Boolean).length
+  const setFiltroCol = (chave, f) => setFiltrosCol((prev) => ({ ...prev, [chave]: f }))
+  function limparFiltros() { setBusca(''); setFiltrosCol({}) }
 
   function navTo(idx) {
     if (idx < 0 || idx >= registros.length) return
@@ -266,74 +297,16 @@ export default function Entidade({ newTrigger, sessao }) {
 
         {activeTab === 'acesso' && (
           <>
-            <div style={{ border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)', boxShadow: 'var(--sh-xs)', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setFiltrosAbertos((a) => !a)}>
-                <SlidersHorizontal size={13} color="var(--t2)" />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)' }}>Filtros</span>
-                {qtdFiltrosAtivos > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, background: 'var(--or3)', color: 'var(--or)' }}>
-                    {qtdFiltrosAtivos} ativo{qtdFiltrosAtivos !== 1 ? 's' : ''}
-                  </span>
-                )}
-                <div style={{ flex: 1 }} />
-                {qtdFiltrosAtivos > 0 && (
-                  <button type="button" className="btn btn-ghost" style={{ height: 24, padding: '0 8px', fontSize: 11 }}
-                    onClick={(e) => { e.stopPropagation(); limparFiltros() }}>
-                    <RotateCcw size={11} /> Limpar
-                  </button>
-                )}
-                {filtrosAbertos ? <ChevronUp size={13} color="var(--t3)" /> : <ChevronDown size={13} color="var(--t3)" />}
-              </div>
-
-              {filtrosAbertos && (
-                <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
-                  onKeyDown={(e) => e.key === 'Enter' && carregarAcesso()}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 12 }}>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Busca geral</label>
-                      <input className="form-input form-input-sm" value={filtros.busca}
-                        onChange={(e) => setFiltros((f) => ({ ...f, busca: e.target.value }))}
-                        placeholder="nome, apelido, CNPJ..." />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Papel</label>
-                      <select className="form-select form-input-sm" value={filtros.papel}
-                        onChange={(e) => setFiltros((f) => ({ ...f, papel: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {PAPEIS.map((p) => <option key={p.valor} value={p.valor}>{p.label}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Status</label>
-                      <select className="form-select form-input-sm" value={filtros.status}
-                        onChange={(e) => setFiltros((f) => ({ ...f, status: e.target.value }))}>
-                        <option value="">Todos</option>
-                        {STATUS.map((s) => <option key={s.valor} value={s.valor}>{s.label}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">UF</label>
-                      <select className="form-select form-input-sm" value={filtros.uf}
-                        onChange={(e) => setFiltros((f) => ({ ...f, uf: e.target.value }))}>
-                        <option value="">Todas</option>
-                        {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
-                      </select>
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label">Cidade</label>
-                      <input className="form-input form-input-sm" value={filtros.cidade}
-                        onChange={(e) => setFiltros((f) => ({ ...f, cidade: e.target.value }))}
-                        placeholder="parte do nome" />
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
-                    onClick={() => carregarAcesso()} disabled={fLoading}>
-                    <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
-                  </button>
-                </div>
-              )}
-            </div>
+            <PainelFiltrosGrid
+              colunas={COLUNAS_FILTRO}
+              valores={filtrosCol}
+              onChange={setFiltroCol}
+              onBuscar={carregarAcesso}
+              onLimpar={limparFiltros}
+              fLoading={fLoading}
+              busca={busca}
+              onBusca={setBusca}
+            />
 
             {fResultados === null ? (
               <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--t3)', border: '1px solid var(--bd)', borderRadius: 10, background: 'var(--s1)' }}>

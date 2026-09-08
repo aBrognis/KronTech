@@ -180,6 +180,20 @@ function CorpoHtmlIsolado({ html, escuro, onImagem }) {
         const doc = win?.document
         if (doc) {
           doc.body.addEventListener('click', e => {
+            // 1) Link: SEMPRE abre no navegador do sistema, nunca dentro do
+            //    iframe (o sandbox so permite navegar o proprio iframe, e o
+            //    site clicado costuma bloquear <iframe> -> iframe fica branco
+            //    e o e-mail "some"). Era exatamente esse o bug relatado.
+            const link = e.target?.closest?.('a[href]')
+            if (link) {
+              const href = link.getAttribute('href') || ''
+              e.preventDefault()
+              if (/^(https?:|mailto:|tel:)/i.test(href)) {
+                window.api.sistema.abrirLink(href)
+              }
+              return
+            }
+            // 2) Imagem: abre o lightbox em tamanho real (ignora spacer/pixel).
             const alvo = e.target
             if (alvo?.tagName === 'IMG' && (alvo.naturalWidth > 40 || alvo.naturalHeight > 40)) {
               e.preventDefault()
@@ -190,14 +204,24 @@ function CorpoHtmlIsolado({ html, escuro, onImagem }) {
           doc.querySelectorAll('img').forEach(img => {
             if (img.naturalWidth > 40 || img.naturalHeight > 40 || !img.complete) img.style.cursor = 'zoom-in'
           })
+          // Reforco: todo link ganha target=_blank e rel de seguranca, e um
+          // <base target=_blank> no head cobre o que for injetado depois.
+          doc.querySelectorAll('a[href]').forEach(a => {
+            a.setAttribute('target', '_blank')
+            a.setAttribute('rel', 'noopener noreferrer')
+          })
         }
       } catch { /* ignora */ }
     }
     iframe.addEventListener('load', aoCarregar)
     const css = cssTema(escuro)
+    // <base target="_blank">: qualquer link sem target definido nao tenta
+    // navegar o proprio iframe (que ficaria branco). A interceptacao de
+    // clique acima ja abre no navegador do sistema; isto e a rede de baixo.
+    const head = `<base target="_blank"><style>${css}</style>`
     const doc = /<head[^>]*>/i.test(html)
-      ? html.replace(/<head[^>]*>/i, m => `${m}<style>${css}</style>`)
-      : `<head><style>${css}</style></head>${html}`
+      ? html.replace(/<head[^>]*>/i, m => `${m}${head}`)
+      : `<head>${head}</head>${html}`
     iframe.srcdoc = doc
     return () => iframe.removeEventListener('load', aoCarregar)
   }, [html, escuro])

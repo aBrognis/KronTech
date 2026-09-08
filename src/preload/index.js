@@ -8,6 +8,9 @@ const api = {
     close:       () => ipcRenderer.invoke('win:close'),
     isMaximized: () => ipcRenderer.invoke('win:isMaximized'),
   },
+  sistema: {
+    abrirLink: (url) => ipcRenderer.invoke('sistema:abrirLink', url),
+  },
   sql: {
     execute:    (query)          => ipcRenderer.invoke('sql:execute', query),
     getTables:  ()               => ipcRenderer.invoke('sql:getTables'),
