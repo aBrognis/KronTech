@@ -227,13 +227,35 @@ Classes estruturais obrigatórias (em `App.css`): `.page-with-footer`,
 `.page-footer`. Nunca escrever `position:fixed` + overlay do zero para o
 corpo da página.
 
-### Aba de Acesso — filtros ABRANGENTES (OBRIGATÓRIO)
+### Aba de Acesso — CONSULTA COMPLETA (OBRIGATÓRIO)
 
-A aba de Acesso é onde o usuário **consulta tudo** de uma tela. Ela **não
-pode** ter só "os filtros básicos" (nome + status + uma UF). Regra:
+A aba de Acesso é onde o usuário **consulta tudo** de uma tela. Vale para os
+três lados: o **SQL da listagem**, os **filtros** e as **colunas da tabela**.
 
-> **Se a tabela tem a coluna, a aba de Acesso tem um filtro para ela.**
-> Um punhado de filtros escolhidos "na mão" é violação do padrão.
+> **Se a entidade tem o dado, a aba de Acesso deixa filtrar por ele, mostrar
+> ele numa coluna, e o SQL da listagem já o traz.** Um punhado de campos
+> escolhidos "na mão" é violação do padrão.
+
+**1. O SQL da listagem traz o máximo possível.** Não é só `SELECT * FROM
+tabela`. Inclui:
+- todos os campos escalares da tabela;
+- o **nome legível de cada FK** por LEFT JOIN (condição de pagamento, banco,
+  natureza jurídica... não só o `_id`);
+- dados de tabelas **1:1** relacionadas (comercial, crédito);
+- o registro **principal** de tabelas filhas via `LEFT JOIN LATERAL (... LIMIT
+  1)` (ex: endereço principal da entidade);
+- **contagens** das filhas (`qtd_contatos`, `qtd_enderecos`, `qtd_anexos`);
+- agregações úteis (`string_agg` dos e-mails dos contatos, por ex).
+  Ver `entidadeService.listar` como referência.
+
+**2. A tabela de resultados usa `components/TabelaResultados.jsx`** — tabela
+com **seletor de colunas** (botão "Colunas", preferência salva por tela em
+`localStorage`), seleção em massa, duplo-clique abre no form, menu de
+contexto. Você declara `COLUNAS_RESULTADO` com **uma entrada por dado que o
+SQL traz**; `sticky: true` = sempre visível (código, nome); `padrao: true` =
+marcada na primeira vez. As demais ficam a um clique de distância.
+
+**3. Os filtros:** um por coluna consultável (abaixo).
 
 Fonte única: **`components/PainelFiltrosGrid.jsx`** — painel retrátil, um
 filtro por coluna, tipado, em grade responsiva, mais busca geral. Filtros só
@@ -364,8 +386,10 @@ parecido. Um único componente-fonte por funcionalidade.
       `InputLookup`), não `<select>` que carrega tudo.
 - [ ] Tem aba Acesso (listagem + filtros + paginação) e aba Cadastro, usando
       `.page-tabs` / `.page-content`.
-- [ ] A aba Acesso usa `PainelFiltrosGrid` com **um filtro por coluna
-      consultável** da tabela, não só 3-4 filtros escolhidos na mão.
+- [ ] A aba Acesso: SQL da listagem traz o máximo (FKs com nome, endereço
+      principal, 1:1, contagens); tabela usa `TabelaResultados` com seletor
+      de colunas; `PainelFiltrosGrid` com **um filtro por coluna
+      consultável**. Nada escolhido "na mão".
 - [ ] Estado inicial: abre em `activeTab='cadastro'`, modo `view`, nunca
       dispara `openNew()` sozinha.
 - [ ] Rodapé usa `FormToolbar`, não botões soltos.

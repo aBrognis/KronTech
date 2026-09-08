@@ -110,10 +110,50 @@ export async function listar({ busca, filtros, papel, status, uf } = {}) {
     }
   }
 
+  // A aba Acesso mostra praticamente todos os campos da entidade. Alem dos
+  // escalares (e.*), traz: o nome legivel das FKs (natureza juridica,
+  // condicao de pagamento, banco), o endereco PRINCIPAL (tabela filha),
+  // dados comerciais/credito (1:1) e contagens das filhas. A tela decide
+  // quais colunas exibir (seletor de colunas); o SQL entrega tudo.
   return query(
     `SELECT e.*,
-       (SELECT count(*) FROM entidade_contato_001 c WHERE c.entidade_id = e.id) AS qtd_contatos
+       nj.descricao                              AS natureza_juridica_nome,
+       cp.descricao                              AS condicao_pagamento_nome,
+       bc.nome                                   AS banco_nome,
+       bc.compe                                  AS banco_compe,
+       ep.logradouro                             AS end_logradouro,
+       ep.numero                                 AS end_numero,
+       ep.complemento                            AS end_complemento,
+       ep.bairro                                 AS end_bairro,
+       ep.cidade                                 AS end_cidade,
+       ep.uf                                     AS end_uf,
+       ep.cep                                    AS end_cep,
+       com.vendedor_id                           AS com_vendedor_id,
+       com.transportadora_id                     AS com_transportadora_id,
+       com.tabela_preco                          AS com_tabela_preco,
+       com.frete_padrao                          AS com_frete_padrao,
+       com.regiao                                AS com_regiao,
+       cr.score_risco                            AS cred_score_risco,
+       cr.status_credito                         AS cred_status,
+       cr.limite_credito                         AS cred_limite,
+       cr.limite_utilizado                       AS cred_utilizado,
+       (SELECT count(*) FROM entidade_contato_001  x WHERE x.entidade_id = e.id) AS qtd_contatos,
+       (SELECT count(*) FROM entidade_endereco_001 x WHERE x.entidade_id = e.id) AS qtd_enderecos,
+       (SELECT count(*) FROM entidade_anexo_001    x WHERE x.entidade_id = e.id) AS qtd_anexos,
+       (SELECT string_agg(x.email, ', ') FROM entidade_contato_001 x
+          WHERE x.entidade_id = e.id AND x.email IS NOT NULL AND x.email <> '') AS emails_contatos
      FROM entidade_001 e
+     LEFT JOIN natureza_juridica_001    nj ON nj.id = e.natureza_juridica_id
+     LEFT JOIN condicao_pagamento_001   cp ON cp.id = e.condicao_pagamento_id
+     LEFT JOIN banco_001                bc ON bc.id = e.banco_id
+     LEFT JOIN entidade_comercial_001   com ON com.entidade_id = e.id
+     LEFT JOIN entidade_credito_001     cr ON cr.entidade_id = e.id
+     LEFT JOIN LATERAL (
+       SELECT * FROM entidade_endereco_001 x
+       WHERE x.entidade_id = e.id
+       ORDER BY (x.tipo = 'principal') DESC, x.principal DESC, x.id
+       LIMIT 1
+     ) ep ON TRUE
      ${cond.length ? 'WHERE ' + cond.join(' AND ') : ''}
      ORDER BY e.nome ASC LIMIT 2000`,
     params

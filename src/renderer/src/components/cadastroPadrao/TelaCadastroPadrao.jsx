@@ -6,6 +6,7 @@ import FormToolbar from '../FormToolbar'
 import PaginacaoBar from '../PaginacaoBar.jsx'
 import MenuContextoGrid from '../MenuContextoGrid'
 import PainelFiltrosGrid from '../PainelFiltrosGrid'
+import TabelaResultados from '../TabelaResultados'
 import { useCadastroPadrao } from './useCadastroPadrao'
 
 /**
@@ -39,8 +40,19 @@ export default function TelaCadastroPadrao({
   // o filtro tem que existir. Sem isto, cai no modo antigo de "busca geral"
   // simples, so aceitavel em cadastro trivial de 2-3 colunas.
   colunasFiltro = null,
+  // Colunas da tabela de resultados. Se omitido, deriva de `colunas` (as 2
+  // primeiras sticky, o resto marcado por padrao). Aceita `sticky`/`padrao`
+  // por coluna (ver TabelaResultados). Passe explicitamente quando o SQL
+  // trouxer mais campos que as colunas visiveis default.
+  colunasResultado = null,
 }) {
   const c = useCadastroPadrao(config)
+
+  const colunasTabela = colunasResultado || colunas.map((col, i) => ({
+    ...col,
+    sticky: i < 2,
+    padrao: i >= 2,
+  }))
 
   // aba ativa: 'acesso' | 'cadastro' | id de uma abaForm
   const [aba, setAba] = useState('cadastro')
@@ -75,7 +87,6 @@ export default function TelaCadastroPadrao({
   }
 
   const temSel = statusEmMassa != null
-  const nColunas = colunas.length + (temSel ? 1 : 0)
   const ctx = { form: c.form, setForm: c.setForm, isRO: c.isRO, erro: c.erro }
   const abaFormAtiva = (abasForm || []).find((a) => a.id === aba) || (abasForm || [])[0]
 
@@ -154,55 +165,22 @@ export default function TelaCadastroPadrao({
                 <div style={{ fontSize: 13 }}>Clique em Buscar para listar</div>
               </div>
             ) : (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                      <tr>
-                        {temSel && (
-                          <Th style={{ width: 40, textAlign: 'center' }}>
-                            <input type="checkbox" checked={c.todosSelecionados} onChange={c.toggleSelecionarTodos}
-                              title="Selecionar todos" style={{ cursor: 'pointer' }} />
-                          </Th>
-                        )}
-                        {colunas.map((col) => (
-                          <Th key={col.chave} style={{ width: col.largura, textAlign: col.align || 'left' }}>{col.label}</Th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {c.registrosPagina.map((r) => {
-                        const marcado = c.selecionados.has(r.id)
-                        return (
-                          <tr key={r.id}
-                            onDoubleClick={() => { c.selecionarLinha(r); setAba(abasForm ? abasForm[0].id : 'cadastro') }}
-                            onContextMenu={(e) => abrirMenuLinha(e, r.id)}
-                            style={{ cursor: 'pointer', background: marcado ? 'var(--or4, var(--s2))' : 'transparent' }}
-                            onMouseEnter={(e) => { if (!marcado) e.currentTarget.style.background = 'var(--s2)' }}
-                            onMouseLeave={(e) => { if (!marcado) e.currentTarget.style.background = 'transparent' }}>
-                            {temSel && (
-                              <Td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                <input type="checkbox" checked={marcado} onChange={() => c.toggleSelecionado(r.id)} style={{ cursor: 'pointer' }} />
-                              </Td>
-                            )}
-                            {colunas.map((col) => (
-                              <Td key={col.chave} style={{ textAlign: col.align || 'left' }}>
-                                {col.render ? col.render(r) : String(r[col.chave] ?? '')}
-                              </Td>
-                            ))}
-                          </tr>
-                        )
-                      })}
-                      {!c.fLoading && c.registrosPagina.length === 0 && (
-                        <tr><td colSpan={nColunas} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>
-                          Nenhum registro encontrado
-                        </td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 8 }}>
+                <TabelaResultados
+                  colunas={colunasTabela}
+                  registros={c.registrosPagina}
+                  prefKey={`cad-${tituloSingular}`}
+                  selecao={temSel ? {
+                    has: (id) => c.selecionados.has(id),
+                    toggle: c.toggleSelecionado,
+                    todos: c.todosSelecionados,
+                    toggleTodos: c.toggleSelecionarTodos,
+                  } : undefined}
+                  onLinhaDuploClique={(r) => { c.selecionarLinha(r); setAba(abasForm ? abasForm[0].id : 'cadastro') }}
+                  onLinhaMenu={statusEmMassa ? abrirMenuLinha : undefined}
+                />
                 {c.selecionados.size > 0 && (
-                  <div style={{ padding: '6px 14px', borderTop: '1px solid var(--bd)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ padding: '6px 14px', border: '1px solid var(--bd)', borderRadius: 8, background: 'var(--s1)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>{c.selecionados.size} selecionado{c.selecionados.size !== 1 ? 's' : ''}. Clique com o botão direito na lista para alterar.</span>
                     <button className="btn btn-ghost" style={{ height: 22, fontSize: 10.5, padding: '0 8px' }} onClick={() => c.setSelecionados(new Set())}>Limpar seleção</button>
                   </div>

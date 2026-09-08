@@ -74,13 +74,20 @@ export default function NaturezasJuridicas({ newTrigger }) {
         validar: (f) => (!f.descricao.trim() ? 'Informe a descrição.' : null),
       }}
       colunas={[
-        { chave: 'codigo', label: 'Código', largura: 70 },
-        { chave: 'codigo_receita', label: 'Cód. Receita', largura: 100 },
-        { chave: 'descricao', label: 'Descrição' },
-        { chave: 'grupo', label: 'Grupo', largura: 150, render: (r) => rotuloGrupo(r.grupo) },
-        { chave: 'exige_ie', label: 'Exige IE', largura: 90, align: 'center', render: (r) => (r.exige_ie ? 'Sim' : 'Não') },
-        { chave: 'ativo', label: 'Situação', largura: 100,
+        { chave: 'codigo', label: 'Código', largura: 70, sticky: true },
+        { chave: 'descricao', label: 'Descrição', sticky: true },
+        { chave: 'codigo_receita', label: 'Cód. Receita', largura: 100, padrao: true, render: (r) => r.codigo_receita || '-' },
+        { chave: 'grupo', label: 'Grupo', largura: 150, padrao: true, render: (r) => rotuloGrupo(r.grupo) },
+        { chave: 'tipo_pessoa', label: 'Tipo pessoa', largura: 110, padrao: true,
+          render: (r) => (TIPOS_PESSOA.find((t) => t.valor === r.tipo_pessoa)?.label || r.tipo_pessoa) },
+        { chave: 'exige_ie', label: 'Exige IE', largura: 90, align: 'center', padrao: true, render: (r) => (r.exige_ie ? 'Sim' : 'Não') },
+        { chave: 'ativo', label: 'Situação', largura: 100, padrao: true,
           render: (r) => <span className={`badge ${r.ativo ? 'badge-green' : 'badge-yellow'}`}>{r.ativo ? 'Ativo' : 'Inativo'}</span> },
+        { chave: 'contribuinte_icms_padrao', label: 'Contrib. ICMS', largura: 110, align: 'center', render: (r) => (r.contribuinte_icms_padrao ? 'Sim' : 'Não') },
+        { chave: 'regime_sugerido', label: 'Regime sugerido', largura: 140,
+          render: (r) => (REGIMES.find((x) => x.valor === r.regime_sugerido)?.label || r.regime_sugerido || '-') },
+        { chave: 'base_legal', label: 'Base legal', largura: 240, render: (r) => r.base_legal || '-' },
+        { chave: 'observacoes', label: 'Observações', largura: 260, render: (r) => r.observacoes || '-' },
       ]}
       statusEmMassa={{
         valores: [{ valor: true, label: 'Ativar' }, { valor: false, label: 'Inativar' }],

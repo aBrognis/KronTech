@@ -91,14 +91,21 @@ export default function Bancos({ newTrigger }) {
         },
       }}
       colunas={[
-        { chave: 'codigo', label: 'Código', largura: 70 },
-        { chave: 'compe', label: 'Compe', largura: 70 },
-        { chave: 'nome', label: 'Nome' },
-        { chave: 'tipo', label: 'Tipo', largura: 150, render: (r) => rotuloTipo(r.tipo) },
-        { chave: 'qtd_agencias', label: 'Agências', largura: 80, align: 'center', render: (r) => r.qtd_agencias || 0 },
-        { chave: 'qtd_convenios', label: 'Convênios', largura: 90, align: 'center', render: (r) => r.qtd_convenios || 0 },
-        { chave: 'ativo', label: 'Situação', largura: 100,
+        { chave: 'codigo', label: 'Código', largura: 70, sticky: true },
+        { chave: 'nome', label: 'Nome', sticky: true },
+        { chave: 'compe', label: 'Compe', largura: 70, padrao: true },
+        { chave: 'nome_curto', label: 'Nome curto', largura: 140, padrao: true, render: (r) => r.nome_curto || '-' },
+        { chave: 'tipo', label: 'Tipo', largura: 150, padrao: true, render: (r) => rotuloTipo(r.tipo) },
+        { chave: 'qtd_agencias', label: 'Agências', largura: 80, align: 'center', padrao: true, render: (r) => r.qtd_agencias || 0 },
+        { chave: 'qtd_convenios', label: 'Convênios', largura: 90, align: 'center', padrao: true, render: (r) => r.qtd_convenios || 0 },
+        { chave: 'ativo', label: 'Situação', largura: 100, padrao: true,
           render: (r) => <span className={`badge ${r.ativo ? 'badge-green' : 'badge-yellow'}`}>{r.ativo ? 'Ativo' : 'Inativo'}</span> },
+        { chave: 'ispb', label: 'ISPB', largura: 100, render: (r) => r.ispb || '-' },
+        { chave: 'situacao_bacen', label: 'Situação BACEN', largura: 130, render: (r) => r.situacao_bacen || '-' },
+        { chave: 'pais', label: 'País', largura: 100, render: (r) => r.pais || '-' },
+        { chave: 'telefone_sac', label: 'Telefone / SAC', largura: 130, render: (r) => r.telefone_sac || '-' },
+        { chave: 'site', label: 'Site', largura: 200, render: (r) => r.site || '-' },
+        { chave: 'observacoes', label: 'Observações', largura: 260, render: (r) => r.observacoes || '-' },
       ]}
       statusEmMassa={{
         valores: [{ valor: true, label: 'Ativar' }, { valor: false, label: 'Inativar' }],

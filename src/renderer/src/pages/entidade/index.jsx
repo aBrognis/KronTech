@@ -4,6 +4,7 @@ import FormToolbar from '../../components/FormToolbar'
 import PaginacaoBar from '../../components/PaginacaoBar.jsx'
 import MenuContextoGrid from '../../components/MenuContextoGrid'
 import PainelFiltrosGrid from '../../components/PainelFiltrosGrid'
+import TabelaResultados from '../../components/TabelaResultados'
 import { notificar } from '../../components/Notificacao'
 import {
   EMPTY_FORM, paraForm, paraPayload, STATUS, PAPEIS, TIPOS_PESSOA, REGIMES,
@@ -67,6 +68,84 @@ const COLUNAS_FILTRO = [
   { chave: 'data_nascimento', label: 'Data de nascimento', tipo: 'data' },
   { chave: 'data_primeiro_contato', label: 'Primeiro contato', tipo: 'data' },
   { chave: 'criado_em', label: 'Cadastrado em', tipo: 'data' },
+]
+
+const fmtR$ = (v) => (v == null ? '-' : (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
+const fmtData = (v) => (v ? String(v).slice(0, 10).split('-').reverse().join('/') : '-')
+
+// Colunas da TABELA de resultados. O SQL traz tudo (entidade + FKs + endereço
+// principal + comercial + crédito); aqui so o que aparece e como. `sticky`:
+// sempre visivel. `padrao`: vem marcada na 1a vez. As demais entram pelo
+// botao "Colunas".
+const COLUNAS_RESULTADO = [
+  { chave: 'codigo', label: 'Código', largura: 70, sticky: true,
+    render: (r) => <span style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo}</span> },
+  { chave: 'nome', label: 'Nome / Razão Social', sticky: true },
+
+  { chave: 'apelido', label: 'Apelido', largura: 160, padrao: true, render: (r) => r.apelido || '-' },
+  { chave: 'cnpj', label: 'CPF / CNPJ', largura: 150, padrao: true, render: (r) => r.cnpj || '-' },
+  { chave: 'papeis', label: 'Papéis', largura: 180, padrao: true,
+    render: (r) => String(r.papeis || '').split(',').filter(Boolean).map(papelLabel).join(', ') || '-' },
+  { chave: 'status', label: 'Status', largura: 100, padrao: true,
+    render: (r) => { const m = statusMeta(r.status); return <span className={`badge ${m.classe}`}>{m.label}</span> } },
+  { chave: 'end_cidade', label: 'Cidade', largura: 150, padrao: true,
+    render: (r) => `${r.end_cidade || r.cidade || ''}${(r.end_uf || r.uf) ? ' - ' + (r.end_uf || r.uf) : ''}` || '-' },
+
+  { chave: 'tipo_pessoa', label: 'Tipo', largura: 80, render: (r) => (r.tipo_pessoa === 'pf' ? 'PF' : 'PJ') },
+  { chave: 'inscricao_estadual', label: 'Inscr. Estadual', largura: 130, render: (r) => r.inscricao_estadual || '-' },
+  { chave: 'inscricao_municipal', label: 'Inscr. Municipal', largura: 130, render: (r) => r.inscricao_municipal || '-' },
+  { chave: 'telefone', label: 'Telefone', largura: 130, render: (r) => r.telefone || '-' },
+  { chave: 'celular', label: 'Celular', largura: 130, render: (r) => r.celular || '-' },
+  { chave: 'email', label: 'E-mail', largura: 220, render: (r) => r.email || '-' },
+  { chave: 'emails_contatos', label: 'E-mails dos contatos', largura: 260, render: (r) => r.emails_contatos || '-' },
+  { chave: 'site', label: 'Site', largura: 180, render: (r) => r.site || '-' },
+
+  { chave: 'end_completo', label: 'Endereço principal', largura: 300,
+    render: (r) => {
+      const p = [r.end_logradouro, r.end_numero, r.end_bairro].filter(Boolean).join(', ')
+      return p || '-'
+    } },
+  { chave: 'end_cep', label: 'CEP', largura: 110, render: (r) => r.end_cep || r.cep || '-' },
+  { chave: 'end_bairro', label: 'Bairro', largura: 140, render: (r) => r.end_bairro || r.bairro || '-' },
+
+  { chave: 'natureza_juridica_nome', label: 'Natureza jurídica', largura: 200, render: (r) => r.natureza_juridica_nome || '-' },
+  { chave: 'regime_tributario', label: 'Regime tributário', largura: 140, render: (r) => r.regime_tributario || '-' },
+  { chave: 'cnae', label: 'CNAE', largura: 200, render: (r) => r.cnae || '-' },
+  { chave: 'porte', label: 'Porte', largura: 120, render: (r) => r.porte || '-' },
+  { chave: 'contribuinte_icms', label: 'Contrib. ICMS', largura: 110, render: (r) => (r.contribuinte_icms ? 'Sim' : 'Não') },
+  { chave: 'optante_simples', label: 'Simples', largura: 90, render: (r) => (r.optante_simples ? 'Sim' : 'Não') },
+  { chave: 'situacao_cadastral', label: 'Situação cadastral', largura: 160, render: (r) => r.situacao_cadastral || '-' },
+
+  { chave: 'condicao_pagamento_nome', label: 'Condição de pagamento', largura: 200, render: (r) => r.condicao_pagamento_nome || '-' },
+  { chave: 'dia_vencimento', label: 'Dia venc.', largura: 90, align: 'center', render: (r) => r.dia_vencimento || '-' },
+  { chave: 'banco', label: 'Banco', largura: 200, render: (r) => (r.banco_nome ? `${r.banco_compe ? r.banco_compe + ' · ' : ''}${r.banco_nome}` : '-') },
+  { chave: 'agencia', label: 'Agência', largura: 100, render: (r) => r.agencia || '-' },
+  { chave: 'conta_corrente', label: 'Conta corrente', largura: 130, render: (r) => r.conta_corrente || '-' },
+  { chave: 'pix_chave', label: 'Chave PIX', largura: 200, render: (r) => r.pix_chave || '-' },
+  { chave: 'limite_credito', label: 'Limite de crédito', largura: 130, align: 'right', render: (r) => fmtR$(r.limite_credito) },
+
+  { chave: 'cred_score_risco', label: 'Score risco', largura: 100, align: 'center', render: (r) => r.cred_score_risco || '-' },
+  { chave: 'cred_status', label: 'Status crédito', largura: 120, render: (r) => r.cred_status || '-' },
+  { chave: 'cred_limite', label: 'Limite (crédito)', largura: 130, align: 'right', render: (r) => fmtR$(r.cred_limite) },
+  { chave: 'cred_utilizado', label: 'Limite utilizado', largura: 130, align: 'right', render: (r) => fmtR$(r.cred_utilizado) },
+
+  { chave: 'com_tabela_preco', label: 'Tabela de preço', largura: 140, render: (r) => r.com_tabela_preco || '-' },
+  { chave: 'com_frete_padrao', label: 'Frete padrão', largura: 120, render: (r) => r.com_frete_padrao || '-' },
+  { chave: 'com_regiao', label: 'Região', largura: 120, render: (r) => r.com_regiao || '-' },
+
+  { chave: 'origem', label: 'Origem', largura: 120, render: (r) => r.origem || '-' },
+  { chave: 'segmento', label: 'Segmento', largura: 140, render: (r) => r.segmento || '-' },
+  { chave: 'grupo_economico', label: 'Grupo econômico', largura: 160, render: (r) => r.grupo_economico || '-' },
+  { chave: 'tags', label: 'Tags', largura: 160, render: (r) => r.tags || '-' },
+
+  { chave: 'qtd_contatos', label: 'Contatos', largura: 80, align: 'center', render: (r) => r.qtd_contatos || 0 },
+  { chave: 'qtd_enderecos', label: 'Endereços', largura: 80, align: 'center', render: (r) => r.qtd_enderecos || 0 },
+  { chave: 'qtd_anexos', label: 'Anexos', largura: 80, align: 'center', render: (r) => r.qtd_anexos || 0 },
+
+  { chave: 'data_fundacao', label: 'Data de fundação', largura: 130, render: (r) => fmtData(r.data_fundacao) },
+  { chave: 'data_nascimento', label: 'Data de nascimento', largura: 140, render: (r) => fmtData(r.data_nascimento) },
+  { chave: 'data_primeiro_contato', label: 'Primeiro contato', largura: 130, render: (r) => fmtData(r.data_primeiro_contato) },
+  { chave: 'criado_em', label: 'Cadastrado em', largura: 140, render: (r) => fmtData(r.criado_em) },
 ]
 
 export default function Entidade({ newTrigger, sessao }) {
@@ -313,55 +392,22 @@ export default function Entidade({ newTrigger, sessao }) {
                 <div style={{ fontSize: 13 }}>Configure os filtros (opcional) e clique em Buscar</div>
               </div>
             ) : (
-              <div style={{ border: '1px solid var(--bd)', borderRadius: 10, overflow: 'hidden', background: 'var(--s1)', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ overflowY: 'auto', flex: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                      <tr>
-                        <Th style={{ width: 40, textAlign: 'center' }}>
-                          <input type="checkbox" checked={todosSelecionados} onChange={toggleSelecionarTodos} style={{ cursor: 'pointer' }} />
-                        </Th>
-                        <Th style={{ width: 70 }}>Código</Th>
-                        <Th>Nome / Razão Social</Th>
-                        <Th style={{ width: 160 }}>Apelido</Th>
-                        <Th style={{ width: 150 }}>CPF / CNPJ</Th>
-                        <Th style={{ width: 150 }}>Cidade</Th>
-                        <Th style={{ width: 180 }}>Papéis</Th>
-                        <Th style={{ width: 100 }}>Status</Th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {registrosPagina.map((r) => {
-                        const marcado = selecionados.has(r.id)
-                        const m = statusMeta(r.status)
-                        return (
-                          <tr key={r.id}
-                            onDoubleClick={() => selecionarLinha(r)}
-                            onContextMenu={(e) => abrirMenuLinha(e, r.id)}
-                            style={{ cursor: 'pointer', background: marcado ? 'var(--or4, var(--s2))' : 'transparent' }}
-                            onMouseEnter={(e) => { if (!marcado) e.currentTarget.style.background = 'var(--s2)' }}
-                            onMouseLeave={(e) => { if (!marcado) e.currentTarget.style.background = 'transparent' }}>
-                            <Td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                              <input type="checkbox" checked={marcado} onChange={() => toggleSelecionado(r.id)} style={{ cursor: 'pointer' }} />
-                            </Td>
-                            <Td style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo}</Td>
-                            <Td>{r.nome}</Td>
-                            <Td>{r.apelido || '-'}</Td>
-                            <Td>{r.cnpj || '-'}</Td>
-                            <Td>{`${r.cidade || ''}${r.uf && !String(r.cidade || '').includes(' - ') ? ' - ' + r.uf : ''}` || '-'}</Td>
-                            <Td>{String(r.papeis || '').split(',').filter(Boolean).map(papelLabel).join(', ') || '-'}</Td>
-                            <Td><span className={`badge ${m.classe}`}>{m.label}</span></Td>
-                          </tr>
-                        )
-                      })}
-                      {!fLoading && registrosPagina.length === 0 && (
-                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, gap: 8 }}>
+                <TabelaResultados
+                  colunas={COLUNAS_RESULTADO}
+                  registros={registrosPagina}
+                  prefKey="entidade-acesso"
+                  selecao={{
+                    has: (id) => selecionados.has(id),
+                    toggle: toggleSelecionado,
+                    todos: todosSelecionados,
+                    toggleTodos: toggleSelecionarTodos,
+                  }}
+                  onLinhaDuploClique={selecionarLinha}
+                  onLinhaMenu={abrirMenuLinha}
+                />
                 {selecionados.size > 0 && (
-                  <div style={{ padding: '6px 14px', borderTop: '1px solid var(--bd)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ padding: '6px 14px', border: '1px solid var(--bd)', borderRadius: 8, background: 'var(--s1)', fontSize: 11.5, color: 'var(--t2)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span>{selecionados.size} selecionada{selecionados.size !== 1 ? 's' : ''}. Botão direito na lista para alterar o status.</span>
                     <button className="btn btn-ghost" style={{ height: 22, fontSize: 10.5, padding: '0 8px' }} onClick={() => setSelecionados(new Set())}>Limpar seleção</button>
                   </div>
@@ -420,9 +466,3 @@ export default function Entidade({ newTrigger, sessao }) {
   )
 }
 
-function Th({ children, style }) {
-  return <th style={{ padding: '7px 12px', fontSize: 9, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1.2, textTransform: 'uppercase', borderBottom: '1px solid var(--bd)', background: 'var(--s1)', textAlign: 'left', ...style }}>{children}</th>
-}
-function Td({ children, style, onClick }) {
-  return <td onClick={onClick} style={{ padding: '9px 12px', color: 'var(--t2)', borderBottom: '1px solid var(--bd)', fontSize: 12.5, ...style }}>{children}</td>
-}
