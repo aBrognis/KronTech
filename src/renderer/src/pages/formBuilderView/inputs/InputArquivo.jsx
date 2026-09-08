@@ -19,7 +19,7 @@ export function InputArquivoCampo({ campo, val, tela, isRO, saving, compact, fmt
         {arqMeta && <span style={{ fontSize: 10, color: 'var(--t3)', flexShrink: 0 }}>{fmtSize(arqMeta.tamanho)}</span>}
         {arqMeta && <button className="btn btn-ghost" style={{ flexShrink: 0, height: 24, fontSize: 11, padding: '0 6px' }} onClick={() => handleAbrirArquivo(arqMeta)}><ExternalLink size={11} /></button>}
         {!isRO && arqMeta && <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', padding: 2, flexShrink: 0 }} onClick={() => setArquivoComSatellites(campo.nome_campo, null)} title="Remover"><X size={12} /></button>}
-        {!isRO && !arqMeta && <button className="btn btn-ghost" style={{ flexShrink: 0, height: 24, fontSize: 11, padding: '0 6px' }} onClick={async () => { const res = await window.api.arquivos.selecionarECopiar({ subpasta }); if (res?.ok) setArquivoComSatellites(campo.nome_campo, res) }} disabled={saving}><Upload size={11} /></button>}
+        {!isRO && !arqMeta && <button className="btn btn-ghost" style={{ flexShrink: 0, height: 24, fontSize: 11, padding: '0 6px' }} onClick={async () => { const res = await window.api.arquivos.selecionarECopiar({ subpasta, chaveCaminho: 'arquivosFormBuilder' }); if (res?.ok) setArquivoComSatellites(campo.nome_campo, res) }} disabled={saving}><Upload size={11} /></button>}
       </div>
     )
   }
@@ -38,7 +38,7 @@ export function InputArquivoCampo({ campo, val, tela, isRO, saving, compact, fmt
       {!isRO && !arqMeta && (
         <button className="btn btn-ghost" style={{ flexShrink: 0 }}
           onClick={async () => {
-            const res = await window.api.arquivos.selecionarECopiar({ subpasta })
+            const res = await window.api.arquivos.selecionarECopiar({ subpasta, chaveCaminho: 'arquivosFormBuilder' })
             if (res?.ok) setArquivoComSatellites(campo.nome_campo, res)
           }}
           disabled={saving}>
@@ -99,7 +99,7 @@ export function InputImagem({ campo, val, tela, isRO, saving, setField }) {
   const subpasta = tela?.nome_tabela || 'anexos'
   const FILTROS_IMG = [{ name: 'Imagens', extensions: ['jpg','jpeg','png','gif','webp','svg','bmp'] }]
   const onSelect = async () => {
-    const res = await window.api.arquivos.selecionarECopiar({ subpasta, filtros: FILTROS_IMG })
+    const res = await window.api.arquivos.selecionarECopiar({ subpasta, filtros: FILTROS_IMG, chaveCaminho: 'arquivosFormBuilder' })
     if (res?.ok) setField(campo.nome_campo, res.path)
   }
   return (

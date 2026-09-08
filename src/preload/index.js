@@ -67,6 +67,8 @@ const api = {
     lerTexto:    (p)                  => ipcRenderer.invoke('arquivos:lerTexto', p),
     copiarLocal:     (caminhoOrigem, nomeArquivo) => ipcRenderer.invoke('arquivos:copiarLocal', { caminhoOrigem, nomeArquivo }),
     abrirPasta:      (pasta)        => ipcRenderer.invoke('arquivos:abrirPasta', pasta),
+    salvarComo:      (caminhoOrigem, nomeSugerido) => ipcRenderer.invoke('arquivos:salvarComo', { caminhoOrigem, nomeSugerido }),
+    salvarVarios:    (itens) => ipcRenderer.invoke('arquivos:salvarVarios', { itens }),
     copiarClipboard: (caminho)      => ipcRenderer.invoke('arquivos:copiarClipboard', caminho),
     selecionarECopiar: (opts)     => ipcRenderer.invoke('arquivos:selecionarECopiar', opts),
     lerBase64:         (path)     => ipcRenderer.invoke('arquivos:lerBase64', path),
@@ -119,6 +121,19 @@ const api = {
   entidade: {
     buscarCnpj: (cnpj) => ipcRenderer.invoke('entidade:buscarCnpj', cnpj),
     buscarCep:  (cep)  => ipcRenderer.invoke('entidade:buscarCep',  cep),
+    listar:          (f)  => ipcRenderer.invoke('entidade:listar', f),
+    obter:           (id) => ipcRenderer.invoke('entidade:obter', id),
+    criar:           (d)  => ipcRenderer.invoke('entidade:criar', d),
+    atualizar:       (d)  => ipcRenderer.invoke('entidade:atualizar', d),
+    excluir:         (id) => ipcRenderer.invoke('entidade:excluir', id),
+    mudarStatusLote: (p)  => ipcRenderer.invoke('entidade:mudarStatusLote', p),
+    buscarLookup:    (f)  => ipcRenderer.invoke('entidade:buscarLookup', f),
+    adicionarAnexo:  (p)  => ipcRenderer.invoke('entidade:adicionarAnexo', p),
+    removerAnexo:    (id) => ipcRenderer.invoke('entidade:removerAnexo', id),
+    registrarInteracao: (p) => ipcRenderer.invoke('entidade:registrarInteracao', p),
+    removerInteracao:   (id) => ipcRenderer.invoke('entidade:removerInteracao', id),
+    alterarLimite:      (p) => ipcRenderer.invoke('entidade:alterarLimite', p),
+    documentosVencendo: (f) => ipcRenderer.invoke('entidade:documentosVencendo', f),
   },
   clipboard: {
     write: (texto) => ipcRenderer.invoke('clipboard:write', texto),
@@ -131,7 +146,10 @@ const api = {
     getIniPath:      ()                       => ipcRenderer.invoke('config:getIniPath'),
     selecionarPasta: (opts)                   => ipcRenderer.invoke('config:selecionarPasta', opts),
     selecionarArquivoIni: ()                  => ipcRenderer.invoke('config:selecionarArquivoIni'),
+    selecionarLogoDocumentos: ()              => ipcRenderer.invoke('config:selecionarLogoDocumentos'),
     salvarGithubToken: (token)                => ipcRenderer.invoke('config:salvarGithubToken', token),
+    salvarAnthropicApiKey: (key)              => ipcRenderer.invoke('config:salvarAnthropicApiKey', key),
+    salvarCnpjaToken: (token)                 => ipcRenderer.invoke('config:salvarCnpjaToken', token),
     onPersonalizacaoAlterada: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('config:personalizacaoAlterada', fn)
@@ -255,8 +273,9 @@ const api = {
     },
   },
   lancarVersao: {
+    lerNotasPendentes: () => ipcRenderer.invoke('lancarVersao:lerNotasPendentes'),
     gerarInstalador: () => ipcRenderer.invoke('lancarVersao:gerarInstalador'),
-    executar: (token) => ipcRenderer.invoke('lancarVersao:executar', token),
+    executar: (token, notas) => ipcRenderer.invoke('lancarVersao:executar', token, notas),
     onProgresso: (cb) => {
       const fn = (_, data) => cb(data)
       ipcRenderer.on('lancarVersao:progresso', fn)
@@ -266,6 +285,130 @@ const api = {
   tokenImportacao: {
     gerar: (escopo) => ipcRenderer.invoke('tokenImportacao:gerar', escopo),
   },
+  documentoGerado: {
+    listarTipos: () => ipcRenderer.invoke('documentoGerado:listarTipos'),
+    listar: (filtros) => ipcRenderer.invoke('documentoGerado:listar', filtros),
+    obter: (id) => ipcRenderer.invoke('documentoGerado:obter', id),
+    excluir: (id) => ipcRenderer.invoke('documentoGerado:excluir', id),
+    gerar: (dados) => ipcRenderer.invoke('documentoGerado:gerar', dados),
+    selecionarImagens: () => ipcRenderer.invoke('documentoGerado:selecionarImagens'),
+    persistirImagens: (payload) => ipcRenderer.invoke('documentoGerado:persistirImagens', payload),
+    confirmar: (dados) => ipcRenderer.invoke('documentoGerado:confirmar', dados),
+    salvarRevisao: (id, dados) => ipcRenderer.invoke('documentoGerado:salvarRevisao', id, dados),
+    listarHistorico: (id) => ipcRenderer.invoke('documentoGerado:listarHistorico', id),
+    mudarStatus: (id, status) => ipcRenderer.invoke('documentoGerado:mudarStatus', id, status),
+    mudarStatusLote: (payload) => ipcRenderer.invoke('documentoGerado:mudarStatusLote', payload),
+    anexosParaEmail: (payload) => ipcRenderer.invoke('documentoGerado:anexosParaEmail', payload),
+    exportarPdf: (id) => ipcRenderer.invoke('documentoGerado:exportarPdf', id),
+    exportarPdfLote: (ids) => ipcRenderer.invoke('documentoGerado:exportarPdfLote', ids),
+    onProgresso: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('documentoGerado:progresso', fn)
+      return () => ipcRenderer.removeListener('documentoGerado:progresso', fn)
+    },
+    onProgressoPdf: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('documentoGerado:progressoPdf', fn)
+      return () => ipcRenderer.removeListener('documentoGerado:progressoPdf', fn)
+    },
+  },
+  promptIa: {
+    listar:    ()           => ipcRenderer.invoke('promptIa:listar'),
+    atualizar: (id, dados)  => ipcRenderer.invoke('promptIa:atualizar', id, dados),
+    criar:     (dados)      => ipcRenderer.invoke('promptIa:criar', dados),
+    editar:    (id, dados)  => ipcRenderer.invoke('promptIa:editar', id, dados),
+    excluir:   (id)         => ipcRenderer.invoke('promptIa:excluir', id),
+  },
+  // Cadastros de apoio da Entidade / faturamento.
+  ...Object.fromEntries(['naturezaJuridica', 'condicaoPagamento', 'banco'].map((r) => [r, {
+    listar:         (f)  => ipcRenderer.invoke(`${r}:listar`, f),
+    obter:          (id) => ipcRenderer.invoke(`${r}:obter`, id),
+    criar:          (d)  => ipcRenderer.invoke(`${r}:criar`, d),
+    atualizar:      (d)  => ipcRenderer.invoke(`${r}:atualizar`, d),
+    excluir:        (id) => ipcRenderer.invoke(`${r}:excluir`, id),
+    mudarAtivoLote: (p)  => ipcRenderer.invoke(`${r}:mudarAtivoLote`, p),
+  }])),
+  bancoImportarFebraban: () => ipcRenderer.invoke('banco:importarFebraban'),
+  municipio: {
+    buscar: (termo) => ipcRenderer.invoke('municipio:buscar', termo),
+  },
+  iaProvedor: {
+    listar:           ()          => ipcRenderer.invoke('iaProvedor:listar'),
+    modelosSugeridos: ()          => ipcRenderer.invoke('iaProvedor:modelosSugeridos'),
+    criar:            (dados)     => ipcRenderer.invoke('iaProvedor:criar', dados),
+    editar:           (id, dados) => ipcRenderer.invoke('iaProvedor:editar', id, dados),
+    excluir:          (id)        => ipcRenderer.invoke('iaProvedor:excluir', id),
+  },
+  emailIa: {
+    gerarCorpo: (payload) => ipcRenderer.invoke('emailIa:gerarCorpo', payload),
+  },
+  email: {
+    iniciarSync:       ()             => ipcRenderer.invoke('email:iniciarSync'),
+    pararSync:         ()             => ipcRenderer.invoke('email:pararSync'),
+    listarContas:      ()             => ipcRenderer.invoke('email:listarContas'),
+    obterConta:         (id)          => ipcRenderer.invoke('email:obterConta', id),
+    criarConta:         (dados)       => ipcRenderer.invoke('email:criarConta', dados),
+    atualizarConta:     (id, dados)   => ipcRenderer.invoke('email:atualizarConta', id, dados),
+    excluirConta:       (id)          => ipcRenderer.invoke('email:excluirConta', id),
+    testarConexao:      (dados)       => ipcRenderer.invoke('email:testarConexao', dados),
+    testarConexaoConta: (id)          => ipcRenderer.invoke('email:testarConexaoConta', id),
+    atualizarAssinatura: (id, dados)  => ipcRenderer.invoke('email:atualizarAssinatura', id, dados),
+    reordenarContas:     (idsNaOrdem) => ipcRenderer.invoke('email:reordenarContas', idsNaOrdem),
+    oauthLoginOutlook:   (opts)       => ipcRenderer.invoke('email:oauthLoginOutlook', opts || {}),
+    aplicarLoginOutlook: (id, dados)  => ipcRenderer.invoke('email:aplicarLoginOutlook', id, dados),
+    obterOutlookClientId: ()          => ipcRenderer.invoke('email:obterOutlookClientId'),
+    salvarOutlookClientId: (clientId) => ipcRenderer.invoke('email:salvarOutlookClientId', clientId),
+    listarMensagens:    (filtros)     => ipcRenderer.invoke('email:listarMensagens', filtros),
+    contarMensagens:    (filtros)     => ipcRenderer.invoke('email:contarMensagens', filtros),
+    reenviarFilaSaida:  (mensagemId)  => ipcRenderer.invoke('email:reenviarFilaSaida', mensagemId || null),
+    contarNaoLidas:     (contaId)     => ipcRenderer.invoke('email:contarNaoLidas', contaId),
+    contarNaoLidasPorPasta: (contaId) => ipcRenderer.invoke('email:contarNaoLidasPorPasta', contaId),
+    obterMensagem:      (id)          => ipcRenderer.invoke('email:obterMensagem', id),
+    marcarLida:         (id, lida)    => ipcRenderer.invoke('email:marcarLida', id, lida),
+    marcarLidaLote:     (ids, lida)   => ipcRenderer.invoke('email:marcarLidaLote', ids, lida),
+    listarMensagensAgrupadas: (filtros) => ipcRenderer.invoke('email:listarMensagensAgrupadas', filtros),
+    contarThreads:            (filtros) => ipcRenderer.invoke('email:contarThreads', filtros),
+    listarMensagensDaThread:  (grupo)   => ipcRenderer.invoke('email:listarMensagensDaThread', grupo),
+    sinalizar:          (id, sinalizada)   => ipcRenderer.invoke('email:sinalizar', id, sinalizada),
+    sinalizarLote:      (ids, sinalizada)  => ipcRenderer.invoke('email:sinalizarLote', ids, sinalizada),
+    listarRascunhos:    (contaId)          => ipcRenderer.invoke('email:listarRascunhos', contaId),
+    salvarRascunho:     (dados)            => ipcRenderer.invoke('email:salvarRascunho', dados),
+    excluirRascunho:    (id)               => ipcRenderer.invoke('email:excluirRascunho', id),
+    sugerirContatos:    (termo, limite)    => ipcRenderer.invoke('email:sugerirContatos', termo, limite),
+    listarEtiquetas:          ()               => ipcRenderer.invoke('email:listarEtiquetas'),
+    criarEtiqueta:            (dados)          => ipcRenderer.invoke('email:criarEtiqueta', dados),
+    atualizarEtiqueta:        (id, dados)      => ipcRenderer.invoke('email:atualizarEtiqueta', id, dados),
+    excluirEtiqueta:          (id)             => ipcRenderer.invoke('email:excluirEtiqueta', id),
+    etiquetasPorMensagens:    (ids)            => ipcRenderer.invoke('email:etiquetasPorMensagens', ids),
+    aplicarEtiquetaLote:      (ids, etiquetaId) => ipcRenderer.invoke('email:aplicarEtiquetaLote', ids, etiquetaId),
+    removerEtiquetaLote:      (ids, etiquetaId) => ipcRenderer.invoke('email:removerEtiquetaLote', ids, etiquetaId),
+    sincronizarAgora:   (contaId)     => ipcRenderer.invoke('email:sincronizarAgora', contaId),
+    ressincronizarDesde: (contaId, novaData) => ipcRenderer.invoke('email:ressincronizarDesde', contaId, novaData),
+    listarPastas:       (contaId)       => ipcRenderer.invoke('email:listarPastas', contaId),
+    descobrirPastasAgora: (contaId)     => ipcRenderer.invoke('email:descobrirPastasAgora', contaId),
+    arquivarLote:       (ids)           => ipcRenderer.invoke('email:arquivarLote', ids),
+    moverParaInboxLote: (ids)           => ipcRenderer.invoke('email:moverParaInboxLote', ids),
+    excluirLote:        (ids)           => ipcRenderer.invoke('email:excluirLote', ids),
+    excluirPermanenteLote: (ids)        => ipcRenderer.invoke('email:excluirPermanenteLote', ids),
+    esvaziarLixeira:    (contaId)       => ipcRenderer.invoke('email:esvaziarLixeira', contaId || null),
+    enviar:             (dados)       => ipcRenderer.invoke('email:enviar', dados),
+    selecionarAnexos:   ()            => ipcRenderer.invoke('email:selecionarAnexos'),
+    onNovaMensagem: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('email:novaMensagem', fn)
+      return () => ipcRenderer.removeListener('email:novaMensagem', fn)
+    },
+    onFilaSaida: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('email:filaSaida', fn)
+      return () => ipcRenderer.removeListener('email:filaSaida', fn)
+    },
+    onProgressoSync: (cb) => {
+      const fn = (_, data) => cb(data)
+      ipcRenderer.on('email:progressoSync', fn)
+      return () => ipcRenderer.removeListener('email:progressoSync', fn)
+    },
+  },
   viagens: {
     listar:            (filtros) => ipcRenderer.invoke('viagens:listar', filtros),
     obter:             (id)      => ipcRenderer.invoke('viagens:obter', id),
@@ -273,6 +416,8 @@ const api = {
     atualizar:         (dados)   => ipcRenderer.invoke('viagens:atualizar', dados),
     excluir:           (id)      => ipcRenderer.invoke('viagens:excluir', id),
     mudarStatus:       (payload) => ipcRenderer.invoke('viagens:mudarStatus', payload),
+    mudarStatusLote:   (payload) => ipcRenderer.invoke('viagens:mudarStatusLote', payload),
+    anexosParaEmail:   (payload) => ipcRenderer.invoke('viagens:anexosParaEmail', payload),
     listarConsultores: ()        => ipcRenderer.invoke('viagens:listarConsultores'),
     exportarExcel:     (id)      => ipcRenderer.invoke('viagens:exportarExcel', id),
     exportarExcelLote: (ids)     => ipcRenderer.invoke('viagens:exportarExcelLote', ids),

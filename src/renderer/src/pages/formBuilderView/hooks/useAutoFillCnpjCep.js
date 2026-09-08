@@ -39,9 +39,16 @@ export function useAutoFillCnpjCep({ form, setForm }) {
     try_('natureza',     data.natureza_juridica)
     try_('natureza_juridica', data.natureza_juridica)
     try_('porte',        data.porte)
-    // ie/rg limpa ao buscar PJ
-    try_('ie_rg',        '')
-    try_('ie',           '')
+    // Inscricao Estadual (SINTEGRA, via CNPJá). So preenche se veio; se o
+    // cliente nao for contribuinte, `inscricao_estadual` vem vazio e a UI
+    // NAO sobrescreve o que ja estava (o usuario pode ter posto "ISENTO").
+    const ie = String(data.inscricao_estadual || '').trim()
+    if (ie) {
+      try_('inscricao_estadual', ie)
+      try_('inscricaoEstadual',  ie)
+      try_('ie',                 ie)
+      try_('ie_rg',              ie)
+    }
     return up
   }
 
@@ -80,6 +87,16 @@ export function useAutoFillCnpjCep({ form, setForm }) {
       const res = await window.api.entidade.buscarCnpj(digits)
       if (!res.ok) { setDocErro(e => ({ ...e, [campo.nome_campo]: res.erro })); return }
       setForm(f => ({ ...f, ...buildCnpjUpdates(res.data, Object.keys(f)) }))
+      // Aviso sobre a Inscricao Estadual: quando a API de IE nao respondeu
+      // (sem token, fora do ar, sem credito). Nao e erro — o resto foi
+      // preenchido; so a IE precisa ser digitada.
+      if (res.data.avisoIe) {
+        setDocErro(e => ({ ...e, [campo.nome_campo]: res.data.avisoIe }))
+      } else if (res.data.naoContribuinte) {
+        setDocErro(e => ({ ...e, [campo.nome_campo]: 'Empresa não contribuinte de ICMS (sem Inscrição Estadual).' }))
+      } else {
+        setDocErro(e => ({ ...e, [campo.nome_campo]: null }))
+      }
     } finally {
       setDocLoading(l => ({ ...l, [campo.nome_campo]: false }))
     }

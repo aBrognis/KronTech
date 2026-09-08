@@ -12,7 +12,10 @@
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1), min-width 0.28s cubic-bezier(0.4,0,0.2,1);
   overflow: visible;
   position: relative;
-  z-index: 10;
+  /* Acima da .tab-bar (z-index 100) e da .topbar (z-index 5) da area
+     principal — senao a barra de abas cobre o botao de recolher, que fica
+     em right negativo e vaza pra dentro da area principal. */
+  z-index: 150;
   flex-shrink: 0;
   box-shadow: 1px 0 0 var(--bd);
 }
@@ -48,27 +51,15 @@ html.light .sb::before {
   min-width: var(--sb-w-c);
 }
 
-/* Toggle — fica na borda direita da sidebar, aparece acima da área principal */
+/* Toggle — fica na borda direita da sidebar, acima da área principal.
+   Visual: classe global .toggle-recolher (App.css). Aqui só o
+   posicionamento. */
 .sb-toggle {
   position: absolute;
-  right: -10px;
+  right: -11px;
   top: 18px;
-  width: 20px;
-  height: 20px;
-  background: var(--s2);
-  border: 1px solid var(--bd2);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
   z-index: 20;
-  transition: var(--tr);
-  color: var(--t2);
 }
-.sb-toggle:hover { background: var(--or); border-color: var(--or); color: #fff; }
-.sb-toggle-icon { display: flex; width: 11px; height: 11px; transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); }
-.sb.collapsed .sb-toggle-icon { transform: rotate(180deg); }
 
 /* Logo */
 .sb-logo {
@@ -106,6 +97,30 @@ html.light .sb::before {
   letter-spacing: -0.6px; line-height: 1.1; color: var(--t1);
   flex-shrink: 0;
 }
+
+/* Busca */
+.sb-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 14px;
+  padding: 0 10px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  background: var(--s2);
+  flex-shrink: 0;
+  transition: border-color .16s, box-shadow .16s;
+}
+.sb-search:focus-within { border-color: var(--or); box-shadow: 0 0 0 3px var(--or3); }
+.sb-search-icon { color: var(--t3); flex-shrink: 0; }
+.sb-search-input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  font-size: 12px; color: var(--t1); font-family: var(--fb);
+}
+.sb-search-input::placeholder { color: var(--t3); }
+.sb.collapsed .sb-search { padding: 0; justify-content: center; width: 32px; margin: 10px auto; }
+.sb.collapsed .sb-search-input { display: none; }
 
 /* Scroll */
 .sb-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px 0; }
@@ -443,11 +458,6 @@ html.light .sb {
   box-shadow: 1px 0 0 var(--bd), var(--sh-xs);
 }
 
-html.light .sb-toggle {
-  background: var(--s2);
-  border-color: var(--bd);
-  color: var(--t2);
-}
 
 html.light .sb-logo { border-bottom-color: var(--bd); }
 

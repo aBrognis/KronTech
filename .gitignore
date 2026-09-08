@@ -5,6 +5,10 @@ node_modules/
 dist/
 out/
 out-release/
+out-release-link/
+
+# Notas de release pendentes (Lançar Versão) — consumidas/apagadas após o lançamento
+RELEASE_NOTES.md
 release/
 
 # Electron build cache
@@ -41,4 +45,10 @@ builder-debug.yml
 
 # Launcher compilado (gerado localmente)
 scripts/launcher/KronTechLauncher.exe
+
+# Dumps de banco e logs soltos (NUNCA versionar nem empacotar — pesam GB)
 db_backups/
+backup/
+*.dump
+_ul
+_ul*

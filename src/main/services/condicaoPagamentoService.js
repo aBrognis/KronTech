@@ -1,0 +1,98 @@
+import { query, queryOne } from '../db'
+
+// CRUD de Condicoes de Pagamento + grids-filho (parcelas, formas aceitas).
+
+const COLS = [
+  'descricao', 'tipo', 'base_prazo', 'dias_uteis', 'empurrar_dia_util', 'dia_fixo_mes',
+  'multa_percentual', 'juros_mes_percentual', 'desconto_percentual', 'desconto_ate_dias',
+  'acrescimo_parcelamento_percentual', 'valor_minimo', 'max_parcelas', 'papel_permitido',
+  'forma_padrao', 'observacoes', 'ativo',
+]
+const FORMAS_VALIDAS = ['boleto', 'pix', 'cartao', 'transferencia', 'dinheiro', 'cheque']
+
+function up(v) { return typeof v === 'string' ? v.trim().toUpperCase() : v }
+
+export async function listar({ busca } = {}) {
+  const cond = ['ativo IS DISTINCT FROM false']
+  const params = []
+  if (busca && String(busca).trim()) {
+    params.push(`%${busca.trim()}%`)
+    cond.push(`(descricao ILIKE $1 OR codigo ILIKE $1)`)
+  }
+  return query(
+    `SELECT c.*,
+       (SELECT count(*) FROM condicao_parcela_001 p WHERE p.condicao_id = c.id) AS qtd_parcelas,
+       (SELECT json_agg(f.forma) FROM condicao_forma_001 f WHERE f.condicao_id = c.id) AS formas
+     FROM condicao_pagamento_001 c
+     WHERE ${cond.join(' AND ')}
+     ORDER BY codigo ASC LIMIT 1000`,
+    params
+  )
+}
+
+export async function obter(id) {
+  const cond = await queryOne('SELECT * FROM condicao_pagamento_001 WHERE id = $1', [id])
+  if (!cond) return null
+  const parcelas = await query('SELECT * FROM condicao_parcela_001 WHERE condicao_id = $1 ORDER BY ordem, dias', [id])
+  const formasRows = await query('SELECT forma FROM condicao_forma_001 WHERE condicao_id = $1', [id])
+  return { ...cond, parcelas, formas: formasRows.map(r => r.forma) }
+}
+
+async function syncParcelas(condicaoId, lista) {
+  await query('DELETE FROM condicao_parcela_001 WHERE condicao_id = $1', [condicaoId])
+  const parcelas = Array.isArray(lista) ? lista : []
+  for (let i = 0; i < parcelas.length; i++) {
+    const p = parcelas[i]
+    await query(
+      `INSERT INTO condicao_parcela_001 (condicao_id, ordem, dias, percentual)
+       VALUES ($1, $2, $3, $4)`,
+      [condicaoId, i + 1, Number(p.dias) || 0, Number(p.percentual) || 0]
+    )
+  }
+}
+
+async function syncFormas(condicaoId, lista) {
+  await query('DELETE FROM condicao_forma_001 WHERE condicao_id = $1', [condicaoId])
+  const formas = (Array.isArray(lista) ? lista : []).filter(f => FORMAS_VALIDAS.includes(f))
+  for (const f of formas) {
+    await query('INSERT INTO condicao_forma_001 (condicao_id, forma) VALUES ($1, $2)', [condicaoId, f])
+  }
+}
+
+export async function criar(dados) {
+  const d = { ...dados, descricao: up(dados.descricao) }
+  const cols = COLS.filter(c => d[c] !== undefined)
+  const ph = cols.map((_, i) => `$${i + 1}`)
+  const row = await queryOne(
+    `INSERT INTO condicao_pagamento_001 (${cols.join(', ')}, codigo)
+     VALUES (${ph.join(', ')}, LPAD(nextval('condicao_pagamento_001_codigo_seq')::text, 4, '0'))
+     RETURNING *`,
+    cols.map(c => d[c])
+  )
+  await syncParcelas(row.id, d.parcelas)
+  await syncFormas(row.id, d.formas)
+  return obter(row.id)
+}
+
+export async function atualizar({ id, ...dados }) {
+  const d = { ...dados, descricao: up(dados.descricao) }
+  const cols = COLS.filter(c => d[c] !== undefined)
+  if (cols.length) {
+    const sets = cols.map((c, i) => `${c} = $${i + 2}`)
+    await query(`UPDATE condicao_pagamento_001 SET ${sets.join(', ')}, alterado_em = NOW() WHERE id = $1`, [id, ...cols.map(c => d[c])])
+  }
+  await syncParcelas(id, d.parcelas)
+  await syncFormas(id, d.formas)
+  return obter(id)
+}
+
+export async function excluir(id) {
+  await query('DELETE FROM condicao_pagamento_001 WHERE id = $1', [id])
+  return { id }
+}
+
+export async function mudarAtivoLote(ids, ativo) {
+  if (!Array.isArray(ids) || !ids.length) return { atualizadas: 0 }
+  const rows = await query('UPDATE condicao_pagamento_001 SET ativo = $2, alterado_em = NOW() WHERE id = ANY($1::int[]) RETURNING id', [ids, ativo])
+  return { atualizadas: rows.length }
+}

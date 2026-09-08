@@ -2,6 +2,7 @@ import { X, Bell, Clock3 } from 'lucide-react'
 import { RECORRENCIAS, MIN_OPTIONS, STATUS_AUTO_LABEL, corStatusAuto } from './utils'
 import SeletorBusca from '../../components/SeletorBusca'
 import FormToolbar from '../../components/FormToolbar'
+import InputData from '../../components/InputData'
 import usePesquisaConfig from '../../hooks/usePesquisaConfig'
 
 export default function EventoModal({ modal, modo, form, setForm, categorias, statuses, clientes, saving, erro, onSave, onDelete, onClose, onAlterar, onDesistir, onConfirmarStatus }) {
@@ -101,7 +102,7 @@ export default function EventoModal({ modal, modo, form, setForm, categorias, st
           <div style={{ display:'grid', gridTemplateColumns:'1.2fr 1fr 1fr', gap:12 }}>
             <div className="form-group" style={{ margin:0 }}>
               <label className="form-label">Data</label>
-              <input type="date" className="form-input" value={form.dt_evento} onChange={e=>set('dt_evento',e.target.value)} disabled={isRO}/>
+              <InputData value={form.dt_evento} onChange={v=>set('dt_evento',v)} disabled={isRO}/>
             </div>
             <div className="form-group" style={{ margin:0 }}>
               <label className="form-label">Início</label>

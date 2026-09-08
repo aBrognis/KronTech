@@ -1,5 +1,5 @@
 import { Pool } from 'pg'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
 import { join } from 'path'
 import {
   getConfig, getDecryptedBancoConfig, getDecryptedBancoProducaoConfig,
@@ -67,9 +67,15 @@ async function capturarColunasDDL(client, nomeTabela) {
   return rows.map(r => {
     let tipo
     if (r.data_type === 'character varying') tipo = r.character_maximum_length ? `VARCHAR(${r.character_maximum_length})` : 'VARCHAR'
+    // CHAR fixo (data_type === 'character', udt bpchar) — SEM o tamanho o
+    // Postgres assume character(1) e trunca. senha_hash_lookup e char(64).
+    else if (r.data_type === 'character') tipo = r.character_maximum_length ? `CHARACTER(${r.character_maximum_length})` : 'CHARACTER(1)'
     else if (r.data_type === 'numeric') tipo = (r.numeric_precision != null) ? `NUMERIC(${r.numeric_precision},${r.numeric_scale ?? 0})` : 'NUMERIC'
     else if (r.data_type === 'USER-DEFINED') tipo = r.udt_name
     else if (r.data_type === 'ARRAY') tipo = r.udt_name.replace(/^_/, '') + '[]'
+    // Tipos com precisao de tempo (timestamp(6), time(3)) tambem perdem o
+    // parametro no toUpperCase cru — mas o default do PG e microssegundos,
+    // igual ao que o dump traz, entao nao quebra. Deixa como esta.
     else tipo = r.data_type.toUpperCase()
 
     let coluna = `"${r.column_name}" ${tipo}`
@@ -210,10 +216,47 @@ async function dumpBanco(client, tabelas, onTabela) {
   return dump
 }
 
+// Escreve o backup em STREAM, LINHA A LINHA, pra nunca montar uma string
+// grande. Bancos grandes (e-mails, anexos, imagens em base64) passavam do
+// limite de string do V8 (~512MB) no JSON.stringify e davam "Invalid
+// string length" — inclusive uma unica tabela grande estourava.
 function salvarBackupJson(dump, destino) {
   const pastaDestino = join(destino, '..')
   if (!existsSync(pastaDestino)) mkdirSync(pastaDestino, { recursive: true })
-  writeFileSync(destino, JSON.stringify({ criadoEm: new Date().toISOString(), tabelas: dump }), 'utf-8')
+  return new Promise((resolve, reject) => {
+    const ws = createWriteStream(destino, { encoding: 'utf-8' })
+    ws.on('error', reject)
+    ws.on('finish', resolve)
+
+    const escrever = (s) => new Promise((res, rej) => {
+      ws.write(s, (err) => err ? rej(err) : res())
+    })
+
+    ;(async () => {
+      try {
+        await escrever(`{"criadoEm":${JSON.stringify(new Date().toISOString())},"tabelas":{`)
+        const nomes = Object.keys(dump)
+        for (let t = 0; t < nomes.length; t++) {
+          const tab = nomes[t]
+          const { colunas = [], colunasJson = [], linhas = [] } = dump[tab] || {}
+          await escrever(`${t ? ',' : ''}${JSON.stringify(tab)}:{`)
+          await escrever(`"colunas":${JSON.stringify(colunas)},`)
+          await escrever(`"colunasJson":${JSON.stringify(colunasJson)},`)
+          await escrever(`"linhas":[`)
+          for (let r = 0; r < linhas.length; r++) {
+            // Uma linha por vez: mesmo com base64 pesado, uma linha
+            // isolada nunca chega perto do limite.
+            await escrever(`${r ? ',' : ''}${JSON.stringify(linhas[r])}`)
+          }
+          await escrever(`]}`)
+        }
+        ws.end('}}')
+      } catch (err) {
+        ws.destroy()
+        reject(err)
+      }
+    })()
+  })
 }
 
 // ── Restauração em dev, dentro de uma transação já aberta ──────────────────
@@ -224,6 +267,23 @@ function salvarBackupJson(dump, destino) {
 // tabela fica pela metade.
 
 const LOTE = 500
+
+// Estima o tamanho medio (bytes) de uma linha por amostragem e escolhe um
+// lote de INSERT que nao estoure a memoria nem o protocolo do pg. Tabelas
+// com linhas pesadas (email_mensagem_001 tem corpo_html com imagens
+// embutidas em base64, ~4MB/linha) precisam de lotes pequenos.
+function loteParaTabela(linhas) {
+  if (!linhas.length) return LOTE
+  const amostra = linhas.slice(0, Math.min(20, linhas.length))
+  let soma = 0
+  for (const l of amostra) {
+    try { soma += Buffer.byteLength(JSON.stringify(l)) } catch { soma += 5000 }
+  }
+  const medio = soma / amostra.length
+  // Alvo: no maximo ~8MB por INSERT.
+  const alvo = Math.max(1, Math.floor((8 * 1024 * 1024) / Math.max(medio, 1)))
+  return Math.min(LOTE, alvo)
+}
 
 async function restaurarNaTransacao(client, tabelasOrdenadas, dumpProducao, schemaProducao, onTabela) {
   // Recria cada tabela do zero com o schema capturado de produção — resolve
@@ -241,8 +301,9 @@ async function restaurarNaTransacao(client, tabelasOrdenadas, dumpProducao, sche
     const { colunas, colunasJson = [], linhas } = dumpProducao[tabela] || { colunas: [], linhas: [] }
     const setJson = new Set(colunasJson)
     if (linhas.length && colunas.length) {
-      for (let offset = 0; offset < linhas.length; offset += LOTE) {
-        const bloco = linhas.slice(offset, offset + LOTE)
+      const lote = loteParaTabela(linhas)
+      for (let offset = 0; offset < linhas.length; offset += lote) {
+        const bloco = linhas.slice(offset, offset + lote)
         const params = []
         const placeholders = bloco.map((linha, idx) => {
           const base = idx * colunas.length
@@ -405,7 +466,7 @@ export async function importarBancoDeProducao({ onProgresso, BrowserWindow, toke
     const cfg = getConfig()
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const destinoBackup = join(cfg.Caminhos.backup, 'import-banco', `backup-dev-${timestamp}.json`)
-    salvarBackupJson(dumpDevBackup, destinoBackup)
+    await salvarBackupJson(dumpDevBackup, destinoBackup)
 
     // ── restaurando_dev (camada 2: transação única, atomicidade nativa) ──
     emitir('restaurando_dev', { atual: 0, total: tabelas.length })

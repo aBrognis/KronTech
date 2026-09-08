@@ -1,5 +1,5 @@
 import { spawn } from 'child_process'
-import { readFileSync, writeFileSync, createReadStream, statSync } from 'fs'
+import { readFileSync, writeFileSync, createReadStream, statSync, mkdirSync, existsSync, symlinkSync } from 'fs'
 import { join } from 'path'
 import { app } from 'electron'
 import { getDecryptedBancoProducaoConfig, getDecryptedGithubToken } from '../config'
@@ -99,7 +99,57 @@ function lerVersaoAtual() {
 // carregado em memória pelo processo Electron atual trava/corrompe a
 // cópia que o electron-builder tenta empacotar depois — foi a causa real
 // do pipeline travar sem nunca terminar "Empacotando...".
-const OUT_DIR_RELEASE = 'out-release'
+//
+// Além disso, todo o projeto vive dentro de uma pasta sincronizada pelo
+// OneDrive (c:\Users\ander\OneDrive\...). O electron-builder extrai um
+// electron.exe de ~177MB dentro do diretório de saída — o OneDrive tenta
+// hashear/sincronizar esse arquivo grande enquanto ele ainda está sendo
+// escrito, e esse lock de I/O é o que trava o pipeline indefinidamente
+// (mesmo sintoma causado pelo Windows Defender, já mitigado antes, mas
+// insuficiente sozinho). Por isso a SAÍDA do build (que inclui esse
+// electron.exe extraído) vai inteira para fora do OneDrive, em
+// C:\KronTech\release-build — mesmo padrão já usado pelo devcache do
+// projeto (C:\devcache\KronTech).
+//
+// electron-builder resolve node_modules e o entry point "main" ambos
+// relativos a directories.app — que PRECISA continuar sendo o projeto
+// real no OneDrive (node_modules de verdade, não um link: uma junction
+// pra node_modules inteiro faz o electron-builder se perder resolvendo
+// centenas de package.json de dependências via realpath, travando
+// silenciosamente na fase "searching for node modules" — testado e
+// descartado). E "main" como caminho ABSOLUTO fora do appDir também
+// quebra: o electron-builder resolve o entry point relativo ao appDir
+// dentro do .asar, gerando "..\..\..\KronTech\..." e falhando com "was
+// not found in this archive" — testado e descartado.
+//
+// Solução: uma junction PEQUENA e ISOLADA dentro do projeto
+// (out-release-link/ → C:\KronTech\release-build\out-release), só para
+// que "main" possa ser um caminho relativo válido
+// ("out-release-link/main/index.js"). Só essa pasta específica é
+// resolvida via link durante o empacotamento — node_modules continua
+// 100% real, sem indireção.
+const RELEASE_BUILD_ROOT = 'C:\\KronTech\\release-build'
+const OUT_DIR_RELEASE = join(RELEASE_BUILD_ROOT, 'out-release')
+const DIST_DIR_RELEASE = join(RELEASE_BUILD_ROOT, 'dist')
+const OUT_RELEASE_LINK = join(ROOT, 'out-release-link')
+
+// process.execPath dentro do processo main é o electron.exe, não um Node
+// puro — mesmo com ELECTRON_RUN_AS_NODE=1 (setado globalmente neste
+// ambiente, já documentado como causa de bugs no Electron aqui) o
+// electron-builder internamente spawna MAIS processos filhos (electron.exe
+// de verificação, app-builder-bin) que herdam o env do processo que os
+// chamou. Se ELECTRON_RUN_AS_NODE não propagar corretamente pra essas
+// subcamadas, um electron.exe filho tenta abrir janela/GPU e trava
+// silenciosamente esperando um display — é a causa mais provável do
+// pipeline travar sempre no mesmo ponto (empacotamento), mesmo depois de
+// eliminar Defender e OneDrive como causas de I/O. Corrigido usando o
+// node.exe real do sistema (nunca process.execPath) e garantindo
+// ELECTRON_RUN_AS_NODE=1 explícito em todo env repassado a processos
+// filhos deste pipeline.
+const NODE_BIN = 'C:\\Program Files\\nodejs\\node.exe'
+function envFilho(extra = {}) {
+  return { ...process.env, ELECTRON_RUN_AS_NODE: '1', ...extra }
+}
 
 // Fases 1-3 do plano: lê versão, builda, empacota — sem tocar git nem
 // GitHub. Retorna a versão calculada e o caminho do instalador gerado.
@@ -110,35 +160,61 @@ export async function gerarInstalador({ onProgresso }) {
   const { pkgPath, pkg, versaoAtual } = lerVersaoAtual()
   const novaVersao = proximaVersaoPatch(versaoAtual)
 
-  emitir('buildando', { versao: novaVersao })
-  const eviteBin = join(ROOT, 'node_modules', 'electron-vite', 'bin', 'electron-vite.js')
-  await spawnAsync(process.execPath, [eviteBin, 'build', '--outDir', OUT_DIR_RELEASE], { cwd: ROOT, env: process.env },
-    linha => emitir('buildando', { versao: novaVersao, linha }))
+  mkdirSync(RELEASE_BUILD_ROOT, { recursive: true })
+  mkdirSync(OUT_DIR_RELEASE, { recursive: true })
+  // Junction idempotente — criada uma vez, reaproveitada em todo lançamento.
+  if (!existsSync(OUT_RELEASE_LINK)) {
+    symlinkSync(OUT_DIR_RELEASE, OUT_RELEASE_LINK, 'junction')
+  }
 
-  // electron-builder resolve o ponto de entrada do app a partir de
-  // package.json "main" — normalmente "out/main/index.js" (o que o dev
-  // usa). Aponta temporariamente pro build isolado só durante o
-  // empacotamento, sempre restaurando o valor original depois (mesmo se
-  // o empacotamento falhar) — nunca deixa o package.json sujo no meio de
-  // um erro.
-  const mainOriginal = pkg.main
-  const mainRelease = `${OUT_DIR_RELEASE}/main/index.js`
+  // "version" precisa virar novaVersao ANTES do build (não só do
+  // empacotamento): electron.vite.config.mjs lê package.json em build time
+  // pra injetar __APP_VERSION__ no bundle do renderer (usado na tela de
+  // splash/login) — se o build rodar com a versão antiga, o instalador
+  // final embute o número de versão errado na UI, mesmo o electron-builder
+  // nomeando o .exe corretamente com a versão nova. E "main" precisa virar
+  // relativo via a junction pequena (out-release-link/ →
+  // C:\KronTech\release-build\out-release) só durante o empacotamento —
+  // sempre restaurando o package.json original depois (mesmo se build OU
+  // empacotamento falhar), nunca deixando o arquivo sujo no meio de um
+  // erro. directories.app do electron-builder continua sendo ROOT
+  // (node_modules real, sem link).
+  //
+  // electron-builder lê artifactName ("KronTech-Setup-${version}.exe") do
+  // package.json no momento do empacotamento, e o bump real de versão só
+  // acontece depois (em versionarEPublicarGit, por decisão de segurança:
+  // nunca commitar antes de confirmar que build+package funcionaram). Sem
+  // a versão nova aqui o instalador sairia nomeado com a versão ANTIGA,
+  // mas o código downstream (exePath, publicarReleaseGithub) já espera o
+  // nome com novaVersao — causava ENOENT ao tentar publicar um arquivo que
+  // não existe com esse nome.
+  const pkgOriginal = pkg
   try {
-    writeFileSync(pkgPath, JSON.stringify({ ...pkg, main: mainRelease }, null, 2) + '\n', 'utf-8')
+    writeFileSync(pkgPath, JSON.stringify({ ...pkg, version: novaVersao }, null, 2) + '\n', 'utf-8')
+
+    emitir('buildando', { versao: novaVersao })
+    const eviteBin = join(ROOT, 'node_modules', 'electron-vite', 'bin', 'electron-vite.js')
+    await spawnAsync(NODE_BIN, [eviteBin, 'build', '--outDir', OUT_DIR_RELEASE], { cwd: ROOT, env: envFilho() },
+      linha => emitir('buildando', { versao: novaVersao, linha }))
+
+    writeFileSync(pkgPath, JSON.stringify({ ...pkg, version: novaVersao, main: 'out-release-link/main/index.js' }, null, 2) + '\n', 'utf-8')
 
     emitir('empacotando', { versao: novaVersao })
     const builderBin = join(ROOT, 'node_modules', 'electron-builder', 'cli.js')
-    const envPkg = { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+    const envPkg = envFilho({ CSC_IDENTITY_AUTO_DISCOVERY: 'false' })
     delete envPkg.WIN_CSC_LINK
     delete envPkg.CSC_LINK
     delete envPkg.CSC_KEY_PASSWORD
-    await spawnAsync(process.execPath, [builderBin, '--win', '--config.npmRebuild=false'], { cwd: ROOT, env: envPkg },
+    await spawnAsync(NODE_BIN, [
+      builderBin, '--win', '--config.npmRebuild=false',
+      `--config.directories.output=${DIST_DIR_RELEASE}`,
+    ], { cwd: ROOT, env: envPkg },
       linha => emitir('empacotando', { versao: novaVersao, linha }))
   } finally {
-    writeFileSync(pkgPath, JSON.stringify({ ...pkg, main: mainOriginal }, null, 2) + '\n', 'utf-8')
+    writeFileSync(pkgPath, JSON.stringify(pkgOriginal, null, 2) + '\n', 'utf-8')
   }
 
-  const distDir = join(ROOT, 'dist')
+  const distDir = DIST_DIR_RELEASE
   const exeName = `KronTech-Setup-${novaVersao}.exe`
   const exePath = join(distDir, exeName)
 
@@ -164,7 +240,7 @@ async function versionarEPublicarGit(novaVersao, onLinha) {
 // Publica a release no GitHub via API REST direta (sem depender do gh CLI
 // instalado/autenticado na máquina) — usa o token cifrado guardado em
 // Configurações > Token do GitHub.
-async function publicarReleaseGithub(novaVersao, distDir, onLinha) {
+async function publicarReleaseGithub(novaVersao, distDir, notas, onLinha) {
   const token = getDecryptedGithubToken()
   if (!token) throw new Error('Token do GitHub não configurado. Configure em Configurações > Token do GitHub.')
 
@@ -181,7 +257,7 @@ async function publicarReleaseGithub(novaVersao, distDir, onLinha) {
     body: JSON.stringify({
       tag_name: `v${novaVersao}`,
       name: `v${novaVersao}`,
-      body: `Versão ${novaVersao}, publicada via Lançar Versão.`,
+      body: notas?.trim() || `Versão ${novaVersao}, publicada via Lançar Versão.`,
     }),
   })
   if (!resCriar.ok) {
@@ -219,7 +295,7 @@ async function publicarReleaseGithub(novaVersao, distDir, onLinha) {
 // gera o instalador, versiona no git e publica no GitHub. O token só é
 // invalidado ao final (sucesso OU falha) — mesmo padrão de
 // services/importarBanco.js.
-export async function lancarNovaVersao({ onProgresso, token }) {
+export async function lancarNovaVersao({ onProgresso, token, notas }) {
   const emitir = (fase, extra = {}) => onProgresso?.({ fase, ...extra })
   const bancoProd = getDecryptedBancoProducaoConfig()
   if (!bancoProd.host || !bancoProd.database) {
@@ -241,7 +317,7 @@ export async function lancarNovaVersao({ onProgresso, token }) {
     await versionarEPublicarGit(novaVersao, linha => emitir('versionando', { versao: novaVersao, linha }))
 
     emitir('publicando', { versao: novaVersao })
-    const releaseUrl = await publicarReleaseGithub(novaVersao, distDir, linha => emitir('publicando', { versao: novaVersao, linha }))
+    const releaseUrl = await publicarReleaseGithub(novaVersao, distDir, notas, linha => emitir('publicando', { versao: novaVersao, linha }))
 
     emitir('concluido', { versao: novaVersao, releaseUrl })
     return { novaVersao, releaseUrl }

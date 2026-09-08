@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { derivarCor } from '../lib/corPersonalizada'
+import { MENU_BASE } from '../components/Sidebar'
 
 /* CSS injetado: cor de destaque parametrizada por accentColor */
 function buildCss(cDark, cLight) {
@@ -55,8 +56,20 @@ html.light .lp-tag-item{border-color:rgba(${cLight.rgb},.14);background:rgba(${c
 `
 }
 
-const TAGS    = ['AGENDA','ARQUIVOS','SQL','FORMULÁRIOS','DASHBOARD','RELATÓRIOS']
+// Lista CURADA (nao gerada) — sao rotulos curtos de marketing, nem todo
+// modulo do menu vira tag. Ao criar um modulo novo relevante, acrescente
+// aqui. A CONTAGEM abaixo (QTD_MODULOS) essa sim e automatica.
+const TAGS    = ['E-MAIL','AGENDA','DOCUMENTOS','COFRE','DESPESAS','DASHBOARD','ARQUIVOS','SQL']
 const FF      = "'Segoe UI Variable','Segoe UI',system-ui,sans-serif"
+
+// Conta os modulos de uso do menu (todos os itens dos grupos), ignorando
+// as ferramentas de configuracao. Atualiza sozinho quando um item novo
+// entra em MENU_BASE (Sidebar.jsx).
+const IGNORAR_NA_CONTAGEM = new Set(['dashboard-designer', 'formbuilder'])
+const QTD_MODULOS = MENU_BASE
+  .flatMap(g => g.items || [])
+  .filter(it => !IGNORAR_NA_CONTAGEM.has(it.id))
+  .length
 
 /* ── Particle engine ─────────────────────────────────────────────────────── */
 function startParticles(canvas, getColors, count = 92) {
@@ -303,10 +316,10 @@ export default function LoginPage({ onLogin, accentColor }) {
 
           <div style={{marginTop:30,width:38,height:1,background:`linear-gradient(90deg,transparent,${tk.accent},transparent)`,opacity:.4}}/>
 
-          <div ref={tagsRef} style={{marginTop:22,display:'flex',gap:7,flexWrap:'wrap',justifyContent:'center',maxWidth:300}}/>
+          <div ref={tagsRef} style={{marginTop:22,display:'flex',gap:7,flexWrap:'wrap',justifyContent:'center',maxWidth:340}}/>
 
           <div style={{marginTop:34,display:'flex',gap:28}}>
-            {[['∞','PRODUTIVIDADE'],['01','CONTROLE'],['24/7','DISPONÍVEL']].map(([v,l]) => (
+            {[[String(QTD_MODULOS),'MÓDULOS'],['1','LUGAR'],['24/7','DISPONÍVEL']].map(([v,l]) => (
               <div key={l} style={{textAlign:'center'}}>
                 <div style={{fontSize:13,fontWeight:800,color:tk.accent,letterSpacing:'-.5px',opacity:.7}}>{v}</div>
                 <div style={{fontSize:'7.5px',letterSpacing:'2px',color:isDark?'#4a4a4a':'#9a9cb0',marginTop:2}}>{l}</div>

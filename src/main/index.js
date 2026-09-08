@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, nativeTheme } from 'electron'
 import { join } from 'path'
+import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs'
 import { loadConfig, encryptSensitiveConfig, IS_DEV } from './config'
 
 // Perfil do Chromium (cache, cookies etc.) isolado do de produção — sem
@@ -12,6 +13,9 @@ import { registerHandlers } from './ipcHandlers'
 import { initDb } from './db'
 import { runMigrations } from './migrate'
 import { startReminderCheck } from './services/reminder'
+import { startEmailSync, atualizarBadgeNaoLidas } from './services/emailSyncService'
+import { registerEmailSyncControl } from './handlers/emailSyncControl'
+import { registrarEsquemaKmail, registrarHandlerKmail } from './services/emailAnexoProtocol'
 import { setupAutoUpdater } from './services/updater'
 import { confirmarStatus } from './handlers/agenda'
 import { query, queryOne } from './db'
@@ -85,7 +89,14 @@ function createWindow() {
   })
 
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
-  win.on('ready-to-show', () => { win.show(); if (isDev) win.maximize() })
+  win.on('ready-to-show', () => {
+    win.show()
+    if (isDev) win.maximize()
+    // Reaplica o selo (overlay) de e-mails nao lidos DEPOIS que a janela
+    // tem botao na barra de tarefas. Se atualizarBadgeNaoLidas rodar no
+    // login antes disso, o Windows descarta o setOverlayIcon em silencio.
+    setTimeout(() => atualizarBadgeNaoLidas().catch(() => {}), 1500)
+  })
 
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -112,6 +123,10 @@ function createWindow() {
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.anderson.krontech')
 }
+
+// Esquema kmail:// (anexos de e-mail servidos ao iframe do leitor). Tem que
+// ser registrado antes de app.whenReady.
+registrarEsquemaKmail()
 
 // Necessário para os botões de ação da notificação de status da Agenda: o
 // clique dispara uma URI krontech://... que o Windows abre como "nova
@@ -143,11 +158,38 @@ if (!app.isPackaged) {
 } else {
   app.setAsDefaultProtocolClient('krontech')
 }
-// Em dev, cada execução roda contra um banco/config isolado (C:\KronTech\
-// KronTech_Teste) — não faz sentido brigar pelo lock de instância única com
-// uma instância de produção já aberta (nem com outra instância de dev, ao
-// testar cenários em paralelo). O lock só protege o app empacotado real.
-const gotLock = IS_DEV ? true : app.requestSingleInstanceLock()
+// Lockfile do dev: grava o PID neste processo; se o arquivo já existe e o
+// PID de lá ainda está vivo, é outro `npm run dev` rodando — este sai.
+// (PID morto ou arquivo corrompido = lock obsoleto, sobrescreve.)
+function adquirirLockDev() {
+  const lockPath = join(app.getPath('userData'), 'dev-instance.lock')
+  try {
+    if (existsSync(lockPath)) {
+      const pidAntigo = parseInt(readFileSync(lockPath, 'utf-8').trim(), 10)
+      if (pidAntigo && pidAntigo !== process.pid) {
+        try {
+          process.kill(pidAntigo, 0) // não mata, só testa se existe
+          return false               // ainda vivo -> outra instância dev ativa
+        } catch { /* ESRCH: processo morto, lock obsoleto */ }
+      }
+    }
+    writeFileSync(lockPath, String(process.pid))
+    app.on('quit', () => { try { unlinkSync(lockPath) } catch {} })
+    return true
+  } catch (e) {
+    console.warn('[dev-lock] falhou, seguindo sem lock:', e.message)
+    return true
+  }
+}
+
+// Instância única:
+//  - Produção: lock nativo do Electron (chaveado pelo AppUserModelId).
+//  - Dev: NÃO usa o lock nativo (senão uma instância de produção aberta
+//    derrubaria o dev, já que os dois compartilham o AppUserModelId). Em
+//    vez disso, um lockfile no userData do dev: se outro `npm run dev` já
+//    está rodando, este sai — evita as duas instâncias disputarem a pasta
+//    de cache do Chromium ("Unable to move the cache: Acesso negado").
+const gotLock = IS_DEV ? adquirirLockDev() : app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
@@ -164,10 +206,19 @@ if (!gotLock) {
   app.whenReady().then(async () => {
     loadConfig()              // lê/cria krontech.ini (BASE_DIR — produção ou dev)
     encryptSensitiveConfig() // criptografa senhas em texto puro (Windows DPAPI)
+    registrarHandlerKmail()  // kmail://anexo/<id> — precisa do banco e da config já carregados
     registerHandlers()
     await runMigrations().catch(err => console.error('[migrate] runMigrations error:', err.message))
     await initDb().catch(err => console.error('initDb error:', err.message))
+    // Migra a chave Anthropic legada do krontech.ini para ia_provedor_001
+    // (so faz algo no primeiro boot apos a feature de provedores).
+    await import('./services/iaProvedorService')
+      .then(m => m.migrarChaveAnthropicLegada())
+      .catch(err => console.warn('[iaProvedor] migrarChaveAnthropicLegada:', err.message))
     startReminderCheck()
+    // startEmailSync() NAO roda aqui — so depois do login, disparado pelo
+    // renderer via IPC 'email:iniciarSync'. Sem isso o app puxava e-mail
+    // (e notificava) antes mesmo da tela de login.
     setupAutoUpdater()
     createWindow()
 

@@ -14,7 +14,10 @@
   text-rendering: optimizeLegibility;
   font-feature-settings: 'kern' 1, 'liga' 1;
 }
-.main  { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+/* overflow-x visible (nao hidden) pra deixar o botao de recolher da Sidebar,
+   que fica em right negativo, aparecer sobre a borda da area principal em vez
+   de ser cortado. overflow-y continua contido. */
+.main  { flex: 1; display: flex; flex-direction: column; overflow-x: visible; overflow-y: hidden; min-width: 0; }
 .drag-region { -webkit-app-region: drag; }
 .no-drag     { -webkit-app-region: no-drag; }
 
@@ -52,6 +55,47 @@
   box-shadow: 0 0 0 2px rgba(74,222,128,.12), 0 0 8px var(--green);
   flex-shrink: 0;
   animation: dotPulse 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   Botao de recolher/expandir painel (circulo na borda de uma coluna).
+   Padrao unico do sistema: qualquer painel colapsavel usa esta classe.
+   O hover pinta com a cor de destaque (var(--or), reage a cor
+   personalizada). Cada uso posiciona o botao (position/right/top) na
+   propria folha; o visual vem daqui.
+   ============================================================ */
+.toggle-recolher {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--s1);
+  border: 1px solid var(--bd2);
+  color: var(--t2);
+  cursor: pointer;
+  box-shadow: var(--sh-xs);
+  transition: var(--tr);
+  -webkit-app-region: no-drag;
+}
+.toggle-recolher:hover {
+  background: var(--or);
+  border-color: var(--or);
+  color: #fff;
+}
+.toggle-recolher-icon {
+  display: flex;
+  width: 11px;
+  height: 11px;
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+/* Painel recolhido: a seta gira 180deg (aponta pro outro lado). O uso
+   aplica a classe .is-recolhido no botao (ou num ancestral) conforme
+   o estado. */
+.toggle-recolher.is-recolhido .toggle-recolher-icon,
+.is-recolhido > .toggle-recolher .toggle-recolher-icon {
+  transform: rotate(180deg);
 }
 
 /* Toggle tema */
@@ -138,6 +182,7 @@
   display: flex; align-items: center; justify-content: center;
   width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
   color: var(--t3); transition: background .12s, color .12s;
+  background: transparent; border: none; padding: 0; cursor: pointer; font: inherit;
 }
 .tab-close:hover { background: var(--bd2); color: var(--t1); }
 .tab-scroll-btn {
@@ -843,6 +888,7 @@ html.light .sql-guide-pre      { color: #2a6e3c; }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes toastPop { from { transform: scale(.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* Dashboard BI — Grid livre + Painel lateral */
 /* --bg-base (tokens.css): mesmo fundo da sidebar. Card sem fundo/borda
@@ -1001,6 +1047,12 @@ html.light .sql-guide-pre      { color: #2a6e3c; }
 .page-content::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 99px; }
 .page-content::-webkit-scrollbar-thumb:hover { background: var(--t3); }
 
+/* area de scroll do formulario da Entidade: mesma barra fina do resto do sistema */
+.entidade-scroll::-webkit-scrollbar { width: 5px; }
+.entidade-scroll::-webkit-scrollbar-track { background: transparent; }
+.entidade-scroll::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 99px; }
+.entidade-scroll::-webkit-scrollbar-thumb:hover { background: var(--t3); }
+
 /* ── Rodapé ── */
 .page-footer {
   border-top: 1px solid var(--bd);
@@ -1011,7 +1063,10 @@ html.light .sql-guide-pre      { color: #2a6e3c; }
   padding: 0 16px;
   gap: 8px;
   height: 48px;
-  box-shadow: 0 -1px 0 var(--bd), var(--sh-xs);
+  /* So a sombra de elevacao (sh-xs). O 0 -1px 0 var(--bd) era uma 2a linha
+     empilhada sobre o border-top, deixando a divisoria do rodape com o
+     dobro da espessura das outras. */
+  box-shadow: var(--sh-xs);
 }
 
 .page-footer-nav {
@@ -1280,7 +1335,7 @@ html.light .tab-item.active .tab-icon { color: var(--or); filter: drop-shadow(0 
 html.light .page-footer {
   background: var(--s1);
   border-top-color: var(--bd);
-  box-shadow: 0 -1px 0 var(--bd), var(--sh-xs);
+  box-shadow: var(--sh-xs);
 }
 html.light .page-tabs {
   background: var(--s1);
@@ -1343,3 +1398,34 @@ html.light .sect:hover   { box-shadow: var(--sh-sm); border-color: var(--bd2); }
 html.light ::-webkit-scrollbar-thumb { background: var(--bd2); }
 html.light ::-webkit-scrollbar-thumb:hover { background: var(--t3); }
 
+
+/* ── Editor rich text (RichTextEditor.jsx) ── */
+.rich-text-editor-area:empty:before {
+  content: attr(data-placeholder);
+  color: var(--t3);
+  pointer-events: none;
+}
+.rich-text-editor-area img { max-width: 100%; height: auto; }
+.rich-text-editor-area a { color: var(--blue); }
+
+/* Destaque visual da assinatura DENTRO do editor apenas — deixa claro onde
+   termina a area de digitar. Este estilo NAO e enviado no e-mail (a classe
+   kr-assinatura vai no corpo, mas sem CSS associado no e-mail). */
+.rich-text-editor-area .kr-assinatura {
+  margin-top: 10px;
+  padding: 12px 12px 4px;
+  border-top: 1px dashed var(--bd2);
+  position: relative;
+}
+.rich-text-editor-area .kr-assinatura::before {
+  content: 'Assinatura';
+  position: absolute;
+  top: -8px; left: 10px;
+  padding: 0 6px;
+  background: var(--s1);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--t3);
+}

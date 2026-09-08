@@ -2,13 +2,14 @@ import { BrowserWindow, dialog, app, shell } from 'electron'
 import { readFileSync, copyFileSync, unlinkSync, existsSync, mkdirSync, statSync } from 'fs'
 import { join, extname, basename, dirname, relative } from 'path'
 import { execSync } from 'child_process'
+import { resolverBaseAnexos } from '../config'
 
 // Seleção + cópia física genérica (dialog nativo → copia pra
 // baseDir/subpasta, resolve colisão de nome, não grava nada no banco — o
 // chamador decide onde persistir o path retornado). Extraída para função
 // exportável reaproveitada por outros módulos (ex.: anexos do Cofre de
 // Senhas), mantendo o handler `arquivos:selecionarECopiar` como wrapper.
-export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = [] } = {}, win, getConfig) {
+export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = [], chaveCaminho = 'arquivos' } = {}, win, getConfig) {
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     title: 'Selecionar arquivo',
     properties: ['openFile'],
@@ -17,8 +18,8 @@ export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = 
   if (canceled || !filePaths.length) return null
   const src     = filePaths[0]
   const stat    = statSync(src)
-  const cfg     = getConfig()
-  const baseDir = cfg.Caminhos?.arquivos || join(app.getPath('userData'), 'arquivos')
+  // Pasta-base especifica da tela (chaveCaminho) com fallback pra generica.
+  const baseDir = resolverBaseAnexos(chaveCaminho)
   const destDir = join(baseDir, subpasta)
   if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
   const origName = basename(src)
@@ -307,6 +308,73 @@ export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getCo
   ipcMain.handle('arquivos:abrirPasta', async (_, caminhoPasta) => {
     const err = await shell.openPath(caminhoPasta)
     return err ? { ok: false, erro: err } : { ok: true }
+  })
+
+  // "Salvar como": abre o dialog nativo de salvar e copia o arquivo de origem
+  // pro destino escolhido. Generico (anexo de e-mail, arquivo do FormBuilder,
+  // etc). { caminhoOrigem, nomeSugerido }.
+  ipcMain.handle('arquivos:salvarComo', async (e, { caminhoOrigem, nomeSugerido }) => {
+    // fromWebContents pode devolver null quando o sender e um iframe filho
+    // (o leitor de e-mail renderiza o corpo num iframe). Sem uma janela-pai
+    // valida o dialog abre NAO-modal e pode ficar atras da janela. Cai pro
+    // getFocusedWindow / primeira janela viva como garantia.
+    const win = BrowserWindow.fromWebContents(e.sender)
+      || BrowserWindow.getFocusedWindow()
+      || BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
+    if (win) win.focus()
+    if (!existsSync(caminhoOrigem)) {
+      return { ok: false, erro: 'Arquivo de origem não encontrado.' }
+    }
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      defaultPath: nomeSugerido || basename(caminhoOrigem),
+      title: 'Salvar anexo',
+    })
+    if (canceled || !filePath) return { ok: false, cancelado: true }
+    try {
+      copyFileSync(caminhoOrigem, filePath)
+      return { ok: true, destino: filePath }
+    } catch (err) {
+      return { ok: false, erro: err.message }
+    }
+  })
+
+  // "Salvar todos": um unico dialog de pasta, copia cada anexo pra la
+  // resolvendo colisao de nome com sufixo (2), (3)... Recebe uma lista
+  // [{ caminhoOrigem, nome }].
+  ipcMain.handle('arquivos:salvarVarios', async (e, { itens = [] } = {}) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+      || BrowserWindow.getFocusedWindow()
+      || BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
+    if (win) win.focus()
+    const validos = itens.filter(it => it?.caminhoOrigem && existsSync(it.caminhoOrigem))
+    if (!validos.length) return { ok: false, erro: 'Nenhum anexo disponível para salvar.' }
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Escolher pasta para salvar os anexos',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (canceled || !filePaths.length) return { ok: false, cancelado: true }
+    const destDir = filePaths[0]
+    let salvos = 0
+    const erros = []
+    for (const it of validos) {
+      const nomeBase = it.nome || basename(it.caminhoOrigem)
+      const ext = extname(nomeBase)
+      const semExt = basename(nomeBase, ext)
+      let destName = nomeBase
+      let destPath = join(destDir, destName)
+      let n = 2
+      while (existsSync(destPath)) {
+        destName = `${semExt} (${n++})${ext}`
+        destPath = join(destDir, destName)
+      }
+      try {
+        copyFileSync(it.caminhoOrigem, destPath)
+        salvos++
+      } catch (err) {
+        erros.push(`${nomeBase}: ${err.message}`)
+      }
+    }
+    return { ok: salvos > 0, salvos, total: validos.length, pasta: destDir, erros }
   })
 
   ipcMain.handle('arquivos:lerBase64', (_e, filePath) => {

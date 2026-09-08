@@ -42,6 +42,19 @@ const DEFAULTS = {
     arquivos: join(BASE_DIR, 'arquivos'),
     backup:   join(BASE_DIR, 'backup'),
     temp:     join(BASE_DIR, 'temp'),
+    // Pasta de anexos por tela — cada uma independente. Vazio = usa
+    // `arquivos` como fallback (ver resolverBaseAnexos). Assim quem ja
+    // tinha tudo em `arquivos` nao precisa mexer em nada; quem quiser
+    // separar (ex.: e-mails fora do OneDrive), preenche a chave da tela.
+    arquivosViagens:     '',
+    arquivosFormBuilder: '',
+    arquivosCofre:       '',
+    arquivosEmail:       '',
+    arquivosDocumentos:  '',
+    // Pasta de EXPORTACAO por tela (Excel de despesa, PDF de documento).
+    // Vazio = usa `exportacoes` como fallback.
+    exportacoesViagens:    '',
+    exportacoesDocumentos: '',
   },
   Sistema: {
     nome: 'KronTech',
@@ -62,6 +75,30 @@ const DEFAULTS = {
   // resto dos segredos do Cofre de Senhas.
   Deploy: {
     githubToken: '',
+  },
+  // Chave de API da Anthropic (Claude), usada pelo Gerador de Documentos
+  // pra reformular texto bruto em documentos formais. Mesmo motivo de
+  // cifrar com encryptCofre em vez de SENSITIVE/DPAPI: precisa ser
+  // portável entre reinstalações/trocas de máquina.
+  Integracoes: {
+    anthropicApiKey: '',
+    // Token da CNPJá (cnpja.com) — usado na busca de CNPJ pra trazer a
+    // Inscricao Estadual (SINTEGRA), que as APIs publicas nao retornam.
+    // Cifrado com encryptCofre (portavel entre maquinas).
+    cnpjaToken: '',
+  },
+  // Dados institucionais impressos no cabeçalho/rodapé e na capa dos PDFs
+  // gerados pelo Documentos (Análises de Aderência / Atas de Treinamento).
+  // logoPath aponta pro arquivo copiado por config:selecionarLogoDocumentos
+  // (fica dentro de Caminhos.arquivos, sobrevive a reinstalação/rebuild).
+  Documentos: {
+    empresaNome: '',
+    empresaCnpj: '',
+    empresaIe: '',
+    empresaEndereco: '',
+    empresaTelefone: '',
+    empresaSite: '',
+    logoPath: '',
   },
 }
 
@@ -254,6 +291,57 @@ export function getDecryptedGithubToken() {
   return decryptCofre(getConfig().Deploy?.githubToken || '')
 }
 
+// Chave de API da Anthropic — mesmo padrão de cifragem/mascaramento do
+// token do GitHub acima.
+export function saveAnthropicApiKey(key) {
+  const cfg = getConfig()
+  cfg.Integracoes.anthropicApiKey = key ? encryptCofre(key) : ''
+  writeFileSync(INI_PATH, stringifyIni(cfg), 'utf-8')
+}
+
+export function getDecryptedAnthropicApiKey() {
+  return decryptCofre(getConfig().Integracoes?.anthropicApiKey || '')
+}
+
+// Token da CNPJá (busca de Inscricao Estadual no CNPJ).
+export function saveCnpjaToken(token) {
+  const cfg = getConfig()
+  if (!cfg.Integracoes) cfg.Integracoes = {}
+  cfg.Integracoes.cnpjaToken = token ? encryptCofre(token) : ''
+  writeFileSync(INI_PATH, stringifyIni(cfg), 'utf-8')
+}
+export function getDecryptedCnpjaToken() {
+  return decryptCofre(getConfig().Integracoes?.cnpjaToken || '')
+}
+
+// Resolve a pasta-base de anexos de uma tela: usa a chave especifica dela
+// em [Caminhos] se preenchida, senao cai no `arquivos` generico. Garante
+// que a pasta exista. Chaves validas: arquivosViagens, arquivosFormBuilder,
+// arquivosCofre, arquivosEmail (ou 'arquivos' pra base generica).
+export function resolverBaseAnexos(chave = 'arquivos') {
+  const cam = getConfig().Caminhos || {}
+  const especifico = (cam[chave] || '').trim()
+  const generico = (cam.arquivos || '').trim() || join(BASE_DIR, 'arquivos')
+  const base = especifico || generico
+  try { if (!existsSync(base)) mkdirSync(base, { recursive: true }) } catch { /* melhor esforco */ }
+  return base
+}
+
+// client_id do registro de app no Azure usado no login OAuth do Outlook.
+// Fica no .ini como fallback global; a tela de Configuracoes tambem pode
+// gravar aqui, e cada conta pode ter o seu proprio (oauth_client_id).
+// Nao e segredo (client_id publico do fluxo PKCE), entao NAO cifra.
+export function getOutlookClientId() {
+  return (getConfig().Email?.outlookClientId || '').trim()
+}
+
+export function saveOutlookClientId(clientId) {
+  const cfg = getConfig()
+  if (!cfg.Email) cfg.Email = {}
+  cfg.Email.outlookClientId = (clientId || '').trim()
+  writeFileSync(INI_PATH, stringifyIni(cfg), 'utf-8')
+}
+
 export function saveConfig(section, key, value) {
   const cfg = getConfig()
   if (!cfg[section]) cfg[section] = {}
@@ -289,6 +377,8 @@ export function getConfigForFrontend() {
     }
   }
   if (result.Deploy?.githubToken) result.Deploy.githubToken = '••••••••'
+  if (result.Integracoes?.anthropicApiKey) result.Integracoes.anthropicApiKey = '••••••••'
+  if (result.Integracoes?.cnpjaToken) result.Integracoes.cnpjaToken = '••••••••'
   return result
 }
 

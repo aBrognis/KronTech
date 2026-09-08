@@ -106,7 +106,8 @@ export function useFormBuilderArquivos({ tela, nomeTabela, form, setForm, setErr
   }
 
   async function handleConfigurarPasta() {
-    const res = await window.api.config.selecionarPasta()
+    // Chave propria do FormBuilder (fallback pra `arquivos` no backend).
+    const res = await window.api.config.selecionarPasta({ chave: 'arquivosFormBuilder', titulo: 'Selecionar pasta de arquivos das telas' })
     if (res.ok && res.data) setPastaConfig(res.data)
   }
 

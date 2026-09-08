@@ -116,6 +116,98 @@ Classes disponíveis: `.badge-orange`, `.badge-blue`, `.badge-yellow`,
 **Não use** `components/ui/badge.jsx` — é resíduo de um scaffold não
 adotado pelo projeto, não está conectado a nada.
 
+### 2.4 Divisores de seção e espaçamento de formulário (OBRIGATÓRIO)
+
+Todo formulário de cadastro (aba Cadastro) é dividido em **blocos com um
+divisor**: um rótulo curto em maiúsculas + uma linha horizontal que vai do
+fim do texto até a borda. **Sem fundo atrás do rótulo** — ele herda a cor
+de fundo do sistema, funcionando em tema claro e escuro.
+
+Fonte única: **`src/renderer/src/components/SecaoForm.jsx`**. Nunca
+reescreva o divisor inline; importe de lá.
+
+```jsx
+import SecaoForm, { SecaoHeader, FormBlocos } from '../components/SecaoForm.jsx'
+```
+
+#### Qual usar
+
+| Situação | Use | Como |
+|---|---|---|
+| Tela **manual** com layout de campos próprio (Arquivos, Cofre, Despesas, Documentos) | `<SecaoHeader titulo="..." />` | É um **irmão** dos `.form-group` dentro de um container `flex column` com `gap: 10`. Só o cabeçalho; os campos você monta como já faz. |
+| Tela **nova** montada com os helpers de campo (`CampoTexto`, `CampoSelect`, ...) | `<FormBlocos>` + `<SecaoForm titulo="...">` | O `SecaoForm` já traz o cabeçalho **e** o grid de campos. `cols` controla o grid interno (default: 2 colunas). |
+
+Exemplo tela manual:
+
+```jsx
+<div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+  <SecaoHeader titulo="Identificação" />
+  <div className="form-group">...</div>
+  <div className="form-group">...</div>
+
+  <SecaoHeader titulo="Endereço" />
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+    <div className="form-group">...</div>
+    <div className="form-group">...</div>
+  </div>
+</div>
+```
+
+Exemplo tela nova:
+
+```jsx
+<FormBlocos>
+  <SecaoForm titulo="Identificação" cols="90px 1fr 1fr">
+    <CampoCodigo valor={form.codigo} />
+    <CampoTexto {...ctx} campo="nome" label="Nome" />
+    <CampoSelect {...ctx} campo="tipo" label="Tipo" opcoes={TIPOS} />
+  </SecaoForm>
+  <SecaoForm titulo="Complemento">
+    <CampoTextarea {...ctx} campo="observacoes" label="Observações" rows={2} />
+  </SecaoForm>
+</FormBlocos>
+```
+
+#### Métrica de espaçamento (definida em `SecaoForm.jsx`, não replicar)
+
+| Constante | Valor | Onde |
+|---|---|---|
+| `DIV_TOPO` | 14px | acima da linha divisória (separa do bloco anterior) |
+| `DIV_BASE_HEADER` | 8px | abaixo da linha no `<SecaoHeader>` — soma com o `gap: 10` do container flex → **18px reais** até o 1º campo |
+| `DIV_BASE_FORM` | 18px | abaixo da linha no `<SecaoForm>` — sem container extra, o valor é direto |
+| gap entre campos | `10px 14px` | linha/coluna dentro de uma seção |
+| gap entre blocos (tela manual) | `10` | no `flex column` que envolve os `SecaoHeader` + campos |
+
+Resultado: **entre a linha divisória e o primeiro campo há sempre ~18px**,
+em qualquer tela. Entre um bloco e o próximo divisor há ~24px (10 do gap +
+14 do `DIV_TOPO`).
+
+**Não** use `marginTop`/`marginBottom` ad-hoc nos `SecaoHeader` para
+"ajustar" — se o espaçamento parecer errado, o problema é o container (o
+`gap` do `flex column` tem que ser 10). O `SecaoHeader`/`SecaoForm` já
+resolvem o resto.
+
+#### Regras
+
+- Todo bloco tem um `titulo`. Rótulos curtos: "Identificação", "Contato",
+  "Endereço", "Fiscal", "Financeiro", "Complemento", "Observações".
+- O **último bloco** costuma ser "Complemento" (observações + flag `ativo`).
+- Botão de ação de um bloco (ex: "Adicionar linha", "Log de Acesso") vai
+  **na própria linha do divisor**, à direita, com `flexShrink: 0`:
+
+  ```jsx
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 8px' }}>
+    <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 0.6 }}>Participantes</span>
+    <span style={{ flex: 1, height: 1, background: 'var(--bd2)' }} />
+    <button className="btn btn-ghost" style={{ height: 26, fontSize: 11, flexShrink: 0 }} onClick={add}>
+      <Plus size={13} /> Adicionar linha
+    </button>
+  </div>
+  ```
+
+  (o `SecaoHeader` ainda não aceita `children`; para esse caso, replique o
+  markup acima — é a única exceção.)
+
 ---
 
 ## 3. Classes CSS estruturais obrigatórias
@@ -217,6 +309,11 @@ fonte por funcionalidade, reusado em todo lugar.
 - [ ] Estado inicial segue a seção 3.1: abre em `activeTab='cadastro'`,
       modo `view`, nunca dispara `openNew()` sozinha ao montar.
 - [ ] O rodapé de ações usa `FormToolbar`, não botões soltos reinventados.
+- [ ] O formulário está dividido em blocos com `SecaoHeader`/`SecaoForm`
+      (seção 2.4). Container `flex column` com `gap: 10`. Nenhum divisor
+      inline reescrito, nenhum `marginTop` ad-hoc para "consertar" espaço.
+- [ ] Não há `notificar.sucesso('Registro incluído/alterado/excluído')` ao
+      gravar/excluir — o próprio retorno ao modo `view` já é o feedback.
 - [ ] Todo IPC novo segue `wrap()` e a convenção `modulo:acao`.
 - [ ] Nenhum componente genérico foi duplicado — se algo parecido já existe
       em `components/` ou `formBuilderView/`, foi reusado ou promovido.

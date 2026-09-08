@@ -11,6 +11,7 @@ import { thS, tdS } from './formBuilderView/gridStyles.js'
 import PaginacaoBar from '../components/PaginacaoBar.jsx'
 import PesquisaPadraoModal from '../components/PesquisaPadraoModal.jsx'
 import FormToolbar from '../components/FormToolbar.jsx'
+import { SecaoHeader } from '../components/SecaoForm.jsx'
 import { notificar } from '../components/Notificacao'
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -545,9 +546,10 @@ export default function Arquivos({ newTrigger }) {
 
                 {/* Coluna esquerda */}
                 <div className="script-form-left">
+                  <SecaoHeader titulo="Identificação" />
 
                   {/* Linha 1: Código + Categoria */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr', gap: 10, marginBottom: 10 }}>
                     <div className="form-group">
                       <label className="form-label">Código</label>
                       <div className="form-input" style={{ width: 80, fontSize: 13, fontWeight: 700, letterSpacing: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default', color: form.codigo ? 'var(--or)' : 'var(--t3)', fontFamily: 'monospace' }}>
@@ -571,13 +573,15 @@ export default function Arquivos({ newTrigger }) {
                   </div>
 
                   {/* Nome */}
-                  <div className="form-group" style={{ marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 10 }}>
                     <label className="form-label">Nome *</label>
                     <input className="form-input" placeholder="Nome descritivo do arquivo..." value={form.nome} onChange={e => setField('nome', e.target.value)} disabled={isRO} autoFocus={!isRO} />
                   </div>
 
+                  <SecaoHeader titulo="Arquivo" />
+
                   {/* Arquivo */}
-                  <div className="form-group" style={{ marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 10 }}>
                     <label className="form-label">Arquivo</label>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <div className="form-input" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--s1)', cursor: 'default', fontSize: 12, color: form.arquivo_nome ? 'var(--t1)' : 'var(--t3)' }}>
@@ -611,14 +615,16 @@ export default function Arquivos({ newTrigger }) {
                     </div>
                   </div>
 
+                  <SecaoHeader titulo="Organização" />
+
                   {/* Tags */}
-                  <div className="form-group" style={{ marginBottom: 14 }}>
+                  <div className="form-group" style={{ marginBottom: 10 }}>
                     <label className="form-label">Tags <span style={{ color: 'var(--t3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(vírgula)</span></label>
                     <input className="form-input" placeholder="contrato, 2024, cliente-x" value={form.tags} onChange={e => setField('tags', e.target.value)} disabled={isRO} />
                   </div>
 
                   {/* Favorito */}
-                  <div style={{ marginBottom: 14 }}>
+                  <div style={{ marginBottom: 10 }}>
                     <label className="fav-check" style={{ pointerEvents: isRO ? 'none' : 'auto' }}>
                       <input type="checkbox" checked={form.favorito} onChange={e => setField('favorito', e.target.checked)} disabled={isRO} />
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>Marcar como favorito <Star size={12} /></span>
@@ -628,14 +634,15 @@ export default function Arquivos({ newTrigger }) {
 
                 {/* Coluna direita */}
                 <div className="script-form-right">
-                  <div className="form-group" style={{ marginBottom: 14 }}>
+                  <SecaoHeader titulo="Descrição" />
+                  <div className="form-group" style={{ marginBottom: 10 }}>
                     <label className="form-label">Descrição / Observações</label>
                     <textarea className="form-textarea" rows={6} placeholder="Notas sobre o arquivo..." value={form.descricao} onChange={e => setField('descricao', e.target.value)} disabled={isRO} style={{ resize: isRO ? 'none' : 'vertical' }} />
                   </div>
 
                   {/* Info do arquivo */}
                   {form.arquivo_nome && (
-                    <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                    <div style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--t3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Informações do Arquivo</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {[

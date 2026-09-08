@@ -1,9 +1,9 @@
 import { getPool } from '../db.js'
-import { existsSync, unlinkSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { existsSync, unlinkSync, writeFileSync, copyFileSync } from 'fs'
+import { join, dirname } from 'path'
 import { BrowserWindow, dialog } from 'electron'
 import { gerarExcelViagem } from '../services/exportViagem.js'
-import { pastaExportacaoAutomatica } from '../services/exportPaths.js'
+import { pastaExportacaoAutomatica, resolverBaseExportacao } from '../services/exportPaths.js'
 import { getConfig } from '../config.js'
 
 export const STATUS_VALIDOS = ['rascunho', 'nao_enviado', 'enviado', 'reembolsado']
@@ -97,14 +97,18 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
       await client.query('BEGIN')
       const codRow = await client.query(`SELECT nextval('despesa_001_codigo_seq') AS next`)
       const codigo = String(codRow.rows[0].next).padStart(4, '0')
+      const carroEmpresa = d.meio_transporte === 'Carro da empresa'
       const ins = await client.query(`
         INSERT INTO despesa_001
           (codigo, consultor_id, consultor_nome, cliente_id, cliente_nome, data_inicio, data_fim,
-           local_partida, local_destino, meio_transporte, status, observacoes)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *
+           local_partida, local_destino, meio_transporte, veiculo_numero, veiculo_placa, status, observacoes)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *
       `, [codigo, d.consultor_id, d.consultor_nome || '', d.cliente_id || null, d.cliente_nome || '',
           d.data_inicio, d.data_fim, d.local_partida || '', d.local_destino || '',
-          d.meio_transporte || '', 'rascunho', d.observacoes || ''])
+          d.meio_transporte || '',
+          carroEmpresa ? (d.veiculo_numero || null) : null,
+          carroEmpresa ? (d.veiculo_placa || null) : null,
+          'rascunho', d.observacoes || ''])
       const parent = ins.rows[0]
       await gravarItens(client, parent.id, itens)
       await client.query('COMMIT')
@@ -125,15 +129,19 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     const client = await getPool().connect()
     try {
       await client.query('BEGIN')
+      const carroEmpresa = d.meio_transporte === 'Carro da empresa'
       const upd = await client.query(`
         UPDATE despesa_001
         SET cliente_id=$1, cliente_nome=$2, data_inicio=$3, data_fim=$4,
             local_partida=$5, local_destino=$6, meio_transporte=$7, observacoes=$8,
-            alterado_em=NOW()
-        WHERE id=$9 RETURNING *
+            veiculo_numero=$9, veiculo_placa=$10, alterado_em=NOW()
+        WHERE id=$11 RETURNING *
       `, [d.cliente_id || null, d.cliente_nome || '', d.data_inicio, d.data_fim,
           d.local_partida || '', d.local_destino || '', d.meio_transporte || '',
-          d.observacoes || '', d.id])
+          d.observacoes || '',
+          carroEmpresa ? (d.veiculo_numero || null) : null,
+          carroEmpresa ? (d.veiculo_placa || null) : null,
+          d.id])
       const row = upd.rows[0]
       if (!row) throw new Error(`Despesa #${d.id} não encontrada.`)
       const orfaos = await gravarItens(client, row.id, itens)
@@ -164,6 +172,60 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     )
     if (!row) throw new Error(`Despesa #${id} não encontrada.`)
     return row
+  }))
+
+  // Marca varias despesas de uma vez (usado pelo botao "E-mail": depois de
+  // enviar, tudo que estava 'rascunho'/'nao_enviado' vira 'enviado').
+  ipcMain.handle('viagens:mudarStatusLote', wrap(async (_, { ids, status }) => {
+    if (!STATUS_VALIDOS.includes(status)) throw new Error(`Status inválido: ${status}`)
+    if (!Array.isArray(ids) || !ids.length) return { atualizadas: 0 }
+    const rows = await query(
+      'UPDATE despesa_001 SET status=$1, alterado_em=NOW() WHERE id = ANY($2::int[]) RETURNING id',
+      [status, ids]
+    )
+    return { atualizadas: rows.length }
+  }))
+
+  // Monta a lista de anexos pro e-mail: a planilha .xlsx de cada despesa +
+  // os comprovantes de cada item. Grava os .xlsx num temp (o comprovante
+  // ja e um arquivo definitivo, vai pelo proprio caminho). `origem` marca
+  // se o arquivo pode ser MOVIDO (temp) ou so COPIADO (definitivo).
+  ipcMain.handle('viagens:anexosParaEmail', wrap(async (_, { ids, incluirPlanilha = true, incluirComprovantes = true }) => {
+    if (!Array.isArray(ids) || !ids.length) return { anexos: [] }
+    const cfg = getConfig()
+    const tempBase = cfg?.Caminhos?.temp || join(process.env.TEMP || process.env.TMP || '.', 'krontech')
+    const tempDir = join(tempBase, 'email-viagens')
+    const anexos = []
+
+    for (const id of ids) {
+      const info = await gerarBufferDespesa(id)
+      if (!info) continue
+
+      if (incluirPlanilha) {
+        try {
+          const { mkdirSync } = await import('fs')
+          if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true })
+          const dest = join(tempDir, info.nome)
+          writeFileSync(dest, info.buffer)
+          anexos.push({ nome: info.nome, caminho: dest, origem: 'novo' }) // temp -> pode mover
+        } catch (err) {
+          console.warn('[viagens] anexosParaEmail planilha:', err.message)
+        }
+      }
+
+      if (incluirComprovantes) {
+        for (const item of info.itens) {
+          if (item.arquivo_path && existsSync(item.arquivo_path)) {
+            anexos.push({
+              nome: nomeArquivoComprovante(item),
+              caminho: item.arquivo_path,
+              origem: 'existente', // arquivo definitivo -> so copia
+            })
+          }
+        }
+      }
+    }
+    return { anexos }
   }))
 
   ipcMain.handle('viagens:listarConsultores', wrap(async () => {
@@ -200,19 +262,43 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
     if (!cabecalho) return null
     const itens = await query('SELECT * FROM despesa_item_001 WHERE despesa_id=$1 ORDER BY data, id', [id])
     const buffer = await gerarExcelViagem({ ...cabecalho, itens })
-    return { cabecalho, buffer, nome: nomeArquivoDespesa(cabecalho) }
+    return { cabecalho, itens, buffer, nome: nomeArquivoDespesa(cabecalho) }
+  }
+
+  function nomeArquivoComprovante(item) {
+    const fmtDataArquivo = d => {
+      const dt = new Date(d)
+      if (Number.isNaN(dt.getTime())) return ''
+      return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(dt).replace(/\//g, '-')
+    }
+    const ext = item.arquivo_ext ? `.${item.arquivo_ext.replace(/^\./, '')}` : ''
+    return `${fmtDataArquivo(item.data)} - ${item.descricao || 'Comprovante'}${ext}`.replace(/[\\/:*?"<>|]/g, '')
+  }
+
+  // Copia os comprovantes anexados a cada item pra dentro da mesma pasta da
+  // planilha exportada — o comprovante do dia 13 de uma viagem de 10 a 15
+  // sai junto, nomeado pela data e descrição do item (não pelo período
+  // inteiro da viagem), pra ficar claro a qual despesa cada arquivo pertence.
+  function copiarComprovantes(itens, pastaDestino) {
+    for (const item of itens) {
+      if (!item.arquivo_path || !existsSync(item.arquivo_path)) continue
+      try {
+        copyFileSync(item.arquivo_path, join(pastaDestino, nomeArquivoComprovante(item)))
+      } catch { /* melhor esforço, não interrompe a exportação da planilha */ }
+    }
   }
 
   ipcMain.handle('viagens:exportarExcel', async (e, id) => {
     try {
       const dados = await gerarBufferDespesa(id)
       if (!dados) return { ok: false, erro: `Despesa #${id} não encontrada.` }
-      const { cabecalho, buffer, nome } = dados
+      const { cabecalho, itens, buffer, nome } = dados
 
       const pastaAuto = pastaExportacaoAutomatica(cabecalho.cliente_nome, cabecalho.data_inicio)
       if (pastaAuto) {
         const filePath = join(pastaAuto, nome)
         writeFileSync(filePath, buffer)
+        copiarComprovantes(itens, pastaAuto)
         return { ok: true, path: filePath }
       }
 
@@ -224,6 +310,7 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
       })
       if (canceled || !filePath) return { ok: false, cancelado: true }
       writeFileSync(filePath, buffer)
+      copiarComprovantes(itens, dirname(filePath))
       return { ok: true, path: filePath }
     } catch (err) {
       return { ok: false, erro: err.message }
@@ -237,7 +324,7 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
   ipcMain.handle('viagens:exportarExcelLote', async (e, ids) => {
     if (!Array.isArray(ids) || !ids.length) return { ok: false, erro: 'Nenhum registro para exportar.' }
     const cfg = getConfig()
-    const temPastaAuto = !!cfg?.Caminhos?.exportacoes
+    const temPastaAuto = !!resolverBaseExportacao('exportacoesViagens')
 
     let pastaFallback = null
     if (!temPastaAuto) {
@@ -256,11 +343,12 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
       try {
         const dados = await gerarBufferDespesa(id)
         if (!dados) { falhas.push(`#${id}: não encontrada`); continue }
-        const { cabecalho, buffer, nome } = dados
+        const { cabecalho, itens, buffer, nome } = dados
         const pasta = temPastaAuto
           ? pastaExportacaoAutomatica(cabecalho.cliente_nome, cabecalho.data_inicio)
           : pastaFallback
         writeFileSync(join(pasta, nome), buffer)
+        copiarComprovantes(itens, pasta)
         sucesso++
       } catch (err) {
         falhas.push(`#${id}: ${err.message}`)

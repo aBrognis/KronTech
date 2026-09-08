@@ -1,10 +1,13 @@
 import { BrowserWindow, dialog } from 'electron'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, copyFileSync } from 'fs'
+import { join, extname } from 'path'
 
-export function registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, saveGithubToken, INI_PATH }) {
+export function registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, saveGithubToken, saveAnthropicApiKey, saveCnpjaToken, INI_PATH }) {
 
   ipcMain.handle('config:get',        wrap(() => getConfigForFrontend()))
   ipcMain.handle('config:salvarGithubToken', wrap((_, token) => saveGithubToken(token)))
+  ipcMain.handle('config:salvarAnthropicApiKey', wrap((_, key) => saveAnthropicApiKey(key)))
+  ipcMain.handle('config:salvarCnpjaToken', wrap((_, token) => saveCnpjaToken(token)))
   ipcMain.handle('config:set',        wrap((_, { section, key, value }) => saveConfig(section, key, value)))
   ipcMain.handle('config:setSection', wrap((_, { section, kvs }) => {
     const result = saveSectionConfig(section, kvs)
@@ -37,6 +40,29 @@ export function registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, sa
     saveConfig('Caminhos', chave, pasta)
     if (!existsSync(pasta)) mkdirSync(pasta, { recursive: true })
     return pasta
+  }))
+
+  // Logo institucional usado no cabeçalho/rodapé/capa dos PDFs do
+  // Documentos — copiado pra dentro de Caminhos.arquivos (sobrevive a
+  // reinstalação/rebuild) e o caminho gravado em Documentos.logoPath.
+  ipcMain.handle('config:selecionarLogoDocumentos', wrap(async (e) => {
+    const win = BrowserWindow.fromWebContents(e.sender)
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+      title: 'Selecionar logo institucional',
+      properties: ['openFile'],
+      filters: [{ name: 'Imagens', extensions: ['png', 'jpg', 'jpeg'] }],
+    })
+    if (canceled || !filePaths.length) return null
+
+    const cfg = getConfigForFrontend()
+    const pastaArquivos = cfg?.Caminhos?.arquivos
+    if (!pastaArquivos) throw new Error('Pasta de arquivos não configurada.')
+    if (!existsSync(pastaArquivos)) mkdirSync(pastaArquivos, { recursive: true })
+
+    const destino = join(pastaArquivos, `logo-documentos${extname(filePaths[0]).toLowerCase()}`)
+    copyFileSync(filePaths[0], destino)
+    saveConfig('Documentos', 'logoPath', destino)
+    return destino
   }))
 
   // Seleção do arquivo krontech.ini de produção diretamente (não a pasta) —

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { X, Plus, Trash2, Paperclip, FileText } from 'lucide-react'
 import { diaDaSemana, fmtMoeda, novoItem } from './utils'
 import StatusBadge from './StatusBadge'
+import InputData from '../../components/InputData'
 
 const MEIOS_TRANSPORTE = ['Carro próprio', 'Carro da empresa', 'Ônibus', 'Avião', 'Outro']
 
@@ -33,7 +34,7 @@ export default function ViagemModal({
   }
 
   async function anexarComprovante(key) {
-    const res = await window.api.arquivos.selecionarECopiar({ subpasta: 'viagens' })
+    const res = await window.api.arquivos.selecionarECopiar({ subpasta: 'viagens', chaveCaminho: 'arquivosViagens' })
     if (!res?.ok) return
     setItem(key, { arquivo_path: res.path, arquivo_nome: res.nome, arquivo_ext: res.ext })
   }
@@ -85,13 +86,15 @@ export default function ViagemModal({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             <div className="form-group">
               <label className="form-label">Período — de *</label>
-              <input type="date" className="form-input" value={form.data_inicio} disabled={somenteLeitura}
-                onChange={e => setCampo('data_inicio', e.target.value)} />
+              <InputData value={form.data_inicio} disabled={somenteLeitura}
+                onChange={v => setCampo('data_inicio', v)}
+                onRange={(ini, fim) => setForm(prev => ({ ...prev, data_inicio: ini, data_fim: fim }))} />
             </div>
             <div className="form-group">
               <label className="form-label">Período — até *</label>
-              <input type="date" className="form-input" value={form.data_fim} disabled={somenteLeitura}
-                onChange={e => setCampo('data_fim', e.target.value)} />
+              <InputData value={form.data_fim} disabled={somenteLeitura}
+                onChange={v => setCampo('data_fim', v)}
+                onRange={(ini, fim) => setForm(prev => ({ ...prev, data_inicio: ini, data_fim: fim }))} />
             </div>
             <div className="form-group">
               <label className="form-label">Meio de Transporte</label>
@@ -148,8 +151,8 @@ export default function ViagemModal({
                     const valor = (Number(it.qtde) || 0) * (Number(it.valor_unitario) || 0)
                     return (
                       <tr key={it._key} style={{ borderTop: '1px solid var(--bd)' }}>
-                        <Td><input type="date" style={CELL_INPUT} value={it.data} disabled={somenteLeitura}
-                          onChange={e => setItem(it._key, { data: e.target.value })} /></Td>
+                        <Td><InputData style={CELL_INPUT} value={it.data} disabled={somenteLeitura}
+                          onChange={v => setItem(it._key, { data: v })} /></Td>
                         <Td><span style={{ color: 'var(--t3)', fontSize: 11 }}>{diaDaSemana(it.data)}</span></Td>
                         <Td><input style={CELL_INPUT} value={it.descricao} disabled={somenteLeitura}
                           onChange={e => setItem(it._key, { descricao: e.target.value })} placeholder="Ex: Refeição" /></Td>

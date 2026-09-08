@@ -814,6 +814,13 @@ export async function initDb() {
     )
   `).catch(e => console.warn('[migration] create kr_pesquisas_001 (startup):', e.message))
 
+  // Retroage a UNIQUE em codigo pra quem já tinha a tabela criada antes
+  // dela existir no CREATE TABLE acima (CREATE TABLE IF NOT EXISTS nunca
+  // altera uma tabela já existente) — sem isso o ON CONFLICT do seed abaixo
+  // falha com "não há restrição de unicidade" toda vez que o app inicia.
+  await query(`ALTER TABLE kr_pesquisas_001 ADD CONSTRAINT kr_pesquisas_001_codigo_key UNIQUE (codigo)`)
+    .catch(() => {}) // já existe — silencioso, não é um erro real
+
   // Seed das pesquisas já usadas hoje pela Agenda — ON CONFLICT preserva
   // qualquer edição que o usuário já tenha feito via tela Monta Pesquisa.
   await query(`
@@ -1208,6 +1215,11 @@ export async function initDb() {
   // produção importado via "Importar Banco", que pode não ter os usuários
   // reais que você lembra de cor.
   if (IS_DEV) {
+    // Mesma retroação de UNIQUE que kr_pesquisas_001.codigo acima — a
+    // tabela kr_usuarios_001 existente não tinha essa constraint.
+    await query(`ALTER TABLE kr_usuarios_001 ADD CONSTRAINT kr_usuarios_001_usuario_key UNIQUE (usuario)`)
+      .catch(() => {})
+
     await query(`
       INSERT INTO kr_usuarios_001 (usuario, nome, senha_hash, perfil)
       VALUES ('admin.dev', 'Admin (Dev)', $1, 'admin')

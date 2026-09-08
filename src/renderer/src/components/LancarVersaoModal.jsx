@@ -36,6 +36,7 @@ function indiceEtapaAtual(faseAtual) {
 export default function LancarVersaoModal({ open, onClose }) {
   const [fase, setFase]           = useState('token') // token | confirmacao | progresso | sucesso | erro
   const [token, setToken]         = useState('')
+  const [notas, setNotas]         = useState('')
   const [progresso, setProgresso] = useState({ fase: '', linha: '' })
   const [historico, setHistorico] = useState([]) // últimas linhas de log, mais recente por último
   const [resultado, setResultado] = useState(null)
@@ -46,11 +47,24 @@ export default function LancarVersaoModal({ open, onClose }) {
     if (consoleRef.current) consoleRef.current.scrollTop = consoleRef.current.scrollHeight
   }, [historico])
 
+  // RELEASE_NOTES.md (raiz do projeto) — Claude escreve o changelog ao
+  // terminar uma sessão, aqui pré-preenche o campo de notas assim que o
+  // modal abre. Continua editável antes de confirmar; se não existir,
+  // fica em branco (usuário digita ou deixa o texto genérico padrão).
+  useEffect(() => {
+    if (open) {
+      window.api.lancarVersao.lerNotasPendentes().then(texto => {
+        if (texto) setNotas(texto)
+      })
+    }
+  }, [open])
+
   if (!open) return null
 
   function resetar() {
     setFase('token')
     setToken('')
+    setNotas('')
     setProgresso({ fase: '', linha: '' })
     setHistorico([])
     setResultado(null)
@@ -70,7 +84,7 @@ export default function LancarVersaoModal({ open, onClose }) {
       if (p.linha) setHistorico(h => [...h.slice(-199), p.linha])
     })
     try {
-      const res = await window.api.lancarVersao.executar(token)
+      const res = await window.api.lancarVersao.executar(token, notas)
       if (!res.ok) {
         setErro(res.erro)
         setFase('erro')
@@ -163,6 +177,21 @@ export default function LancarVersaoModal({ open, onClose }) {
                 <br /><br />
                 Esta ação não pode ser desfeita.
               </div>
+              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{
+                  fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: .5,
+                }}>
+                  Notas da versão (opcional)
+                </label>
+                <textarea
+                  className="form-input"
+                  value={notas}
+                  onChange={e => setNotas(e.target.value)}
+                  placeholder="O que mudou nesta versão? Aparece na página da release no GitHub."
+                  rows={6}
+                  style={{ height: 220, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, padding: '10px 12px' }}
+                />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '18px 24px' }}>
               <button className="btn btn-ghost" onClick={() => setFase('token')}>Voltar</button>
@@ -235,7 +264,6 @@ export default function LancarVersaoModal({ open, onClose }) {
                 {resultado.releaseUrl && (
                   <div style={{ marginTop: 10 }}>
                     <a href={resultado.releaseUrl} target="_blank" rel="noreferrer"
-                      onClick={e => { e.preventDefault(); window.api?.shell?.openExternal?.(resultado.releaseUrl) }}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--or)', fontSize: 12 }}>
                       <ExternalLink size={12} /> Ver release no GitHub
                     </a>

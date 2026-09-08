@@ -233,7 +233,10 @@ export default function FormBuilderView({ nomeTabela, onTituloChange }) {
       onTituloChange?.(t.nome_tela, t.nome_tabela)
       // Carrega pasta configurada se a tela tiver campo arquivo
       if ((t.campos || []).some(c => c.tipo === 'arquivo')) {
-        window.api.config.get().then(res => setPastaConfig((res.ok ? res.data?.Caminhos?.arquivos : '') || ''))
+        window.api.config.get().then(res => {
+          const cam = res.ok ? res.data?.Caminhos : null
+          setPastaConfig(cam?.arquivosFormBuilder || cam?.arquivos || '')
+        })
       }
       // Pré-carrega sugestões para campos do tipo pasta
       const camposPasta = (t.campos || []).filter(c => c.tipo === 'pasta' && c.nome_campo)

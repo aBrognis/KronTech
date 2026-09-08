@@ -57,11 +57,14 @@ export async function gerarExcelViagem(despesa) {
   ws.getCell('A1').alignment = { horizontal: 'center' }
   ws.getRow(1).height = 26
 
+  const carroEmpresa = despesa.meio_transporte === 'Carro da empresa'
   const linhasCabecalho = [
     ['Consultor:', despesa.consultor_nome, 'Cliente:', despesa.cliente_nome || ''],
     ['Período de:', fmtData(despesa.data_inicio), 'Até:', fmtData(despesa.data_fim)],
     ['Local Partida:', despesa.local_partida || '', 'Local Destino:', despesa.local_destino || ''],
-    ['Meio de Transporte:', despesa.meio_transporte || '', '', ''],
+    carroEmpresa
+      ? ['Meio de Transporte:', despesa.meio_transporte || '', 'Carro:', `${despesa.veiculo_numero || ''}${despesa.veiculo_placa ? ' - ' + despesa.veiculo_placa : ''}`.trim()]
+      : ['Meio de Transporte:', despesa.meio_transporte || '', '', ''],
   ]
   let r = 3
   for (const [l1, v1, l2, v2] of linhasCabecalho) {

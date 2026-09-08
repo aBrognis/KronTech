@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap, Receipt, Lock,
-  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut
+  Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut, FileText, Search, Mail,
+  Landmark, Scale, CreditCard, Users
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -27,15 +28,29 @@ export const MENU_BASE = [
       { id: 'agenda',       label: 'Agenda',              Icon: CalendarDays },
       { id: 'viagens',      label: 'Despesas de Viagem',  Icon: Receipt      },
       { id: 'cofre-senhas', label: 'Cofre de Senhas',     Icon: Lock         },
+      { id: 'email',        label: 'E-mails',             Icon: Mail         },
+    ]
+  },
+  {
+    id: 'cadastros',
+    baseLabel: 'Cadastros',
+    items: [
+      // grupoPadrao: onde o item cai quando o .ini nao tem override pra ele.
+      // 'din_Cadastros' e o grupo dinamico onde a Entidade ja vivia.
+      { id: 'entidade',            label: 'Entidades',             Icon: Users,      grupoPadrao: 'din_Cadastros' },
+      { id: 'naturezas-juridicas', label: 'Naturezas Jurídicas',    Icon: Scale,      grupoPadrao: 'din_Cadastros' },
+      { id: 'condicoes-pagamento', label: 'Condições de Pagamento',  Icon: CreditCard, grupoPadrao: 'din_Cadastros' },
+      { id: 'bancos',              label: 'Bancos',                 Icon: Landmark,   grupoPadrao: 'din_Cadastros' },
     ]
   },
   {
     id: 'ferramentas',
     baseLabel: 'Ferramentas',
     items: [
-      { id: 'arquivos',    label: 'Arquivos',         Icon: FolderOpen },
-      { id: 'sql',         label: 'Editor SQL',       Icon: Database   },
-      { id: 'formbuilder', label: 'KronTech Designer', Icon: LayoutGrid },
+      { id: 'arquivos',            label: 'Arquivos',         Icon: FolderOpen },
+      { id: 'sql',                 label: 'Editor SQL',       Icon: Database   },
+      { id: 'documentos-gerados',  label: 'Documentos',       Icon: FileText   },
+      { id: 'formbuilder',         label: 'KronTech Designer', Icon: LayoutGrid },
     ]
   }
 ]
@@ -56,7 +71,8 @@ const LABELS_KEY = { inicio: 'label_inicio', gestao: 'label_gestao', ferramentas
 
 export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hideFormbuilder = false, designerMode = false, sessao = null, onLogout }) {
   const [collapsed,      setCollapsed]      = useState(false)
-  const [openGroups,     setOpenGroups]     = useState({ inicio: true, gestao: true, ferramentas: true, designer: true })
+  const [openGroups,     setOpenGroups]     = useState({ inicio: false, gestao: false, ferramentas: false, designer: false })
+  const [busca,          setBusca]          = useState('')
   const [version,        setVersion]        = useState('1.1')
   const [telasDin,       setTelasDin]       = useState([])
   const [reloading,      setReloading]      = useState(false)
@@ -178,11 +194,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     try {
       const res = await window.api.formBuilder.listarTelas(true)
       if (!res.ok) throw new Error(res.erro)
-      const telas = res.data
-      setTelasDin(telas)
-      const extras = {}
-      telas.forEach(t => { if (t.modulo_nome) extras[`din_${t.modulo_nome}`] = true })
-      if (telas.length) setOpenGroups(prev => ({ ...prev, ...extras }))
+      setTelasDin(res.data)
     } catch (e) { console.error('[Sidebar] carregarTelas:', e) }
     finally { if (showSpin) setReloading(false) }
   }
@@ -207,8 +219,17 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
 
   // Itens nativos com destino customizado (Módulos → "Nomes das telas nativas")
   // saem do grupo MENU_BASE original e entram no grupo de destino escolhido.
+  // Um item pode ter `grupoPadrao` no MENU_BASE: e o destino usado quando o
+  // .ini nao tem override explicito pra ele (ex: as telas de Cadastros de
+  // Apoio caem em din_Cadastros, junto da Entidade, sem o usuario mexer).
+  const destinoDeItem = {} // itemId -> grupo destino (override do .ini OU grupoPadrao)
+  MENU_BASE.flatMap(g => g.items).forEach(it => {
+    const ov = itensGrupoOverride[it.id]
+    if (ov) destinoDeItem[it.id] = ov
+    else if (it.grupoPadrao) destinoDeItem[it.id] = it.grupoPadrao
+  })
   const itensNativosMovidos = {} // destino -> [item]
-  Object.entries(itensGrupoOverride).forEach(([itemId, destino]) => {
+  Object.entries(destinoDeItem).forEach(([itemId, destino]) => {
     if (!destino) return
     const item = MENU_BASE.flatMap(g => g.items).find(it => it.id === itemId)
     if (!item) return
@@ -219,7 +240,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       Icon: itensIconeOverride[item.id] ? telaIcon(itensIconeOverride[item.id]) : item.Icon,
     })
   })
-  const itemTemOverride = id => Object.prototype.hasOwnProperty.call(itensGrupoOverride, id) && itensGrupoOverride[id]
+  const itemTemOverride = id => Object.prototype.hasOwnProperty.call(destinoDeItem, id) && destinoDeItem[id]
 
   // Ordem manual dentro do grupo: itens com posição salva vêm primeiro (na
   // ordem salva), os demais mantêm a ordem natural, depois deles.
@@ -276,9 +297,12 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       if (sid.startsWith('din_')) {
         const nome = sid.slice(4)
         const tls = gruposDin[nome]
-        if (!tls?.length) return
+        // din_ pode nao ter tela FormBuilder mas ter item nativo movido
+        // pra la (ex: din_Cadastros so com as telas de apoio + Entidade).
+        const movidos = itensNativosMovidos[sid] || []
+        if (!tls?.length && !movidos.length) return
         usedDin.add(nome)
-        result.push(buildDynGroup(nome, tls))
+        result.push(buildDynGroup(nome, tls || []))
       } else {
         const base = MENU_BASE.find(g => g.id === sid)
         if (!base) return
@@ -303,6 +327,18 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
       ...nomesModulosSoNativos.map(nome => buildDynGroup(nome))
     ]
   }
+
+  // Busca (like por nome da tela): filtra os itens de cada grupo pelo termo
+  // digitado; grupos sem nenhum item batendo somem da lista, e os grupos
+  // restantes são forçados a aparecer abertos (independente do estado salvo
+  // em openGroups), pra achar a tela sem precisar expandir manualmente.
+  const buscaAtiva = busca.trim().length > 0
+  const termoBusca = busca.trim().toLowerCase()
+  const menuExibido = buscaAtiva
+    ? menu
+        .map(group => ({ ...group, items: group.items.filter(it => it.label.toLowerCase().includes(termoBusca)) }))
+        .filter(group => group.items.length > 0)
+    : menu
 
   const hh = agora.getHours()
   const mm  = String(agora.getMinutes()).padStart(2, '0')
@@ -453,8 +489,12 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
     <>
     <aside className={`sb${collapsed ? ' collapsed' : ''}`}>
 
-      <button className="sb-toggle" onClick={() => setCollapsed(p => !p)}>
-        <span className="sb-toggle-icon">
+      <button
+        className={`sb-toggle toggle-recolher${collapsed ? ' is-recolhido' : ''}`}
+        onClick={() => setCollapsed(p => !p)}
+        title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+      >
+        <span className="toggle-recolher-icon">
           <ChevronLeft size={11} strokeWidth={2.5} />
         </span>
       </button>
@@ -480,17 +520,30 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
           </div>
         </div>
 
+        <div className="sb-search">
+          <Search size={13} className="sb-search-icon" />
+          <input
+            className="sb-search-input"
+            type="text"
+            placeholder="Buscar tela..."
+            value={busca}
+            onChange={e => { setBusca(e.target.value); if (collapsed) setCollapsed(false) }}
+          />
+        </div>
+
         <nav className="sb-scroll">
-          {menu.map(group => (
+          {menuExibido.map(group => {
+            const aberto = buscaAtiva ? true : !!openGroups[group.id]
+            return (
             <div key={group.id} className="sb-group">
               <button className="sb-group-header" onClick={() => toggleGroup(group.id)}>
                 <span className="sg-label">{group.label}</span>
-                <span className={`sg-arrow ${openGroups[group.id] ? 'open' : 'closed'}`}>
+                <span className={`sg-arrow ${aberto ? 'open' : 'closed'}`}>
                   <ChevronDown size={10} strokeWidth={2.5} />
                 </span>
               </button>
 
-              <div className={`sg-items ${openGroups[group.id] !== false ? 'open' : 'closed'}`}>
+              <div className={`sg-items ${aberto ? 'open' : 'closed'}`}>
                 {group.items.map(({ id, label, Icon, badge }) => (
                   <button
                     key={id}
@@ -509,7 +562,7 @@ export default function Sidebar({ activePage, onNavigate, telasVersion = 0, hide
                 ))}
               </div>
             </div>
-          ))}
+          )})}
         </nav>
 
         <div className="sb-bottom">

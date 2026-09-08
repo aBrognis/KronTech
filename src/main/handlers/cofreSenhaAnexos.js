@@ -14,7 +14,7 @@ export function registerCofreSenhaAnexosHandlers({ ipcMain, wrap, query, queryOn
 
   ipcMain.handle('cofreSenhaAnexos:adicionar', async (e, { credencialId, tipoAnexo = 'generico', descricao = '', filtros, usuarioNome } = {}) => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    const copiado = await selecionarECopiarArquivo({ subpasta: 'cofre', filtros }, win, getConfig)
+    const copiado = await selecionarECopiarArquivo({ subpasta: 'cofre', filtros, chaveCaminho: 'arquivosCofre' }, win, getConfig)
     if (!copiado) return { ok: false, erro: 'Seleção cancelada.' }
     if (!copiado.ok) return copiado
     try {

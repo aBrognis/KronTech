@@ -11,6 +11,7 @@ export default function FormToolbar({
   saving = false,
   onIncluir, onAlterar, onExcluir, onConsultar, onExportar,
   onGravar, onDesistir,
+  acoesExtras,             // opcional: JSX de botoes extras, aparece so em modo consulta, apos "Exportar"
 }) {
   const isRO = mode === 'view'
 
@@ -37,6 +38,7 @@ export default function FormToolbar({
             {onExcluir && <button className="btn btn-danger" onClick={onExcluir} disabled={!temRegistros}><Trash2 size={13} /> Excluir</button>}
             {onConsultar && <button className="btn btn-ghost" onClick={onConsultar}><Search size={13} /> Consultar</button>}
             {onExportar && <button className="btn btn-ghost" onClick={onExportar}><FileDown size={13} /> Exportar</button>}
+            {acoesExtras}
           </>
         ) : (
           <>

@@ -13,6 +13,7 @@ import HistoricoSenhaModal from '../components/cofre/HistoricoSenhaModal.jsx'
 import LogAcessoModal from '../components/cofre/LogAcessoModal.jsx'
 import AnexosPainel from '../components/cofre/AnexosPainel.jsx'
 import TotpField from '../components/cofre/TotpField.jsx'
+import { SecaoHeader } from '../components/SecaoForm.jsx'
 import { NIVEL_META, EMPTY_FORM, TIPOS_CREDENCIAL, fmtDataBR, estaVencida } from './cofreSenhas/utils'
 
 const FILTROS_VAZIOS = { busca: '', categoria: '', apenasFavoritos: false, apenasVencidas: false }
@@ -385,16 +386,18 @@ export default function CofreSenhas({ newTrigger, sessao }) {
         )}
 
         {activeTab === 'cadastro' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {isRO && form.id && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 10px' }}>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap' }}>Identificação</span>
+              <span style={{ flex: 1, height: 1, background: 'var(--bd2)' }} />
+              {isRO && form.id && (
                 <button type="button" onClick={() => setShowLogAcesso(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 11 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--t3)', fontSize: 11, flexShrink: 0 }}
                   title="Ver log de acesso deste item">
                   <ScrollText size={12} /> Log de Acesso
                 </button>
-              </div>
-            )}
+              )}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 10 }}>
               <div className="form-group" style={{ margin: 0 }}>
                 <label className="form-label">Código</label>
@@ -419,6 +422,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
               </select>
             </div>
 
+            <div><SecaoHeader titulo="Acesso" /></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="form-group">
                 <label className="form-label">Categoria</label>
@@ -492,6 +496,7 @@ export default function CofreSenhas({ newTrigger, sessao }) {
 
             <datalist id="cofre-categorias">{categorias.map(c => <option key={c} value={c} />)}</datalist>
 
+            <div><SecaoHeader titulo="Autenticação em dois fatores" /></div>
             <TotpField
               credencialId={form.id}
               value={form.totp_secret}
@@ -502,9 +507,13 @@ export default function CofreSenhas({ newTrigger, sessao }) {
             />
 
             {form.id && (
-              <AnexosPainel credencialId={form.id} usuarioNome={nomeUsuarioAtual} disabled={isRO} />
+              <>
+                <div><SecaoHeader titulo="Anexos" /></div>
+                <AnexosPainel credencialId={form.id} usuarioNome={nomeUsuarioAtual} disabled={isRO} />
+              </>
             )}
 
+            <div><SecaoHeader titulo="Complemento" /></div>
             <div className="form-group">
               <label className="form-label">Observações</label>
               <textarea className="form-textarea" rows={2} value={form.observacoes} disabled={isRO}

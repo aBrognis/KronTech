@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { getConfig, saveConfig, saveSectionConfig, saveGithubToken, getConfigForFrontend, INI_PATH } from './config'
+import { getConfig, saveConfig, saveSectionConfig, saveGithubToken, saveAnthropicApiKey, saveCnpjaToken, getConfigForFrontend, INI_PATH } from './config'
 
 import { query, queryOne, getPool } from './db'
 import { wrap, importLog, importCancelFlags, categoriaByExt, scanDir, hashCamposSenha } from './handlers/_shared'
@@ -27,6 +27,16 @@ import { registerCofreSenhaHistoricoHandlers } from './handlers/cofreSenhaHistor
 import { registerCofreSenhaAcessoHandlers } from './handlers/cofreSenhaAcesso'
 import { registerCofreSenhaAnexosHandlers } from './handlers/cofreSenhaAnexos'
 import { registerCofreSenhaGeradorHandlers } from './handlers/cofreSenhaGerador'
+import { registerDocumentoGeradoHandlers } from './handlers/documentoGerado'
+import { registerEmailContaHandlers } from './handlers/emailConta'
+import { registerEmailMensagemHandlers } from './handlers/emailMensagem'
+import { registerEmailEnvioHandlers } from './handlers/emailEnvio'
+import { registerEmailEtiquetaHandlers } from './handlers/emailEtiqueta'
+import { registerEmailPastaHandlers } from './handlers/emailPasta'
+import { registerEmailSyncControl } from './handlers/emailSyncControl'
+import { registerPromptIaHandlers } from './handlers/promptIa'
+import { registerCadastrosApoioHandlers } from './handlers/cadastrosApoio'
+import { registerMunicipioHandlers } from './handlers/municipio'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -35,9 +45,9 @@ export function registerHandlers() {
   registerDashboardHandlers({ ipcMain, wrap, query, queryOne })
   registerDashboardDemoHandlers({ ipcMain, wrap, query })
   registerClipboardHandlers({ ipcMain, wrap })
-  registerEntidadeHandlers({ ipcMain })
+  registerEntidadeHandlers({ ipcMain, wrap })
   registerAuthHandlers({ ipcMain, query, queryOne })
-  registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, saveGithubToken, INI_PATH })
+  registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, saveGithubToken, saveAnthropicApiKey, saveCnpjaToken, INI_PATH })
   registerUpdateHandlers({ ipcMain, wrap })
   registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getConfig, importLog, importCancelFlags, categoriaByExt, scanDir })
   registerFormBuilderHandlers({ ipcMain, wrap, query, hashCamposSenha, importLog, importCancelFlags, categoriaByExt, scanDir })
@@ -53,4 +63,14 @@ export function registerHandlers() {
   registerCofreSenhaAcessoHandlers({ ipcMain, wrap, query })
   registerCofreSenhaAnexosHandlers({ ipcMain, wrap, query, queryOne, getConfig })
   registerCofreSenhaGeradorHandlers({ ipcMain, wrap, query, queryOne })
+  registerDocumentoGeradoHandlers({ ipcMain, wrap })
+  registerEmailContaHandlers({ ipcMain, wrap })
+  registerEmailMensagemHandlers({ ipcMain, wrap })
+  registerEmailEnvioHandlers({ ipcMain, wrap, getConfig })
+  registerEmailEtiquetaHandlers({ ipcMain, wrap })
+  registerEmailPastaHandlers({ ipcMain, wrap })
+  registerEmailSyncControl({ ipcMain })
+  registerPromptIaHandlers({ ipcMain, wrap })
+  registerCadastrosApoioHandlers({ ipcMain, wrap })
+  registerMunicipioHandlers({ ipcMain, wrap })
 }

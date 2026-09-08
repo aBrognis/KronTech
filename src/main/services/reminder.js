@@ -48,6 +48,42 @@ async function check() {
   } catch {}
 }
 
+// Documentos de entidade vencendo (IE, certidoes, contrato social...).
+// Roda 1x por dia (na 1a checagem apos meia-noite). Notifica so uma vez
+// por documento por dia.
+let ultimoAlertaDocs = null
+async function checkDocumentosEntidade() {
+  const hoje = new Date().toISOString().slice(0, 10)
+  if (ultimoAlertaDocs === hoje) return
+  ultimoAlertaDocs = hoje
+  try {
+    const rows = await query(`
+      SELECT d.tipo, d.validade, e.nome AS entidade_nome, e.codigo AS entidade_codigo
+      FROM entidade_documento_001 d
+      JOIN entidade_001 e ON e.id = d.entidade_id
+      WHERE d.validade IS NOT NULL
+        AND d.validade BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '30 days')
+      ORDER BY d.validade ASC
+    `)
+    if (!rows.length) return
+    const linhas = rows.slice(0, 5).map(r => {
+      const dias = Math.ceil((new Date(String(r.validade).slice(0, 10)) - new Date()) / 86400000)
+      return `${r.entidade_nome}: ${r.tipo} vence em ${dias}d`
+    })
+    const extra = rows.length > 5 ? `\n+${rows.length - 5} outros` : ''
+    new Notification({
+      title: `KronTech — ${rows.length} documento(s) de entidade vencendo`,
+      body: linhas.join('\n') + extra,
+      icon,
+    }).show()
+  } catch (e) {
+    // tabela pode nao existir ainda em bancos que nao rodaram a migration
+    if (!/relation .* does not exist/i.test(e.message || '')) {
+      console.warn('[reminder] checkDocumentosEntidade:', e.message)
+    }
+  }
+}
+
 let lastTopUpDate = null
 async function topUpRecurringSeries() {
   const today = new Date().toISOString().slice(0, 10)
@@ -65,10 +101,12 @@ export function startReminderCheck() {
   topUpRecurringSeries()
   checkStatusAutomatico()
   checkAgendamentos()
+  checkDocumentosEntidade()
   setInterval(() => {
     check()
     topUpRecurringSeries()
     checkStatusAutomatico()
     checkAgendamentos()
+    checkDocumentosEntidade()
   }, 60_000)
 }

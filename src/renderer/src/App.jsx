@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Sun, Moon, Play, X, Plus, ChevronLeft, ChevronRight, LayoutDashboard, CalendarDays, FolderOpen, Database, Settings, LayoutGrid, Receipt, Lock } from 'lucide-react'
+import { Sun, Moon, Play, X, Plus, ChevronLeft, ChevronRight, Settings, LayoutGrid } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { _initNavegacao } from './lib/funcoes/navegacao.js'
 import SplashScreen    from './pages/SplashScreen'
 import LoginPage       from './pages/LoginPage'
-import Sidebar         from './components/Sidebar'
+import Sidebar, { MENU_BASE } from './components/Sidebar'
 import UpdateBanner    from './components/UpdateBanner'
 import ErrorBoundary   from './components/ErrorBoundary'
 import NotificacaoRoot from './components/Notificacao'
@@ -17,6 +17,12 @@ import Viagens         from './pages/Viagens'
 import CofreSenhas     from './pages/CofreSenhas'
 import FormBuilderView from './pages/FormBuilderView'
 import Configuracoes, { aplicarCorSistema } from './pages/Configuracoes'
+import DocumentosGerados from './pages/DocumentosGerados'
+import Email from './pages/Email'
+import NaturezasJuridicas from './pages/NaturezasJuridicas'
+import CondicoesPagamento from './pages/CondicoesPagamento'
+import Bancos from './pages/Bancos'
+import Entidade from './pages/entidade'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
 
@@ -31,6 +37,12 @@ const PAGE_META = {
   agenda:              { title: 'Agenda',                sub: 'GESTÃO · COMPROMISSOS'             },
   viagens:             { title: 'Despesas de Viagem',     sub: 'GESTÃO · REEMBOLSOS'               },
   'cofre-senhas':      { title: 'Cofre de Senhas',        sub: 'SEGURANÇA · CREDENCIAIS'            },
+  email:               { title: 'E-mails',                sub: 'GESTÃO · CAIXA DE ENTRADA'          },
+  'documentos-gerados':{ title: 'Documentos',             sub: 'FERRAMENTAS · GERAÇÃO DE DOCUMENTOS' },
+  entidade:            { title: 'Entidades',              sub: 'CADASTROS · CLIENTES, FORNECEDORES' },
+  'naturezas-juridicas':{ title: 'Naturezas Jurídicas',   sub: 'CADASTROS · APOIO'                  },
+  'condicoes-pagamento':{ title: 'Condições de Pagamento', sub: 'CADASTROS · APOIO'                  },
+  bancos:              { title: 'Bancos',                 sub: 'CADASTROS · APOIO'                  },
   arquivos:            { title: 'Arquivos',              sub: 'FERRAMENTAS · GESTÃO DE ARQUIVOS'  },
   sql:                 { title: 'Editor SQL',            sub: 'FERRAMENTAS · POSTGRESQL'          },
   formbuilder:         { title: 'Criador de Telas',      sub: 'FERRAMENTAS · CADASTROS DINÂMICOS' },
@@ -67,39 +79,35 @@ function WinControls() {
   )
 }
 
-const FIXED_PAGES = [
-  { pageId: 'dashboard',           label: 'Dashboard',         Icon: LayoutDashboard },
-  { pageId: 'agenda',              label: 'Agenda',            Icon: CalendarDays    },
-  { pageId: 'viagens',             label: 'Despesas de Viagem',Icon: Receipt         },
-  { pageId: 'cofre-senhas',        label: 'Cofre de Senhas',   Icon: Lock            },
-  { pageId: 'arquivos',            label: 'Arquivos',          Icon: FolderOpen      },
-  { pageId: 'sql',                 label: 'Editor SQL',        Icon: Database        },
-  { pageId: 'configuracoes',       label: 'Configuração do Sistema', Icon: Settings  },
-]
-
 function telaIcon(nome) {
   const key = (nome || 'layout').split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
   return LucideIcons[key] || LayoutGrid
 }
 
 // ── Ícone de página ──────────────────────────────────────────────────────────
+// Derivado de MENU_BASE (Sidebar.jsx) — única fonte de verdade dos ícones
+// nativos, pra abas nunca ficarem com ícone diferente do menu lateral.
+// Só "configuracoes" é acrescentado à parte, pois não é um item de MENU_BASE
+// (fica fixo no rodapé da sidebar, fora dos grupos).
 const PAGE_ICON_MAP = {
-  dashboard: LayoutDashboard, agenda: CalendarDays, viagens: Receipt, 'cofre-senhas': Lock,
-  arquivos: FolderOpen, sql: Database, configuracoes: Settings,
-  'dashboard-designer': LayoutGrid,
+  ...Object.fromEntries(MENU_BASE.flatMap(g => g.items).map(it => [it.id, it.Icon])),
+  configuracoes: Settings,
 }
 
-function PageIcon({ pageId, icone, size = 18 }) {
+function PageIcon({ pageId, icone, size = 18, iconeOverride }) {
   if (pageId.startsWith('fb__')) {
     const Icon = telaIcon(icone || 'layout')
     return <Icon size={size} strokeWidth={1.5} />
   }
-  const Icon = PAGE_ICON_MAP[pageId] || LayoutGrid
+  // itensIconeOverride (customização feita em Módulos → Designer) tem
+  // prioridade sobre o ícone padrão de MENU_BASE — mesma regra que
+  // Sidebar.jsx aplica no menu lateral.
+  const Icon = (iconeOverride?.[pageId] ? telaIcon(iconeOverride[pageId]) : null) || PAGE_ICON_MAP[pageId] || LayoutGrid
   return <Icon size={size} strokeWidth={1.5} />
 }
 
 // ── Painel flutuante de abas ─────────────────────────────────────────────────
-function TabsPanel({ tabs, activeTabId, onSelect, onClose, onReorder, onHide, telasDin }) {
+function TabsPanel({ tabs, activeTabId, onSelect, onClose, onReorder, onHide, telasDin, itensIconeOverride }) {
   const [pos, setPos] = useState(null)
   const dragTabRef = useRef(null)
   const [localTabs, setLocalTabs] = useState(tabs)
@@ -184,6 +192,7 @@ function TabsPanel({ tabs, activeTabId, onSelect, onClose, onReorder, onHide, te
                 icone={tab.pageId.startsWith('fb__')
                   ? telasDin.find(t => `fb__${t.nome_tabela}` === tab.pageId)?.icone
                   : undefined}
+                iconeOverride={itensIconeOverride}
                 size={22}
               />
             </div>
@@ -206,7 +215,7 @@ function TabsPanel({ tabs, activeTabId, onSelect, onClose, onReorder, onHide, te
 let onReorderFromPanel = () => {}
 
 // ── Barra de abas ────────────────────────────────────────────────────────────
-function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, showPanel, onTogglePanel }) {
+function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, itensIconeOverride, showPanel, onTogglePanel }) {
   const scrollRef  = useRef(null)
   const dragState  = useRef(null)
   const [canLeft,  setCanLeft]  = useState(false)
@@ -265,7 +274,7 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, sho
 
       <div ref={scrollRef} className="tab-list" onScroll={checkScroll}>
         {tabs.map(tab => (
-          <button
+          <div
             key={tab.id}
             data-tabid={tab.id}
             draggable
@@ -276,6 +285,8 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, sho
             className={`tab-item${tab.id === activeTabId ? ' active' : ''}${dragOver === tab.id ? ' drag-over' : ''}`}
             onClick={() => onSelect(tab.id)}
             title={tab.label}
+            role="button"
+            tabIndex={0}
           >
             <span className="tab-icon">
               <PageIcon
@@ -283,16 +294,17 @@ function TabBar({ tabs, activeTabId, onSelect, onClose, onReorder, telasDin, sho
                 icone={tab.pageId.startsWith('fb__')
                   ? telasDin.find(t => `fb__${t.nome_tabela}` === tab.pageId)?.icone
                   : undefined}
+                iconeOverride={itensIconeOverride}
                 size={12}
               />
             </span>
             <span className="tab-label">{tab.label}</span>
             {tabs.length > 1 && (
-              <span className="tab-close" onClick={e => { e.stopPropagation(); onClose(tab.id) }}>
+              <button type="button" className="tab-close" onClick={e => { e.stopPropagation(); onClose(tab.id) }}>
                 <X size={10} strokeWidth={2.5} />
-              </span>
+              </button>
             )}
-          </button>
+          </div>
         ))}
       </div>
 
@@ -342,6 +354,11 @@ export default function App() {
   const [newTrigger,   setNewTrigger]   = useState(0)
   const [telasVersion, setTelasVersion] = useState(0)
   const [labelsItens,  setLabelsItens]  = useState({})
+  // Override de ícone por item nativo (Módulos → "Nomes das telas nativas"
+  // do Designer) — mesma fonte que Sidebar.jsx usa pra desenhar o menu
+  // lateral; sem isso, as abas do topo mostravam o ícone padrão de
+  // MENU_BASE em vez do ícone customizado, divergindo do menu.
+  const [itensIconeOverride, setItensIconeOverride] = useState({})
   const { isDark, toggle } = useTheme()
 
   useEffect(() => {
@@ -359,6 +376,9 @@ export default function App() {
       if (p?.labels_itens) {
         try { setLabelsItens(JSON.parse(p.labels_itens)) } catch { /* ignora ini corrompido */ }
       }
+      if (p?.itens_icone_override) {
+        try { setItensIconeOverride(JSON.parse(p.itens_icone_override)) } catch { /* ignora ini corrompido */ }
+      }
     }).catch(() => {})
     window.api.formBuilder.listarTelas(true).then(res => res.ok && setTelasDin(res.data)).catch(() => {})
 
@@ -366,6 +386,9 @@ export default function App() {
       const d = e.detail || {}
       if (d.labelsItens != null) {
         try { setLabelsItens(JSON.parse(d.labelsItens || '{}')) } catch { /* ignora ini corrompido */ }
+      }
+      if (d.itensIconeOverride != null) {
+        try { setItensIconeOverride(JSON.parse(d.itensIconeOverride || '{}')) } catch { /* ignora ini corrompido */ }
       }
     }
     window.addEventListener('krontech:config-changed', onConfigChanged)
@@ -396,6 +419,13 @@ export default function App() {
 
   const tabsRef = useRef(tabs)
   useEffect(() => { tabsRef.current = tabs }, [tabs])
+
+  // Sincronizacao de e-mail so comeca quando ha sessao ativa (pos-login em
+  // producao; bypass automatico em dev). startEmailSync no main e
+  // idempotente, entao chamar aqui e no onLogin nao duplica nada.
+  useEffect(() => {
+    if (appPhase === 'app' && sessao) window.api.email?.iniciarSync?.()
+  }, [appPhase, sessao])
 
   const handleNavigate = useCallback((pageId) => {
     setNewTrigger(0)
@@ -470,6 +500,9 @@ export default function App() {
     : { ...metaBase, title: labelsItens[currentPageId] || metaBase.title }
 
   function renderTabContent(pageId) {
+    // Entidade migrou de tela FormBuilder pra pagina dedicada — redireciona
+    // quem ainda pedir a antiga (ex: lupa que abria fb__entidade_001).
+    if (pageId === 'fb__entidade_001') pageId = 'entidade'
     if (pageId.startsWith('fb__')) {
       const nomeTabela = pageId.slice(4)
       return (
@@ -485,6 +518,12 @@ export default function App() {
       case 'agenda':             return <Agenda newTrigger={newTrigger} />
       case 'viagens':            return <Viagens newTrigger={newTrigger} sessao={sessao} />
       case 'cofre-senhas':       return <CofreSenhas newTrigger={newTrigger} sessao={sessao} />
+      case 'email':              return <Email newTrigger={newTrigger} />
+      case 'documentos-gerados': return <DocumentosGerados newTrigger={newTrigger} />
+      case 'entidade':           return <Entidade newTrigger={newTrigger} />
+      case 'naturezas-juridicas': return <NaturezasJuridicas newTrigger={newTrigger} />
+      case 'condicoes-pagamento': return <CondicoesPagamento newTrigger={newTrigger} />
+      case 'bancos':             return <Bancos newTrigger={newTrigger} />
       case 'arquivos':           return <Arquivos newTrigger={newTrigger} />
       case 'sql':                return <EditorSQL />
       case 'configuracoes':      return <Configuracoes />
@@ -493,11 +532,11 @@ export default function App() {
   }
 
   if (appPhase === 'splash') return <SplashScreen onDone={() => setAppPhase('login')} accentColor={accentColor} />
-  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); setAppPhase('app') }} accentColor={accentColor} /><UpdateBanner /><NotificacaoRoot /></>
+  if (appPhase === 'login')  return <><LoginPage onLogin={(s) => { setSessao(s); window.api.win.maximize(); window.api.email?.iniciarSync?.(); setAppPhase('app') }} accentColor={accentColor} /><UpdateBanner /><NotificacaoRoot /></>
 
   return (
     <div className="app">
-      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} onLogout={() => { setSessao(null); setAppPhase('login') }} />
+      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} onLogout={() => { window.api.email?.pararSync?.(); setSessao(null); setAppPhase('login') }} />
       <div className="main">
 
         {/* Topbar */}
@@ -528,6 +567,7 @@ export default function App() {
             onClose={closeTab}
             onReorder={reorderTabs}
             telasDin={telasDin}
+            itensIconeOverride={itensIconeOverride}
             showPanel={showPanel}
             onTogglePanel={() => setShowPanel(v => !v)}
           />
@@ -547,6 +587,7 @@ export default function App() {
               onReorder={reorderTabs}
               onHide={() => setShowPanel(false)}
               telasDin={telasDin}
+              itensIconeOverride={itensIconeOverride}
             />
           </>
         )}
@@ -557,7 +598,15 @@ export default function App() {
             <main
               key={tab.id}
               className="content"
-              style={{ display: tab.id === activeTabId ? 'flex' : 'none' }}
+              style={{
+                display: tab.id === activeTabId ? 'flex' : 'none',
+                // Cada aba isolada no próprio stacking/paint context — evita
+                // que o compositor do Chromium reaproveite um frame
+                // desatualizado de uma aba escondida (ex.: canvas do
+                // ECharts do Dashboard) sobre a aba recém-ativada.
+                isolation: 'isolate',
+                contain: 'layout paint',
+              }}
             >
               <ErrorBoundary key={tab.id}>
                 {renderTabContent(tab.pageId)}

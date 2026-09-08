@@ -39,6 +39,7 @@ export const EMPTY_FORM = {
   cliente_id: '', cliente_nome: '',
   data_inicio: '', data_fim: '',
   local_partida: '', local_destino: '', meio_transporte: '',
+  veiculo_numero: '', veiculo_placa: '',
   observacoes: '',
   itens: [],
 }
