@@ -275,18 +275,12 @@ export function registerViagensHandlers({ ipcMain, wrap, query, queryOne }) {
   }))
 
   ipcMain.handle('viagens:listarConsultores', wrap(async () => {
+    // usuario_001 e a tela nativa de Usuário; se existir, e a fonte.
     const tabelaExiste = await queryOne(
       `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='usuario_001'`
     )
     if (tabelaExiste) {
-      const colLogin = await queryOne(
-        `SELECT nome_campo FROM kr_tela_campos_001 tc
-         JOIN kr_telas_001 t ON t.id=tc.tela_id
-         WHERE t.nome_tabela='usuario_001' AND tc.tipo='login' AND tc.ativo=TRUE LIMIT 1`
-      )
-      if (colLogin) {
-        return query(`SELECT id, nome FROM usuario_001 WHERE ativo=TRUE ORDER BY nome`)
-      }
+      return query(`SELECT id, nome FROM usuario_001 WHERE ativo=TRUE ORDER BY nome`)
     }
     return query(`SELECT id, nome FROM kr_usuarios_001 WHERE ativo=TRUE ORDER BY nome`)
   }))

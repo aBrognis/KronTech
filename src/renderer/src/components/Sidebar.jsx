@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap, Receipt, Lock,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut, FileText, Search, Mail,
-  Landmark, Scale, CreditCard, Users
+  Landmark, Scale, CreditCard, Users, UserCog
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -38,6 +38,7 @@ export const MENU_BASE = [
       // grupoPadrao: onde o item cai quando o .ini nao tem override pra ele.
       // 'din_Cadastros' e o grupo dinamico onde a Entidade ja vivia.
       { id: 'entidade',            label: 'Entidades',             Icon: Users,      grupoPadrao: 'din_Cadastros' },
+      { id: 'usuarios',            label: 'Usuários',              Icon: UserCog,    grupoPadrao: 'din_Cadastros' },
       { id: 'naturezas-juridicas', label: 'Naturezas Jurídicas',    Icon: Scale,      grupoPadrao: 'din_Cadastros' },
       { id: 'condicoes-pagamento', label: 'Condições de Pagamento',  Icon: CreditCard, grupoPadrao: 'din_Cadastros' },
       { id: 'bancos',              label: 'Bancos',                 Icon: Landmark,   grupoPadrao: 'din_Cadastros' },

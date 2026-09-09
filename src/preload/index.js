@@ -138,6 +138,15 @@ const api = {
     alterarLimite:      (p) => ipcRenderer.invoke('entidade:alterarLimite', p),
     documentosVencendo: (f) => ipcRenderer.invoke('entidade:documentosVencendo', f),
   },
+  usuario: {
+    listar:          (f)  => ipcRenderer.invoke('usuario:listar', f),
+    obter:           (id) => ipcRenderer.invoke('usuario:obter', id),
+    criar:           (d)  => ipcRenderer.invoke('usuario:criar', d),
+    atualizar:       (d)  => ipcRenderer.invoke('usuario:atualizar', d),
+    excluir:         (id) => ipcRenderer.invoke('usuario:excluir', id),
+    mudarStatusLote: (p)  => ipcRenderer.invoke('usuario:mudarStatusLote', p),
+    redefinirSenha:  (p)  => ipcRenderer.invoke('usuario:redefinirSenha', p),
+  },
   clipboard: {
     write: (texto) => ipcRenderer.invoke('clipboard:write', texto),
     read:  ()      => ipcRenderer.invoke('clipboard:read'),

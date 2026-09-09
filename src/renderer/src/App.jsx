@@ -23,6 +23,7 @@ import NaturezasJuridicas from './pages/NaturezasJuridicas'
 import CondicoesPagamento from './pages/CondicoesPagamento'
 import Bancos from './pages/Bancos'
 import Entidade from './pages/entidade'
+import Usuarios from './pages/usuarios'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
 
@@ -500,9 +501,10 @@ export default function App() {
     : { ...metaBase, title: labelsItens[currentPageId] || metaBase.title }
 
   function renderTabContent(pageId) {
-    // Entidade migrou de tela FormBuilder pra pagina dedicada — redireciona
-    // quem ainda pedir a antiga (ex: lupa que abria fb__entidade_001).
+    // Entidade e Usuário migraram de tela FormBuilder pra pagina dedicada —
+    // redireciona quem ainda pedir a antiga (ex: lupa que abria fb__...).
     if (pageId === 'fb__entidade_001') pageId = 'entidade'
+    if (pageId === 'fb__usuario_001') pageId = 'usuarios'
     if (pageId.startsWith('fb__')) {
       const nomeTabela = pageId.slice(4)
       return (
@@ -521,6 +523,7 @@ export default function App() {
       case 'email':              return <Email newTrigger={newTrigger} />
       case 'documentos-gerados': return <DocumentosGerados newTrigger={newTrigger} />
       case 'entidade':           return <Entidade newTrigger={newTrigger} />
+      case 'usuarios':           return <Usuarios newTrigger={newTrigger} />
       case 'naturezas-juridicas': return <NaturezasJuridicas newTrigger={newTrigger} />
       case 'condicoes-pagamento': return <CondicoesPagamento newTrigger={newTrigger} />
       case 'bancos':             return <Bancos newTrigger={newTrigger} />

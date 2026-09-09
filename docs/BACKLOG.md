@@ -11,6 +11,17 @@
 
 ## Aberto
 
+### Controle de acesso (permissões)
+
+As tabelas `kr_grupos_acesso_001`, `kr_grupo_permissoes_001`,
+`kr_usuario_permissoes_001`, `kr_usuario_grupo_001` existem no banco mas
+**nenhum código lê ou aplica**. Os campos `usuario_001.perm_cadastros /
+perm_financeiro / perm_relatorios / perm_config` também não têm efeito — a
+tela nativa de Usuário grava, mas o sistema ignora. Falta o motor: cada tela
+nativa checar incluir/alterar/excluir/consultar do usuário logado, uma tela
+de Grupos/Perfis, e o `App.jsx`/`Sidebar` respeitarem as permissões. Escopo
+grande; só iniciar com pedido explícito.
+
 ### E-mail
 
 - Bugs e funções aprovadas acumuladas — o usuário disse que traria a lista
@@ -22,6 +33,16 @@
 
 ## Concluído recentemente
 
+- **Usuários: tela nativa** (esta sessão): `usuario_001` deixou de ser tela
+  do FormBuilder e virou página dedicada (`pages/usuarios/`) no padrão da
+  Entidade — `usuarioService.js` + `handlers/usuario.js`, abas Dados /
+  Acesso (login + redefinir senha) / Permissões, aba Acesso com
+  `PainelFiltrosGrid` + `TabelaResultados` + status em massa. `auth:login`
+  e `viagens:listarConsultores` desacoplados de `kr_tela_campos_001`
+  (colunas `login`/`senha` fixas). Migration só de dados
+  (`1788915346560_usuario-tela-nativa`). A linha em `kr_telas_001` fica,
+  inacessível pela navegação (igual Entidade); `App.jsx` redireciona
+  `fb__usuario_001` → `usuarios`.
 - **E-mail: Caixa de Saída revisada** (esta sessão):
   - A listagem agora traz `envio_status` / `envio_erro` /
     `envio_proxima_tentativa`; a Caixa de Saída tem renderização própria

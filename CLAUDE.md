@@ -182,7 +182,7 @@ sempre a resposta é sim.
 3. **Tela tipo ERP** (abas, grid-filho com CRUD, API externa, layout próprio)
    → página React dedicada. **Obrigada a replicar** o padrão visual/funcional,
    reusando os componentes abaixo. Nunca reescrever lupa, filtro, paginação.
-   Exemplos: Entidade, E-mail, Agenda, Viagens.
+   Exemplos: Entidade, Usuários, E-mail, Agenda, Viagens.
 
 ### Componentes que JÁ EXISTEM — use estes
 
@@ -471,6 +471,16 @@ empacotado, `migrations/` vai para fora do ASAR via `"extraResources"` no
 Migração de tela antiga → nova: **sempre** inclui migration de dados junto,
 não só de schema (o formato antigo do dado pode não bater com a UI nova; ex:
 `entidade_001.papeis` era `CFP`, virou `cliente,fornecedor`).
+
+**Usuários / login:** há duas tabelas — `kr_usuarios_001` (o `admin` de
+fallback, criado por `db.js`) e `usuario_001` (a tela nativa de Usuário). O
+`auth:login` tenta `usuario_001` primeiro (colunas `login`/`senha` fixas, hash
+bcrypt) e cai em `kr_usuarios_001` se não achar. `viagens:listarConsultores`
+usa `usuario_001` quando ela existe. As tabelas de grupos/permissões
+(`kr_grupos_acesso_001`, `kr_grupo_permissoes_001`, `kr_usuario_permissoes_001`,
+`kr_usuario_grupo_001`) e os campos `usuario_001.perm_*` existem mas **nenhum
+código aplica** — a tela grava, sem efeito, até o motor de controle de acesso
+existir (ver `docs/BACKLOG.md`).
 
 ---
 
