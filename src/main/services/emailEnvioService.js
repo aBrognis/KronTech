@@ -54,12 +54,15 @@ async function criarTransporte(conta, { pool = false } = {}) {
   })
 }
 
-function montarMail(conta, { para, cc, cco, assunto, corpoHtml, corpoTexto, emReplyA, anexos, messageId }) {
+function montarMail(conta, { para, cc, cco, assunto, corpoHtml, corpoTexto, emReplyA, anexos, messageId }, { omitirBcc = false } = {}) {
   return {
     from: conta.email,
     to: para,
     cc: cc || undefined,
-    bcc: cco || undefined,
+    // A copia arquivada na pasta "Enviados" nao leva o Bcc (padrao dos
+    // clientes reais: quem ve os Enviados nao deve ver os destinatarios
+    // ocultos).
+    bcc: omitirBcc ? undefined : (cco || undefined),
     replyTo: conta.reply_to || undefined,
     subject: assunto,
     html: corpoHtml,
@@ -86,8 +89,9 @@ async function despacharSmtp(conta, dados, transporter = null) {
 // esforco: se falhar, devolve null (o envio ja aconteceu).
 async function gerarMimeCru(conta, dados) {
   try {
-    const t = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'network' })
-    const info = await t.sendMail(montarMail(conta, dados))
+    // newline 'windows' = CRLF, exigido pelo IMAP APPEND. Sem Bcc na copia.
+    const t = nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'windows' })
+    const info = await t.sendMail(montarMail(conta, dados, { omitirBcc: true }))
     return Buffer.isBuffer(info.message) ? info.message : null
   } catch {
     return null
@@ -96,7 +100,12 @@ async function gerarMimeCru(conta, dados) {
 
 // Sobe a copia na pasta Enviados do servidor IMAP. Import dinamico pra
 // evitar ciclo com emailSyncService. Nunca propaga erro.
+// So arquiva quando ha um Message-Id fixo nosso (dados.messageId): sem ele,
+// a copia no servidor teria um id aleatorio que o sync nao casaria com a
+// linha local, criando duplicata. Vale so pra linhas de fila antigas,
+// anteriores a esta mudanca.
 async function arquivarNaPastaEnviados(contaId, conta, dados) {
+  if (!dados.messageId) return
   try {
     const raw = await gerarMimeCru(conta, dados)
     if (!raw) return
@@ -122,7 +131,21 @@ async function marcarEnviado(registroId, info, mensagemOrigemId, rascunhoId) {
     await query('UPDATE email_mensagem_001 SET respondida = true WHERE id = $1', [mensagemOrigemId])
   }
   if (rascunhoId) {
-    await query('DELETE FROM email_mensagem_001 WHERE id = $1 AND rascunho = true', [rascunhoId])
+    await removerRascunhoComArquivos(rascunhoId)
+  }
+}
+
+// Apaga um rascunho e a pasta de anexos dele em disco (o CASCADE do banco
+// so limpa as linhas de email_anexo_001, nao os arquivos). Usado quando um
+// rascunho e "consumido" ao ser enviado.
+async function removerRascunhoComArquivos(rascunhoId) {
+  const reg = await queryOne('SELECT conta_id FROM email_mensagem_001 WHERE id = $1 AND rascunho = true', [rascunhoId])
+  if (!reg) return
+  await query('DELETE FROM email_mensagem_001 WHERE id = $1 AND rascunho = true', [rascunhoId])
+  const base = resolverBaseAnexos('arquivosEmail')
+  if (base) {
+    const pasta = join(base, 'email', String(reg.conta_id), String(rascunhoId))
+    if (existsSync(pasta)) { try { rmSync(pasta, { recursive: true, force: true }) } catch { /* em uso */ } }
   }
 }
 
@@ -211,7 +234,7 @@ export async function enviarEmail({ contaId, para, cc, cco, assunto, corpoHtml, 
     // querer corrigir e reenviar). Quando foi so a rede, apaga: a mensagem
     // ja esta na Caixa de Saida e vai sozinha.
     if (r.estado === 'fila' && rascunhoId) {
-      await query('DELETE FROM email_mensagem_001 WHERE id = $1 AND rascunho = true', [rascunhoId])
+      await removerRascunhoComArquivos(rascunhoId)
     }
     const e = new Error(
       r.estado === 'erro'
@@ -226,6 +249,19 @@ export async function enviarEmail({ contaId, para, cc, cco, assunto, corpoHtml, 
 // Reprocessa a Caixa de Saida. Chamado pelo worker de sync (a cada ciclo)
 // e pelo botao "Reenviar agora" (forcar = ignora o horario agendado).
 export async function tentarFilaSaida({ forcar = false, mensagemId = null } = {}) {
+  // Recupera mensagens presas em 'enviando' — o app fechou no meio de uma
+  // tentativa. 'enviando' e um estado transitorio setado so pela trava do
+  // loop abaixo; se ha uma nessa situacao no INICIO de um ciclo agendado,
+  // a tentativa anterior morreu. So o ciclo agendado (nao o botao
+  // "Reenviar agora") faz esse reset, pra nao roubar uma linha que outro
+  // ciclo esteja de fato enviando neste instante.
+  if (!forcar) {
+    await query(
+      `UPDATE email_mensagem_001 SET envio_status = 'fila'
+       WHERE origem = 'enviado' AND envio_status = 'enviando'`
+    ).catch(() => {})
+  }
+
   const cond = forcar
     ? `envio_status IN ('fila','erro')`
     : `envio_status = 'fila' AND (envio_proxima_tentativa IS NULL OR envio_proxima_tentativa <= NOW())`

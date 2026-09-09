@@ -597,7 +597,12 @@ export async function apendarEmailEnviado(contaId, rawMime) {
   )
   if (local) caminhoSent = local.caminho_imap
 
-  const client = new ImapFlow({
+  // Reaproveita a conexao IDLE persistente da conta quando ela estiver viva
+  // — abrir uma conexao IMAP nova por e-mail enviado esbarraria no limite de
+  // conexoes simultaneas de provedores como o Gmail.
+  const idle = conexoesIdle.get(contaId)
+  const reusar = idle && idle.usable
+  const client = reusar ? idle : new ImapFlow({
     host: conta.imap_host,
     port: conta.imap_porta,
     secure: conta.imap_seguranca === 'tls',
@@ -605,7 +610,7 @@ export async function apendarEmailEnviado(contaId, rawMime) {
     logger: false,
   })
   try {
-    await client.connect()
+    if (!reusar) await client.connect()
     if (!caminhoSent) {
       try {
         const pastas = await descobrirPastas(client, contaId)
@@ -617,7 +622,7 @@ export async function apendarEmailEnviado(contaId, rawMime) {
   } catch (err) {
     console.warn(`[emailSync] apendarEmailEnviado (conta ${contaId}):`, err.message)
   } finally {
-    try { await client.logout() } catch { /* ignore */ }
+    if (!reusar) { try { await client.logout() } catch { /* ignore */ } }
   }
 }
 

@@ -48,10 +48,17 @@ export default function ComposerModal({ modo, contas, contaAtivaId, mensagemOrig
   const [mostrarCco, setMostrarCco] = useState(!!rascunho?.copia_oculta?.length)
   const [assunto, setAssunto] = useState(rascunho?.assunto || assuntoInicial || '')
   const [corpo, setCorpo] = useState(rascunho?.corpo_html || corpoInicial || '')
-  // Anexos pre-carregados (ex.: chamado a partir de Despesas de Viagem).
-  const [anexos, setAnexos] = useState(() => (anexosIniciais || []).map(a => ({
-    nome: a.nome, caminho: a.caminho, origem: a.origem || 'existente',
-  })))
+  // Anexos: os do rascunho reaberto (ja gravados em disco -> origem
+  // 'existente'), ou os pre-carregados por um chamador externo (ex.:
+  // Despesas de Viagem).
+  const [anexos, setAnexos] = useState(() => {
+    if (rascunho?.anexos?.length) {
+      return rascunho.anexos.map(a => ({ nome: a.nome_original, caminho: a.caminho, origem: 'existente' }))
+    }
+    return (anexosIniciais || []).map(a => ({
+      nome: a.nome, caminho: a.caminho, origem: a.origem || 'existente',
+    }))
+  })
   const [enviando, setEnviando] = useState(false)
   const [salvandoRascunho, setSalvandoRascunho] = useState(false)
   const [erro, setErro] = useState(null)

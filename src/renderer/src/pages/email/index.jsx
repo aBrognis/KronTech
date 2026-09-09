@@ -349,9 +349,12 @@ export default function Email({ newTrigger }) {
         comAnexo: filtrosAvancados.comAnexo || undefined,
         limite: porPagina, offset: (pagina - 1) * porPagina,
       }
+      // A Caixa de Saida nunca agrupa por conversa (nao faz sentido pra fila
+      // de envio); usa sempre a listagem simples.
+      const usarAgrupado = agrupado && !ehSaida
       const [resLista, resTotal] = await Promise.all([
-        agrupado ? window.api.email.listarMensagensAgrupadas(filtros) : window.api.email.listarMensagens(filtros),
-        agrupado ? window.api.email.contarThreads(filtros) : window.api.email.contarMensagens(filtros),
+        usarAgrupado ? window.api.email.listarMensagensAgrupadas(filtros) : window.api.email.listarMensagens(filtros),
+        usarAgrupado ? window.api.email.contarThreads(filtros) : window.api.email.contarMensagens(filtros),
       ])
       const lista = resLista.ok ? resLista.data || [] : []
       setMensagens(lista)
@@ -422,6 +425,16 @@ export default function Email({ newTrigger }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastaAtivaId])
 
+  // Se estou na Caixa de Saida de uma conta e ela esvaziou (ultimo item
+  // enviado/descartado), volta pra Caixa de entrada — a pasta some da
+  // navegacao quando a contagem zera.
+  useEffect(() => {
+    if (pastaAtivaId === SAIDA_ID && contaAtivaId && !saidaPorConta[contaAtivaId]) {
+      setPastaAtivaId(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saidaPorConta, pastaAtivaId, contaAtivaId])
+
   async function reenviarSaida() {
     if (processandoLote) return
     setProcessandoLote(true)
@@ -466,9 +479,11 @@ export default function Email({ newTrigger }) {
     try {
       const res = await window.api.email.editarDaFila(id)
       if (!res.ok) { notificar.erro(res.erro || 'Não foi possível abrir para edição.'); return }
-      // Vira rascunho: recarrega listas/contadores e reabre no composer.
+      // Vira rascunho. Busca o objeto completo (com anexos) pra o composer
+      // reabrir com os arquivos que estavam anexados.
+      const resFull = await window.api.email.obterMensagem(id)
       await Promise.all([carregarMensagens(), carregarContas()])
-      setRascunhoEditando(res.data)
+      setRascunhoEditando(resFull.ok ? resFull.data : res.data)
       setComposerModo('novo')
       setComposerAberto(true)
     } finally {
@@ -512,7 +527,10 @@ export default function Email({ newTrigger }) {
     if (recargaToken.current !== tokenClique) return
     if (res.ok) {
       setMensagemAtiva(res.data)
-      if (!res.data.lida) {
+      // Nao marca "lida" e-mail da Caixa de Saida (nao entra na contagem de
+      // nao lidas) nem mensagens enviadas.
+      const ehSaida = pastaAtivaId === SAIDA_ID || res.data.origem === 'enviado'
+      if (!res.data.lida && !ehSaida) {
         await window.api.email.marcarLida(id, true)
         setMensagens(prev => prev.map(m => m.id === id ? { ...m, lida: true } : m))
         ajustarNaoLidasLocal([res.data], -1)
