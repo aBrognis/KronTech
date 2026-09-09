@@ -11,15 +11,6 @@
 
 ## Aberto
 
-### FormBuilder — seletor de colunas na aba Acesso
-
-A aba Acesso do FormBuilder (`formBuilderView/AbaAcesso.jsx`) já tem: filtro
-por coluna (`PainelFiltros`), busca geral, ordenação por cabeçalho e export
-CSV. **Falta o seletor de colunas** que as telas nativas ganharam
-(`components/TabelaResultados.jsx`): telas com 15+ campos mostram uma tabela
-larga demais, sem como escolher o que ver. Levar `TabelaResultados` (ou só o
-mecanismo de colunas visíveis + `localStorage`) para o `AbaAcesso`.
-
 ### E-mail
 
 - **Caixa de Saída** — fila de reenvio, estados (`fila` / `enviando` /
@@ -40,6 +31,13 @@ mecanismo de colunas visíveis + `localStorage`) para o `AbaAcesso`.
 
 ## Concluído recentemente
 
+- **FormBuilder: seletor de colunas na aba Acesso** (esta sessão): o
+  mecanismo de colunas visíveis foi extraído para `components/
+  SeletorColunas.jsx` (`useSeletorColunas` + `<BotaoSeletorColunas>`),
+  `TabelaResultados` passou a consumi-lo, e a aba Acesso do FormBuilder
+  (`formBuilderView/AbaAcesso.jsx`) ganhou o botão "Colunas" (2 primeiras
+  fixas, 6 seguintes marcadas por padrão, preferência salva por tabela). O
+  filtro por coluna continua abrangendo todos os campos, visíveis ou não.
 - **Datas em objeto Date pelo IPC** (esta sessão): o Electron manda `Date`
   pelo IPC como `Date` de verdade (structured clone, não JSON). Vários
   `fmtData` faziam `String(x).slice(0,10).split('-')` e saíam

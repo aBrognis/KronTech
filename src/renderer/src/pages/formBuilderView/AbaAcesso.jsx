@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { Download, Star, ChevronUp, ChevronDown } from 'lucide-react'
 import { exportarCSV } from '../../lib/funcoes/index.js'
 import { thS, tdS } from './gridStyles.js'
 import PaginacaoBar from '../../components/PaginacaoBar.jsx'
 import PainelFiltros from './PainelFiltros.jsx'
+import { useSeletorColunas, BotaoSeletorColunas } from '../../components/SeletorColunas.jsx'
 
 // Aba "Acesso": filtro por coluna (server-side) + tabela paginada de
 // registros da tela. Só lê tela/registros/dados de acesso via props, não
@@ -18,6 +20,19 @@ export default function AbaAcesso({
   const listaExibir = fResultados?.registros ?? []
   const totalGeral  = fResultados?.total ?? total
   const totalPaginas = fResultados?.totalPaginas ?? 1
+
+  // Seletor de colunas visíveis (mesmo mecanismo das telas nativas): as 2
+  // primeiras colunas de dados ficam fixas, o resto entra no seletor com as
+  // 6 primeiras marcadas por padrão. Preferência salva por tabela.
+  const colunasSeletor = useMemo(
+    () => camposData.map((c, i) => ({
+      chave: c.nome_campo, label: c.label, sticky: i < 2, padrao: i >= 2 && i < 8,
+    })),
+    [camposData]
+  )
+  const seletor = useSeletorColunas(colunasSeletor, `fb-${nomeTabela}`)
+  const chavesVisiveis = seletor.colsMostradas.map((c) => c.chave)
+  const camposVisiveis = camposData.filter((c) => chavesVisiveis.includes(c.nome_campo))
 
   const renderCell = (c, reg) => {
     const v   = reg[c.nome_campo]
@@ -77,7 +92,8 @@ export default function AbaAcesso({
           limparFiltrosAcesso={limparFiltrosAcesso} onBuscar={handleBuscar} fLoading={fLoading} />
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+        {seletor.opcionais.length > 0 && <BotaoSeletorColunas {...seletor} />}
         <button className="btn btn-ghost" style={{ height: 30, padding: '0 10px' }}
           disabled={!totalGeral}
           onClick={handleExportCSV}>
@@ -97,7 +113,7 @@ export default function AbaAcesso({
               <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
                   <th style={{ ...thS, textAlign: 'center', width: 36 }}>#</th>
-                  {camposData.map(c => (
+                  {camposVisiveis.map(c => (
                     <th key={c.id} style={{ ...thS, cursor: 'pointer', userSelect: 'none' }}
                       onClick={() => setOrdenacao(c.nome_campo)}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -119,7 +135,7 @@ export default function AbaAcesso({
                     onMouseLeave={e => { e.currentTarget.style.background = 'var(--s1)' }}
                   >
                     <td style={{ ...tdS, textAlign: 'center', color: 'var(--t3)', fontSize: 10, width: 36 }}>{(fPagina - 1) * fPorPagina + ri + 1}</td>
-                    {camposData.map(c => (
+                    {camposVisiveis.map(c => (
                       <td key={c.id} style={tdS}>{renderCell(c, reg)}</td>
                     ))}
                     {tela.col_favorito !== false && (
@@ -130,7 +146,7 @@ export default function AbaAcesso({
                   </tr>
                 ))}
                 {!fLoading && listaExibir.length === 0 && (
-                  <tr><td colSpan={camposData.length + 1 + (tela.col_favorito !== false ? 1 : 0)} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
+                  <tr><td colSpan={camposVisiveis.length + 1 + (tela.col_favorito !== false ? 1 : 0)} style={{ textAlign: 'center', padding: '32px', color: 'var(--t3)', fontSize: 11, fontStyle: 'italic' }}>Nenhum registro encontrado</td></tr>
                 )}
               </tbody>
             </table>

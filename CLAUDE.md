@@ -255,6 +255,12 @@ contexto. Você declara `COLUNAS_RESULTADO` com **uma entrada por dado que o
 SQL traz**; `sticky: true` = sempre visível (código, nome); `padrao: true` =
 marcada na primeira vez. As demais ficam a um clique de distância.
 
+O mecanismo do seletor de colunas mora em `components/SeletorColunas.jsx`
+(`useSeletorColunas(colunas, prefKey)` + `<BotaoSeletorColunas>`), usado por
+`TabelaResultados` e pela aba Acesso do FormBuilder (`formBuilderView/
+AbaAcesso.jsx`). Não recriar por tela — chave de `localStorage`
+`krontech.cols.<prefKey>`.
+
 **3. Os filtros:** um por coluna consultável (abaixo).
 
 Fonte única: **`components/PainelFiltrosGrid.jsx`** — painel retrátil, um
