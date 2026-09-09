@@ -13,13 +13,18 @@ import { X } from 'lucide-react'
 // value: string "a@x.com, b@y.com" (mesmo formato que o backend ja espera)
 // onChange(novaString)
 
-const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+export const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-function paraLista(str) {
+export function paraLista(str) {
   return String(str || '')
     .split(/[,;]/)
     .map((s) => s.trim())
     .filter(Boolean)
+}
+
+// Devolve os endereços claramente malformados de uma string "a@x, b, c@y".
+export function emailsInvalidos(str) {
+  return paraLista(str).filter((e) => !RE_EMAIL.test(e))
 }
 
 export default function CampoDestinatarios({ value, onChange, placeholder, autoFocus }) {

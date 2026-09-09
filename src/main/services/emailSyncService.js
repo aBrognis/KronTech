@@ -9,6 +9,11 @@ import { authImap } from './emailAuth'
 import { lerDimensaoImagem } from './imagemDimensoes'
 
 const INTERVALO_MS = 5 * 60_000
+// A Caixa de Saida e reprocessada num ritmo proprio, bem mais curto que o
+// sync IMAP: um e-mail que caiu por rede e a rede volta em segundos sai no
+// minuto seguinte, sem esperar o ciclo de 5min. O tick e barato quando a
+// fila esta vazia (um SELECT que nao acha nada).
+const INTERVALO_FILA_MS = 60_000
 
 // Mesmo padrão de ícone de reminder.js — extraResources em produção,
 // app.getAppPath() em dev (imune a junction fora do OneDrive).
@@ -35,12 +40,31 @@ const conexoesIdle = new Map() // contaId -> ImapFlow
 // Idempotente: chamadas repetidas nao criam multiplos timers/conexoes.
 let syncIniciado = false
 let intervaloSync = null
+let intervaloFila = null
+let filaEmAndamento = false
+
+// Reprocessa a Caixa de Saida fora do ciclo do sync IMAP. Barato quando a
+// fila esta vazia; nao roda concorrente consigo mesmo.
+async function tickFilaSaida() {
+  if (filaEmAndamento) return
+  filaEmAndamento = true
+  try {
+    const { tentarFilaSaida } = await import('./emailEnvioService')
+    const r = await tentarFilaSaida()
+    if (r.enviados > 0) broadcast('email:filaSaida', { enviados: r.enviados })
+  } catch (err) {
+    console.warn('[emailSync] tickFilaSaida:', err.message)
+  } finally {
+    filaEmAndamento = false
+  }
+}
 
 export function startEmailSync() {
   if (syncIniciado) return
   syncIniciado = true
   syncTodasContas()
   intervaloSync = setInterval(syncTodasContas, INTERVALO_MS)
+  intervaloFila = setInterval(tickFilaSaida, INTERVALO_FILA_MS)
   iniciarTodasConexoesIdle()
   // Badge da taskbar reflete o estado atual assim que o usuario entra.
   atualizarBadgeNaoLidas().catch(() => {})
@@ -108,6 +132,7 @@ export function stopEmailSync() {
   if (!syncIniciado) return
   syncIniciado = false
   if (intervaloSync) { clearInterval(intervaloSync); intervaloSync = null }
+  if (intervaloFila) { clearInterval(intervaloFila); intervaloFila = null }
   for (const contaId of [...conexoesIdle.keys()]) pararConexaoIdle(contaId)
   const win = BrowserWindow.getAllWindows().find(w => !w.isDestroyed())
   if (win) {
@@ -353,14 +378,10 @@ async function syncTodasContas() {
         console.warn(`[emailSync] conta ${conta.id} (${conta.email}):`, err.message)
       }
     }
-    // Caixa de Saida: tenta reenviar o que ficou preso por falha de rede.
-    try {
-      const { tentarFilaSaida } = await import('./emailEnvioService')
-      const r = await tentarFilaSaida()
-      if (r.enviados > 0) broadcast('email:filaSaida', { enviados: r.enviados })
-    } catch (err) {
-      console.warn('[emailSync] tentarFilaSaida:', err.message)
-    }
+    // Caixa de Saida: tenta reenviar o que ficou preso por falha de rede
+    // (o tick dedicado ja cuida disso a cada minuto; aqui e so mais uma
+    // chance logo apos o sync IMAP).
+    await tickFilaSaida()
   } finally {
     syncEmAndamento = false
   }
@@ -554,6 +575,49 @@ export async function descobrirPastasAgora(contaId) {
     return await descobrirPastas(client, contaId)
   } finally {
     await client.logout()
+  }
+}
+
+// Sobe uma copia do e-mail recem-enviado para a pasta "Enviados" do
+// servidor IMAP, pra ele aparecer no webmail / no celular do usuario (o
+// SMTP so entrega, nao arquiva). Melhor esforco: qualquer falha aqui e
+// engolida — o e-mail ja foi enviado, isto e so paridade com clientes
+// nativos. Recebe o MIME cru (Buffer) que o nodemailer produziu no envio.
+export async function apendarEmailEnviado(contaId, rawMime) {
+  if (!rawMime || !Buffer.isBuffer(rawMime)) return
+  const conta = await queryOne('SELECT * FROM email_conta_001 WHERE id = $1 AND ativa = true', [contaId])
+  if (!conta) return
+
+  // Descobre o caminho da pasta Enviados: do catalogo local, senao lista as
+  // pastas do servidor pra achar a \Sent.
+  let caminhoSent = null
+  const local = await queryOne(
+    `SELECT caminho_imap FROM email_pasta_001 WHERE conta_id = $1 AND special_use = '\\Sent' LIMIT 1`,
+    [contaId]
+  )
+  if (local) caminhoSent = local.caminho_imap
+
+  const client = new ImapFlow({
+    host: conta.imap_host,
+    port: conta.imap_porta,
+    secure: conta.imap_seguranca === 'tls',
+    auth: await authImap(conta),
+    logger: false,
+  })
+  try {
+    await client.connect()
+    if (!caminhoSent) {
+      try {
+        const pastas = await descobrirPastas(client, contaId)
+        caminhoSent = pastas.find(p => p.special_use === '\\Sent')?.caminho_imap || null
+      } catch { /* sem catalogo: aborta silencioso */ }
+    }
+    if (!caminhoSent) return
+    await client.append(caminhoSent, rawMime, ['\\Seen'])
+  } catch (err) {
+    console.warn(`[emailSync] apendarEmailEnviado (conta ${contaId}):`, err.message)
+  } finally {
+    try { await client.logout() } catch { /* ignore */ }
   }
 }
 

@@ -57,6 +57,40 @@ export function nomeOuEmail(nome, email) {
   return nome?.trim() || email || ''
 }
 
+// Descreve o estado de um e-mail na Caixa de Saida (envio_status +
+// envio_proxima_tentativa + envio_erro) para exibir na lista e no leitor.
+// -> { rotulo, detalhe, corInline, aguardando }
+export function descreverStatusSaida(m) {
+  const st = m?.envio_status
+  if (st === 'enviando') {
+    return { rotulo: 'Enviando...', detalhe: '', corInline: 'var(--t2)', aguardando: true }
+  }
+  if (st === 'erro') {
+    return {
+      rotulo: 'Falhou',
+      detalhe: m.envio_erro || 'O servidor recusou a mensagem.',
+      corInline: 'var(--red)',
+      aguardando: false,
+    }
+  }
+  // 'fila' (ou qualquer coisa que caia na Caixa de Saida): vai retentar.
+  const prox = m?.envio_proxima_tentativa ? new Date(m.envio_proxima_tentativa) : null
+  let quando = ''
+  if (prox && !Number.isNaN(prox.getTime())) {
+    const diffMin = Math.round((prox - Date.now()) / 60000)
+    if (diffMin <= 0) quando = 'a qualquer momento'
+    else if (diffMin === 1) quando = 'em cerca de 1 minuto'
+    else if (diffMin < 60) quando = `em cerca de ${diffMin} minutos`
+    else quando = `em cerca de ${Math.round(diffMin / 60)} h`
+  }
+  return {
+    rotulo: 'Na fila',
+    detalhe: quando ? `Nova tentativa ${quando}` : 'Aguardando envio',
+    corInline: 'var(--yellow)',
+    aguardando: true,
+  }
+}
+
 // Paleta curada (não cores aleatórias saturadas demais) — cada remetente
 // sempre cai na mesma cor via hash simples do e-mail, dando identidade
 // visual consistente aos avatares sem depender de imagem de perfil real.

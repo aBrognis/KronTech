@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Send, Paperclip, Trash2, Loader2, Save, Bot } from 'lucide-react'
 import RichTextEditor from '../../components/RichTextEditor'
-import CampoDestinatarios from './CampoDestinatarios'
+import CampoDestinatarios, { emailsInvalidos } from './CampoDestinatarios'
 import { fmtDataHora, nomeOuEmail } from './utils'
 import { notificar } from '../../components/Notificacao'
 
@@ -189,11 +189,18 @@ export default function ComposerModal({ modo, contas, contaAtivaId, mensagemOrig
     }
   }
 
-  // Cancelar/fechar NAO salva rascunho. O rascunho so e criado quando o
-  // usuario clica explicitamente em "Salvar rascunho". Se ja existe um
-  // rascunho (aberto pra edicao) e o usuario cancela sem salvar, mantem o
-  // que estava gravado, nao sobrescreve.
-  function fechar() {
+  // Cancelar/fechar NAO salva rascunho automaticamente. Mas se o usuario
+  // digitou algo e nao e um rascunho ja gravado, confirma o descarte antes
+  // de fechar (evita perder texto por um clique no X). Se ja existe um
+  // rascunho aberto pra edicao, fechar so descarta as mudancas nao salvas.
+  async function fechar() {
+    const jaGravado = !!rascunhoIdRef.current
+    if (!jaGravado && temConteudo()) {
+      const ok = await notificar.confirmar('Descartar esta mensagem? O que você escreveu será perdido.', {
+        titulo: 'Descartar e-mail', confirmarLabel: 'Descartar', perigo: true,
+      })
+      if (!ok) return
+    }
     onFechar()
   }
 
@@ -202,6 +209,11 @@ export default function ComposerModal({ modo, contas, contaAtivaId, mensagemOrig
     if (!contaId) { setErro('Selecione a conta remetente.'); return }
     if (!para.trim()) { setErro('Informe ao menos um destinatário.'); return }
     if (!assunto.trim()) { setErro('Informe o assunto.'); return }
+    const invalidos = [...emailsInvalidos(para), ...emailsInvalidos(cc), ...emailsInvalidos(cco)]
+    if (invalidos.length) {
+      setErro(`Endereço de e-mail inválido: ${invalidos.join(', ')}. Corrija antes de enviar.`)
+      return
+    }
     enviandoRef.current = true
     setErro(null)
     setEnviando(true)

@@ -13,24 +13,35 @@
 
 ### E-mail
 
-- **Caixa de Saída** — fila de reenvio, estados (`fila` / `enviando` /
-  `erro`), reprocessamento com backoff. Backend em `emailEnvioService.js` já
-  tem a base (`tentarFilaSaida`, `agendarRetry`); falta revisar a UI e o
-  worker.
 - Bugs e funções aprovadas acumuladas — o usuário disse que traria a lista
   do que quer verificar. Não iniciar sem essa lista.
-
-### Entidade
-
-- Tela nível ERP está implementada (8 abas, 12 tabelas). **Falta testar o
-  fluxo completo no dev com dados reais** — criar entidade nova preenchendo
-  várias abas (endereços, contatos, comercial, crédito, relacionamento,
-  documentos), gravar, reabrir, conferir persistência.
+- (opcional) `PaginacaoCompacta` de `ListaMensagens.jsx` reimplementa o
+  `PaginacaoBar` genérico "porque a coluna é estreita" — dívida menor.
 
 ---
 
 ## Concluído recentemente
 
+- **E-mail: Caixa de Saída revisada** (esta sessão):
+  - A listagem agora traz `envio_status` / `envio_erro` /
+    `envio_proxima_tentativa`; a Caixa de Saída tem renderização própria
+    (`ItemSaida` em `ListaMensagens.jsx`): destinatário + chip de status
+    ("Na fila · nova tentativa em X" / "Falhou: <motivo>") + ações por item
+    (reenviar agora, editar, descartar).
+    `descreverStatusSaida` em `email/utils.js`.
+  - Backend: `descartarDaFilaSaida` e `moverFilaParaRascunho` em
+    `emailEnvioService.js`; handlers `email:descartarDaFila` /
+    `email:editarDaFila`.
+  - Leitor mostra o `envio_erro` de um e-mail preso (antes só mostrava a
+    resposta de sucesso).
+  - Composer: confirma o descarte ao fechar com conteúdo não salvo; bloqueia
+    o envio se houver endereço malformado (`emailsInvalidos`).
+  - Fila reprocessada a cada 60s por um tick dedicado (`INTERVALO_FILA_MS`),
+    não mais só junto do sync IMAP de 5min.
+  - `tentarFilaSaida` reusa um transporte SMTP com pool por conta.
+  - Cópia do enviado sobe pra pasta "Enviados" do servidor via IMAP APPEND
+    (`apendarEmailEnviado` em `emailSyncService.js`), com Message-Id fixo pra
+    o sync não duplicar a linha.
 - **FormBuilder: seletor de colunas na aba Acesso** (esta sessão): o
   mecanismo de colunas visíveis foi extraído para `components/
   SeletorColunas.jsx` (`useSeletorColunas` + `<BotaoSeletorColunas>`),

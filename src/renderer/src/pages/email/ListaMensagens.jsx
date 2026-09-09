@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Search, Paperclip, MailOpen, Mail as MailIcon, X, Loader2, ChevronDown, ChevronRight, ChevronLeft, Layers, Tag, Archive, Trash2, MoreVertical, CheckCheck, Star, SlidersHorizontal } from 'lucide-react'
-import { fmtDataCurta, iniciais, nomeOuEmail, achatarEtiquetasEmArvore, corAvatar, corAvatarTint } from './utils'
+import { Search, Paperclip, MailOpen, Mail as MailIcon, X, Loader2, ChevronDown, ChevronRight, ChevronLeft, Layers, Tag, Archive, Trash2, MoreVertical, CheckCheck, Star, SlidersHorizontal, Send, Pencil, AlertTriangle } from 'lucide-react'
+import { fmtDataCurta, iniciais, nomeOuEmail, achatarEtiquetasEmArvore, corAvatar, corAvatarTint, descreverStatusSaida } from './utils'
 
 const TAMANHOS_PAGINA = [25, 50, 100, 200]
 
@@ -27,6 +27,68 @@ function PaginacaoCompacta({ pagina, totalPaginas, total, porPagina, onPagina, o
         <button className="btn btn-ghost" style={{ height: 22, width: 22, padding: 0 }}
           onClick={() => onPagina(pagina + 1)} disabled={pagina >= totalPaginas} title="Próxima página">
           <ChevronRight size={12} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Linha da Caixa de Saida: mostra o DESTINATARIO (nao o remetente, que sou
+// eu), o status ("Na fila / nova tentativa em X" ou "Falhou: <motivo>") e
+// acoes por item (reenviar agora, editar, descartar).
+function ItemSaida({ m, ativa, onSelecionar, onReenviar, onEditar, onDescartar, ocupado }) {
+  const status = descreverStatusSaida(m)
+  const dest = (m.destinatarios || []).map(d => d.nome?.trim() || d.email).filter(Boolean)
+  const destLabel = dest.length ? dest.join(', ') : '(sem destinatário)'
+  const classes = ['email-item-linha']
+  if (ativa) classes.push('ativa')
+
+  return (
+    <div className={classes.join(' ')} style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+      <button
+        onClick={() => onSelecionar(m.id)}
+        style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0, textAlign: 'left', padding: '9px 8px 9px 13px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+      >
+        <div style={{
+          width: 29, height: 29, borderRadius: '30%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--s3)', color: status.corInline, fontSize: 11, fontWeight: 700, marginTop: 1,
+        }}>
+          {status.aguardando
+            ? (m.envio_status === 'enviando' ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={13} />)
+            : <AlertTriangle size={13} />}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+              Para: {destLabel}
+            </span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: status.corInline, flexShrink: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {status.rotulo}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+            {m.assunto || '(sem assunto)'}
+          </div>
+          {status.detalhe && (
+            <div style={{ fontSize: 10.5, color: status.corInline, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              title={status.detalhe}>
+              {status.detalhe}
+            </div>
+          )}
+        </div>
+      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2, padding: '0 6px', flexShrink: 0 }}>
+        <button className="btn btn-ghost" style={{ height: 24, width: 24, padding: 0 }} disabled={ocupado}
+          onClick={e => { e.stopPropagation(); onReenviar(m.id) }} title="Reenviar agora">
+          <Send size={12} />
+        </button>
+        <button className="btn btn-ghost" style={{ height: 24, width: 24, padding: 0 }} disabled={ocupado}
+          onClick={e => { e.stopPropagation(); onEditar(m.id) }} title="Editar e reenviar">
+          <Pencil size={12} />
+        </button>
+        <button className="btn btn-ghost" style={{ height: 24, width: 24, padding: 0, color: 'var(--red)' }} disabled={ocupado}
+          onClick={e => { e.stopPropagation(); onDescartar(m.id) }} title="Descartar">
+          <Trash2 size={12} />
         </button>
       </div>
     </div>
@@ -171,6 +233,7 @@ export default function ListaMensagens({
   onArquivarLote, onExcluirLote, processandoPasta,
   mostrarConta, contasPorId = {},
   onSinalizar, apenasSinalizadas, onApenasSinalizadas, onBuscaAvancada, filtrosAvancados,
+  modoSaida = false, onReenviarItem, onEditarItem, onDescartarItem, itemSaidaOcupado,
 }) {
   const temSelecao = selecionados.size > 0
   const [menuEtiquetaAberto, setMenuEtiquetaAberto] = useState(false)
@@ -179,6 +242,36 @@ export default function ListaMensagens({
   // Ao arrastar uma linha: se ela faz parte da selecao atual, arrasta a
   // selecao inteira; caso contrario, arrasta so aquela mensagem.
   const getDragIds = (id) => (selecionados.has(id) ? Array.from(selecionados) : [id])
+
+  // Caixa de Saida: lista enxuta, sem busca/filtros/selecao em massa, so os
+  // itens da fila com status e acoes por item.
+  if (modoSaida) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, overflowX: 'hidden' }}>
+        <div className="email-lista-scroll">
+          {loading ? (
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 12.5 }}>Carregando...</div>
+          ) : !mensagens.length ? (
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--t3)', fontSize: 12.5 }}>A Caixa de Saída está vazia.</div>
+          ) : (
+            mensagens.map(m => (
+              <ItemSaida
+                key={m.id}
+                m={m}
+                ativa={m.id === mensagemAtivaId}
+                onSelecionar={onSelecionar}
+                onReenviar={onReenviarItem}
+                onEditar={onEditarItem}
+                onDescartar={onDescartarItem}
+                ocupado={itemSaidaOcupado}
+              />
+            ))
+          )}
+        </div>
+        <PaginacaoCompacta pagina={pagina} totalPaginas={totalPaginas} total={total} porPagina={porPagina} onPagina={onPagina} onPorPagina={onPorPagina} />
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0, overflowX: 'hidden' }}>

@@ -440,6 +440,57 @@ export default function Email({ newTrigger }) {
     }
   }
 
+  // ── Acoes por item da Caixa de Saida ────────────────────────────────────
+  const [itemSaidaOcupado, setItemSaidaOcupado] = useState(false)
+
+  async function reenviarItemSaida(id) {
+    if (itemSaidaOcupado) return
+    setItemSaidaOcupado(true)
+    try {
+      const res = await window.api.email.reenviarFilaSaida(id)
+      await Promise.all([carregarMensagens(), carregarContas()])
+      if (res.ok) {
+        if (res.data.enviados > 0) notificar.sucesso('E-mail enviado.')
+        else notificar.aviso('Não foi possível enviar agora. Continua na fila.')
+      } else {
+        notificar.erro(res.erro || 'Falha ao reenviar.')
+      }
+    } finally {
+      setItemSaidaOcupado(false)
+    }
+  }
+
+  async function editarItemSaida(id) {
+    if (itemSaidaOcupado) return
+    setItemSaidaOcupado(true)
+    try {
+      const res = await window.api.email.editarDaFila(id)
+      if (!res.ok) { notificar.erro(res.erro || 'Não foi possível abrir para edição.'); return }
+      // Vira rascunho: recarrega listas/contadores e reabre no composer.
+      await Promise.all([carregarMensagens(), carregarContas()])
+      setRascunhoEditando(res.data)
+      setComposerModo('novo')
+      setComposerAberto(true)
+    } finally {
+      setItemSaidaOcupado(false)
+    }
+  }
+
+  async function descartarItemSaida(id) {
+    if (itemSaidaOcupado) return
+    if (!(await notificar.confirmar('Descartar este e-mail da Caixa de Saída? Ele não será enviado.', { titulo: 'Descartar e-mail', confirmarLabel: 'Descartar', perigo: true }))) return
+    setItemSaidaOcupado(true)
+    try {
+      const res = await window.api.email.descartarDaFila(id)
+      if (!res.ok) { notificar.erro(res.erro || 'Falha ao descartar.'); return }
+      if (mensagemAtivaId === id) { setMensagemAtivaId(null); setMensagemAtiva(null) }
+      await Promise.all([carregarMensagens(), carregarContas()])
+      notificar.sucesso('E-mail descartado.')
+    } finally {
+      setItemSaidaOcupado(false)
+    }
+  }
+
   async function selecionarMensagem(id) {
     // Rascunho: clicar reabre o composer de onde parou, não o leitor.
     if (pastaAtivaId === RASCUNHOS_ID) {
@@ -1164,11 +1215,11 @@ export default function Email({ newTrigger }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--bd)', background: 'rgba(234,179,8,.06)' }}>
               <Send size={14} style={{ color: 'var(--yellow)', flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: 'var(--t2)', flex: 1 }}>
-                E-mails aguardando envio. O sistema tenta sozinho a cada ciclo.
+                E-mails que ainda não saíram. O sistema tenta sozinho; use os botões de cada item para reenviar, editar ou descartar.
               </span>
               <button className="btn btn-primary" style={{ height: 28, fontSize: 11.5 }} onClick={reenviarSaida} disabled={processandoLote}>
                 {processandoLote ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />}
-                Reenviar agora
+                Reenviar tudo
               </button>
             </div>
           )}
@@ -1223,6 +1274,11 @@ export default function Email({ newTrigger }) {
               onApenasSinalizadas={v => { setApenasSinalizadas(v); setPagina(1) }}
               onBuscaAvancada={() => setBuscaAvancadaAberta(true)}
               filtrosAvancados={filtrosAvancados}
+              modoSaida={pastaAtivaId === SAIDA_ID}
+              onReenviarItem={reenviarItemSaida}
+              onEditarItem={editarItemSaida}
+              onDescartarItem={descartarItemSaida}
+              itemSaidaOcupado={itemSaidaOcupado}
             />
           )}
         </div>

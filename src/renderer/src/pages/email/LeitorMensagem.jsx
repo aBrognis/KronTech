@@ -1,7 +1,7 @@
 import { useRef, useEffect, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Paperclip, Download, MailOpen, Tag, X, Star, Reply, ReplyAll, Forward, ChevronLeft, ChevronDown, DownloadCloud, Send } from 'lucide-react'
-import { fmtDataLonga, nomeOuEmail, achatarEtiquetasEmArvore, iniciais, corAvatar, corAvatarTint } from './utils'
+import { fmtDataLonga, nomeOuEmail, achatarEtiquetasEmArvore, iniciais, corAvatar, corAvatarTint, descreverStatusSaida } from './utils'
 import { notificar } from '../../components/Notificacao'
 
 function abrirAnexo(caminho) {
@@ -470,6 +470,17 @@ export default function LeitorMensagem({
                 )}
               </div>
             )}
+            {/* Caixa de Saida: e-mail que ainda NAO saiu — mostra o motivo
+                (fila com proxima tentativa, ou falha permanente). */}
+            {!cabecalhoRecolhido && mensagem.origem === 'enviado' && ['fila', 'enviando', 'erro'].includes(mensagem.envio_status) && (() => {
+              const s = descreverStatusSaida(mensagem)
+              return (
+                <div style={{ fontSize: 11, color: s.corInline, marginTop: 4, lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+                  <Send size={11} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span><strong>{s.rotulo}.</strong> {s.detalhe}</span>
+                </div>
+              )
+            })()}
             {!cabecalhoRecolhido && (mensagem.etiquetas || []).length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                 {(mensagem.etiquetas || []).map(etq => (

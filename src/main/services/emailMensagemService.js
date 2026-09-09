@@ -126,7 +126,8 @@ export async function listarMensagens({ contaId, busca, apenasNaoLidas, etiqueta
   const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : ''
   params.push(limite, offset)
   return query(
-    `SELECT id, conta_id, remetente_nome, remetente_email, assunto, data_envio, lida, respondida, encaminhada, tem_anexo, origem, sinalizada
+    `SELECT id, conta_id, remetente_nome, remetente_email, destinatarios, assunto, data_envio, lida, respondida, encaminhada, tem_anexo, origem, sinalizada,
+            envio_status, envio_erro, envio_tentativas, envio_proxima_tentativa
      FROM email_mensagem_001
      ${where}
      ORDER BY data_envio DESC
@@ -165,8 +166,9 @@ export async function listarMensagensAgrupadas({ contaId, busca, apenasNaoLidas,
        ${where}
        GROUP BY grupo
      )
-     SELECT m.id, m.conta_id, m.remetente_nome, m.remetente_email, m.assunto, m.data_envio,
+     SELECT m.id, m.conta_id, m.remetente_nome, m.remetente_email, m.destinatarios, m.assunto, m.data_envio,
             m.lida, m.respondida, m.encaminhada, m.tem_anexo, m.origem, m.sinalizada,
+            m.envio_status, m.envio_erro, m.envio_tentativas, m.envio_proxima_tentativa,
             t.grupo AS thread_grupo, t.total AS thread_total, t.tem_nao_lida AS thread_tem_nao_lida
      FROM threads t
      JOIN email_mensagem_001 m ON m.id = t.mensagem_mais_recente_id
