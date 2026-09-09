@@ -6,8 +6,8 @@ import MenuContextoGrid from '../../components/MenuContextoGrid'
 import PainelFiltrosGrid from '../../components/PainelFiltrosGrid'
 import TabelaResultados from '../../components/TabelaResultados'
 import { notificar } from '../../components/Notificacao'
-import { fmtDataBR } from '../../lib/utils/data.js'
-import { EMPTY_FORM, paraForm, paraPayload, STATUS, statusMeta } from './utils'
+import { fmtDataBR, fmtDataHoraBR } from '../../lib/utils/data.js'
+import { EMPTY_FORM, paraForm, paraPayload, STATUS, statusMeta, PERFIS, perfilMeta } from './utils'
 import AbaDados from './AbaDados'
 import AbaAcessoCredenciais from './AbaAcessoCredenciais'
 import AbaPermissoes from './AbaPermissoes'
@@ -22,14 +22,26 @@ const ABAS_FORM = [
 const COLUNAS_FILTRO = [
   { chave: 'codigo', label: 'Código', tipo: 'texto' },
   { chave: 'nome', label: 'Nome', tipo: 'texto' },
+  { chave: 'apelido', label: 'Apelido', tipo: 'texto' },
+  { chave: 'documento', label: 'CPF', tipo: 'texto' },
+  { chave: 'matricula', label: 'Matrícula', tipo: 'texto' },
   { chave: 'login', label: 'Login', tipo: 'texto' },
   { chave: 'email', label: 'E-mail', tipo: 'texto' },
   { chave: 'telefone', label: 'Telefone', tipo: 'texto' },
+  { chave: 'whatsapp', label: 'WhatsApp', tipo: 'texto' },
   { chave: 'setor', label: 'Setor', tipo: 'texto' },
   { chave: 'cargo', label: 'Cargo', tipo: 'texto' },
+  { chave: 'centro_custo', label: 'Centro de custo', tipo: 'texto' },
+  { chave: 'perfil', label: 'Perfil', tipo: 'exato', opcoes: PERFIS.map((p) => ({ valor: p.valor, label: p.label })) },
   { chave: 'status', label: 'Status', tipo: 'exato', opcoes: STATUS.map((s) => ({ valor: s.valor, label: s.label })) },
   { chave: 'ativo', label: 'Ativo', tipo: 'booleano' },
+  { chave: 'dois_fatores', label: '2FA exigido', tipo: 'booleano' },
+  { chave: 'forcar_troca_senha', label: 'Trocar senha no login', tipo: 'booleano' },
   { chave: 'favorito', label: 'Favorito', tipo: 'booleano' },
+  { chave: 'admissao', label: 'Admissão', tipo: 'data' },
+  { chave: 'desligamento', label: 'Desligamento', tipo: 'data' },
+  { chave: 'dt_expiracao', label: 'Acesso expira em', tipo: 'data' },
+  { chave: 'dt_ultimo_acesso', label: 'Último acesso', tipo: 'data' },
   { chave: 'criado_em', label: 'Criado em', tipo: 'data' },
   { chave: 'alterado_em', label: 'Alterado em', tipo: 'data' },
 ]
@@ -39,13 +51,28 @@ const COLUNAS_RESULTADO = [
     render: (r) => <span style={{ fontFamily: 'monospace', color: 'var(--or)', fontWeight: 600 }}>{r.codigo || '-'}</span> },
   { chave: 'nome', label: 'Nome', sticky: true },
   { chave: 'login', label: 'Login', largura: 160, padrao: true, render: (r) => r.login || '-' },
+  { chave: 'perfil', label: 'Perfil', largura: 120, padrao: true,
+    render: (r) => <span className={`badge ${perfilMeta(r.perfil).classe}`}>{perfilMeta(r.perfil).label}</span> },
   { chave: 'email', label: 'E-mail', largura: 220, padrao: true, render: (r) => r.email || '-' },
   { chave: 'setor', label: 'Setor', largura: 140, padrao: true, render: (r) => r.setor || '-' },
   { chave: 'cargo', label: 'Cargo', largura: 140, padrao: true, render: (r) => r.cargo || '-' },
   { chave: 'status', label: 'Status', largura: 110, padrao: true,
     render: (r) => <span className={`badge ${statusMeta(r.status).classe}`}>{statusMeta(r.status).label}</span> },
+  { chave: 'dt_ultimo_acesso', label: 'Último acesso', largura: 150, padrao: true,
+    render: (r) => (r.dt_ultimo_acesso ? fmtDataHoraBR(r.dt_ultimo_acesso) : 'Nunca') },
+  { chave: 'apelido', label: 'Apelido', largura: 120, render: (r) => r.apelido || '-' },
+  { chave: 'documento', label: 'CPF', largura: 140, render: (r) => r.documento || '-' },
+  { chave: 'matricula', label: 'Matrícula', largura: 110, render: (r) => r.matricula || '-' },
   { chave: 'telefone', label: 'Telefone', largura: 130, render: (r) => r.telefone || '-' },
+  { chave: 'whatsapp', label: 'WhatsApp', largura: 130, render: (r) => r.whatsapp || '-' },
+  { chave: 'ramal', label: 'Ramal', largura: 80, render: (r) => r.ramal || '-' },
+  { chave: 'centro_custo', label: 'Centro de custo', largura: 140, render: (r) => r.centro_custo || '-' },
+  { chave: 'gestor_nome', label: 'Gestor', largura: 180, render: (r) => r.gestor_nome || '-' },
+  { chave: 'admissao', label: 'Admissão', largura: 120, render: (r) => fmtDataBR(r.admissao) },
+  { chave: 'dt_expiracao', label: 'Expira em', largura: 120,
+    render: (r) => (r.dt_expiracao ? <span style={{ color: r.acesso_expirado ? 'var(--red)' : undefined }}>{fmtDataBR(r.dt_expiracao)}{r.acesso_expirado ? ' (expirado)' : ''}</span> : '-') },
   { chave: 'tem_senha', label: 'Senha', largura: 80, align: 'center', render: (r) => (r.tem_senha ? 'Sim' : 'Não') },
+  { chave: 'dois_fatores', label: '2FA', largura: 70, align: 'center', render: (r) => (r.dois_fatores ? 'Sim' : '-') },
   { chave: 'favorito', label: 'Fav.', largura: 60, align: 'center', render: (r) => (r.favorito ? 'Sim' : '-') },
   { chave: 'criado_em', label: 'Criado em', largura: 140, render: (r) => fmtDataBR(r.criado_em) },
   { chave: 'alterado_em', label: 'Alterado em', largura: 140, render: (r) => fmtDataBR(r.alterado_em) },

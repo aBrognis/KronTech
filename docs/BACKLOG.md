@@ -33,16 +33,22 @@ grande; só iniciar com pedido explícito.
 
 ## Concluído recentemente
 
-- **Usuários: tela nativa** (esta sessão): `usuario_001` deixou de ser tela
-  do FormBuilder e virou página dedicada (`pages/usuarios/`) no padrão da
-  Entidade — `usuarioService.js` + `handlers/usuario.js`, abas Dados /
-  Acesso (login + redefinir senha) / Permissões, aba Acesso com
-  `PainelFiltrosGrid` + `TabelaResultados` + status em massa. `auth:login`
-  e `viagens:listarConsultores` desacoplados de `kr_tela_campos_001`
-  (colunas `login`/`senha` fixas). Migration só de dados
-  (`1788915346560_usuario-tela-nativa`). A linha em `kr_telas_001` fica,
-  inacessível pela navegação (igual Entidade); `App.jsx` redireciona
-  `fb__usuario_001` → `usuarios`.
+- **Usuários: tela nativa nível ERP** (esta sessão): `usuario_001` deixou
+  de ser tela do FormBuilder e virou página dedicada (`pages/usuarios/`) no
+  padrão da Entidade. Schema enriquecido (migration
+  `1788916719794_usuario-campos-erp`): CPF, apelido, matrícula, ramal,
+  WhatsApp, admissão/desligamento, gestor (FK auto-referência), centro de
+  custo, **perfil** (admin/gerente/supervisor/operador/consulta),
+  expiração de acesso, último acesso, forçar troca de senha, 2FA, tema,
+  idioma, + tabela `usuario_senha_hist_001` (histórico de trocas de
+  senha). `usuarioService.js` + `handlers/usuario.js`; 3 abas densas
+  (Dados / Acesso com histórico de senhas / Permissões 2x2 + preferências);
+  aba Acesso com `PainelFiltrosGrid` (24 filtros) + `TabelaResultados` +
+  status em massa. `auth:login` carimba `dt_ultimo_acesso`, checa
+  `dt_expiracao`/`bloqueado_ate`, conta `tentativas_login`, devolve
+  `perfil` + `forcarTrocaSenha`; desacoplado de `kr_tela_campos_001`.
+  Migration `1788915346560_usuario-tela-nativa` normaliza dados. `App.jsx`
+  redireciona `fb__usuario_001` → `usuarios`.
 - **E-mail: Caixa de Saída revisada** (esta sessão):
   - A listagem agora traz `envio_status` / `envio_erro` /
     `envio_proxima_tentativa`; a Caixa de Saída tem renderização própria

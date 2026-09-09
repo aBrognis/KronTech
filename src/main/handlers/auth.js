@@ -14,18 +14,41 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
       )
       if (tabelaExiste) {
         const row = await queryOne(
-          `SELECT id, login, nome, status, foto, senha AS senha_hash
+          `SELECT id, login, nome, status, foto, perfil,
+                  dt_expiracao, forcar_troca_senha, bloqueado_ate,
+                  senha AS senha_hash
            FROM usuario_001
            WHERE LOWER(login)=$1 AND ativo=TRUE LIMIT 1`,
           [login]
         )
         if (row) {
           if (!row.senha_hash) return { ok: false, erro: 'Usuário sem senha definida. Contate o administrador.' }
-          const ok = await bcrypt.compare(pwd, row.senha_hash)
-          if (!ok) return { ok: false, erro: 'Senha incorreta.' }
           if (row.status === 'inativo')   return { ok: false, erro: 'Usuário inativo.' }
           if (row.status === 'bloqueado') return { ok: false, erro: 'Usuário bloqueado.' }
-          return { ok: true, user: { id: row.id, usuario: row.login, nome: row.nome, perfil: row.status || 'usuario', foto: row.foto || null, fonte: 'usuario_001' } }
+          if (row.bloqueado_ate && new Date(row.bloqueado_ate) > new Date()) {
+            return { ok: false, erro: 'Usuário temporariamente bloqueado. Tente mais tarde.' }
+          }
+          if (row.dt_expiracao) {
+            const hoje = new Date().toISOString().slice(0, 10)
+            const exp = new Date(row.dt_expiracao).toISOString().slice(0, 10)
+            if (exp < hoje) return { ok: false, erro: 'Acesso deste usuário expirou. Contate o administrador.' }
+          }
+          const ok = await bcrypt.compare(pwd, row.senha_hash)
+          if (!ok) {
+            await query('UPDATE usuario_001 SET tentativas_login = tentativas_login + 1 WHERE id = $1', [row.id]).catch(() => {})
+            return { ok: false, erro: 'Senha incorreta.' }
+          }
+          // Sucesso: carimba o ultimo acesso e zera o contador de tentativas.
+          await query('UPDATE usuario_001 SET dt_ultimo_acesso = NOW(), tentativas_login = 0 WHERE id = $1', [row.id]).catch(() => {})
+          return {
+            ok: true,
+            user: {
+              id: row.id, usuario: row.login, nome: row.nome,
+              perfil: row.perfil || 'operador', foto: row.foto || null,
+              fonte: 'usuario_001',
+              forcarTrocaSenha: !!row.forcar_troca_senha,
+            },
+          }
         }
       }
 

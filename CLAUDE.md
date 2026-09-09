@@ -473,14 +473,18 @@ não só de schema (o formato antigo do dado pode não bater com a UI nova; ex:
 `entidade_001.papeis` era `CFP`, virou `cliente,fornecedor`).
 
 **Usuários / login:** há duas tabelas — `kr_usuarios_001` (o `admin` de
-fallback, criado por `db.js`) e `usuario_001` (a tela nativa de Usuário). O
-`auth:login` tenta `usuario_001` primeiro (colunas `login`/`senha` fixas, hash
-bcrypt) e cai em `kr_usuarios_001` se não achar. `viagens:listarConsultores`
-usa `usuario_001` quando ela existe. As tabelas de grupos/permissões
-(`kr_grupos_acesso_001`, `kr_grupo_permissoes_001`, `kr_usuario_permissoes_001`,
-`kr_usuario_grupo_001`) e os campos `usuario_001.perm_*` existem mas **nenhum
-código aplica** — a tela grava, sem efeito, até o motor de controle de acesso
-existir (ver `docs/BACKLOG.md`).
+fallback, criado por `db.js`) e `usuario_001` (a tela nativa de Usuário,
+`pages/usuarios/`, nível ERP: perfil, expiração, 2FA, histórico de senha em
+`usuario_senha_hist_001`, gestor FK auto-referência). O `auth:login` tenta
+`usuario_001` primeiro (colunas `login`/`senha` fixas, hash bcrypt; carimba
+`dt_ultimo_acesso`, checa `dt_expiracao`/`bloqueado_ate`, conta
+`tentativas_login`) e cai em `kr_usuarios_001` se não achar.
+`viagens:listarConsultores` usa `usuario_001` quando ela existe. As tabelas de
+grupos/permissões (`kr_grupos_acesso_001`, `kr_grupo_permissoes_001`,
+`kr_usuario_permissoes_001`, `kr_usuario_grupo_001`), os campos
+`usuario_001.perm_*` e o `perfil` **não são aplicados por nenhum código** — a
+tela grava, sem efeito, até o motor de controle de acesso existir (ver
+`docs/BACKLOG.md`).
 
 ---
 
