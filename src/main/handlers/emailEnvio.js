@@ -20,8 +20,10 @@ export function registerEmailEnvioHandlers({ ipcMain, wrap, getConfig }) {
   // reenviar. Retorna o registro pra o composer reabrir.
   ipcMain.handle('email:editarDaFila', wrap((_, mensagemId) => moverFilaParaRascunho(mensagemId)))
 
+  // Multiseleção: devolve um array de { path, nome, ext, tamanho } — um por
+  // arquivo escolhido (ou [] se cancelou).
   ipcMain.handle('email:selecionarAnexos', wrap(async (e) => {
     const win = BrowserWindow.fromWebContents(e.sender)
-    return selecionarECopiarArquivo({ subpasta: 'email/rascunhos', chaveCaminho: 'arquivosEmail' }, win, getConfig)
+    return selecionarECopiarArquivo({ subpasta: 'email/rascunhos', chaveCaminho: 'arquivosEmail', multiplos: true }, win, getConfig)
   }))
 }

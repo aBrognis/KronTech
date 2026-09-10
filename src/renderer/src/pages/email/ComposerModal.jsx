@@ -140,7 +140,14 @@ export default function ComposerModal({ modo, contas, contaAtivaId, mensagemOrig
 
   async function adicionarAnexo() {
     const res = await window.api.email.selecionarAnexos()
-    if (res.ok && res.data) setAnexos(prev => [...prev, { nome: res.data.nome, caminho: res.data.path, origem: 'novo' }])
+    // Agora vem um array (multiseleção): adiciona todos os que copiaram ok.
+    const itens = res.ok ? (res.data || []) : []
+    if (itens.length) {
+      setAnexos(prev => [
+        ...prev,
+        ...itens.map(a => ({ nome: a.nome, caminho: a.path, origem: 'novo' })),
+      ])
+    }
   }
   function removerAnexo(idx) {
     setAnexos(prev => prev.filter((_, i) => i !== idx))

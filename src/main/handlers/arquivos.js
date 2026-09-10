@@ -16,24 +16,9 @@ const TIPOS_FILTRO_ARQ = {
   dt_criacao: 'data', dt_atualizacao: 'data',
 }
 
-// Seleção + cópia física genérica (dialog nativo → copia pra
-// baseDir/subpasta, resolve colisão de nome, não grava nada no banco — o
-// chamador decide onde persistir o path retornado). Extraída para função
-// exportável reaproveitada por outros módulos (ex.: anexos do Cofre de
-// Senhas), mantendo o handler `arquivos:selecionarECopiar` como wrapper.
-export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = [], chaveCaminho = 'arquivos' } = {}, win, getConfig) {
-  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
-    title: 'Selecionar arquivo',
-    properties: ['openFile'],
-    filters: filtros.length ? filtros : undefined,
-  })
-  if (canceled || !filePaths.length) return null
-  const src     = filePaths[0]
-  const stat    = statSync(src)
-  // Pasta-base especifica da tela (chaveCaminho) com fallback pra generica.
-  const baseDir = resolverBaseAnexos(chaveCaminho)
-  const destDir = join(baseDir, subpasta)
-  if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
+// Copia UM arquivo de origem pra baseDir/subpasta, resolvendo colisao de
+// nome com sufixo (1), (2)... Devolve { ok, path, nome, ext, tamanho }.
+function copiarParaAnexos(src, destDir) {
   const origName = basename(src)
   const origExt  = extname(origName)
   const origBase = basename(origName, origExt)
@@ -54,8 +39,38 @@ export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = 
     path:    destPath,
     nome:    destName,
     ext:     origExt.toLowerCase().replace('.', ''),
-    tamanho: stat.size,
+    tamanho: statSync(destPath).size,
   }
+}
+
+// Seleção + cópia física genérica (dialog nativo → copia pra
+// baseDir/subpasta, resolve colisão de nome, não grava nada no banco — o
+// chamador decide onde persistir o path retornado). Extraída para função
+// exportável reaproveitada por outros módulos (ex.: anexos do Cofre de
+// Senhas), mantendo o handler `arquivos:selecionarECopiar` como wrapper.
+//
+// `multiplos: true` liga a multiseleção no dialog e devolve um ARRAY de
+// resultados (um por arquivo). Sem ele, comportamento antigo: um objeto só
+// (ou null se cancelou).
+export async function selecionarECopiarArquivo({ subpasta = 'anexos', filtros = [], chaveCaminho = 'arquivos', multiplos = false } = {}, win, getConfig) {
+  const props = ['openFile']
+  if (multiplos) props.push('multiSelections')
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    title: multiplos ? 'Selecionar arquivos' : 'Selecionar arquivo',
+    properties: props,
+    filters: filtros.length ? filtros : undefined,
+  })
+  if (canceled || !filePaths.length) return multiplos ? [] : null
+
+  // Pasta-base especifica da tela (chaveCaminho) com fallback pra generica.
+  const baseDir = resolverBaseAnexos(chaveCaminho)
+  const destDir = join(baseDir, subpasta)
+  if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true })
+
+  if (multiplos) {
+    return filePaths.map((src) => copiarParaAnexos(src, destDir)).filter((r) => r.ok)
+  }
+  return copiarParaAnexos(filePaths[0], destDir)
 }
 
 export function registerArquivosHandlers({ ipcMain, wrap, query, queryOne, getConfig, importLog, importCancelFlags, categoriaByExt, scanDir }) {
