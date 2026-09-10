@@ -304,7 +304,27 @@ Tipos de filtro:
 | `numero` | de / até | `>= AND <=` |
 | `data` | de / até (date) | `>= AND <=` |
 | `booleano` | Todos / Sim / Não | `= true/false` |
-| `exato` | dropdown (precisa de `opcoes: [{valor,label}]`) | `=` |
+| `exato` (1 valor) | dropdown (precisa de `opcoes`) | `=` |
+| `exato` + `multi: true` | **grupo de checkboxes** (precisa de `opcoes`) | `= ANY(valores)` |
+| `exato` + `multi` + `csv: true` | checkboxes, coluna é string com vírgula (ex: `papeis`) | `(',' \|\| col \|\| ',') ILIKE '%,v,%'` OR por valor |
+| `lookup` | **lupa** que abre a consulta da tabela relacionada, multi-seleção via chips (precisa de `tabela`, `campoLabel`, `camposBusca`) | `col = ANY(ids::int[])` |
+
+**Regra de ouro dos filtros (obrigatória, vale para telas nativas E
+FormBuilder):** todo campo que referencia outra tabela (`_id`) é filtro
+`lookup`, nunca texto nem dropdown. Toda escolha fixa com `opcoes` é `multi`
+(checkbox), nunca dropdown de 1 valor, salvo `multi: false` explícito. Não
+repetir essa lógica por tela: a tela só **declara** o filtro; o
+comportamento vem de `components/filtros/FilterLookup.jsx` +
+`FilterExatoMulti.jsx` (frontend), `montarFiltro` (backend nativo, aceita
+`tiposPorColuna[chave]` string ou `{ tipo, multi, csv, castArray }`) e
+`buildFiltroSQL` / `opGroupForTipo` (backend FormBuilder). No FormBuilder o
+`lookup` vem da config do campo (`lookupTabela` etc., opções já
+pré-carregadas em `lookupOpcoes`) e `select`/`radio` viram checkboxes
+automaticamente. `ColumnFilter.jsx` (front) e `opGroupForTipo` (back) têm
+que ficar em sincronia.
+
+`lookup` e `exato`+`multi` entram como **filtros fixos** do painel (sempre
+visíveis, junto das datas). Filtros largos ocupam 2 colunas da grade.
 
 Quando um filtro de `status`/`ativo` é usado, o service **deixa de forçar
 "só ativos"** — o usuário pode querer ver inativos/bloqueados.

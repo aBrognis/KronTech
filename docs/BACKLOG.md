@@ -22,6 +22,32 @@
 
 ## Concluído recentemente
 
+- **Filtros da aba Acesso nível ERP** (esta sessão): FK vira lupa,
+  multi-escolha vira checkbox, como **regra global do padrão** (nativas +
+  FormBuilder), não feature de tela.
+  - `montarFiltro` (`filtroSqlGenerico.js`) ganhou família `lookup`
+    (`col = ANY(ids::int[])`), `exato`+`multi` (`= ANY`), `exato`+`multi`+`csv`
+    (ILIKE OR com vírgulas nas pontas, p/ `papeis`), e passou a aceitar
+    `tiposPorColuna[chave]` como string OU `{ tipo, multi, csv, castArray }`.
+  - `buildFiltroSQL` / `opGroupForTipo` (`formBuilderService.js`): `lookup`
+    virou grupo próprio; `exato` aceita `f.valores` array.
+  - `cadastroPadraoFactory.js` propaga as flags do `colunasFiltro` pro
+    `montarFiltro`.
+  - Novos: `components/filtros/FilterLookup.jsx` (chips + lupa, reusa
+    `PesquisaPadraoModal` + `window.api.form.query`) e
+    `components/filtros/FilterExatoMulti.jsx` (grupo de checkboxes).
+  - `PainelFiltrosGrid.jsx` + `formBuilderView/PainelFiltros.jsx`: `lookup` e
+    `exato`+`multi` são filtros fixos; largos ocupam `span 2`.
+  - `ColumnFilter.jsx` / `FilterExato.jsx` do FormBuilder: `lookup` e
+    `select`/`radio` com opções agora renderizam checkboxes; `lookup` usa as
+    opções já pré-carregadas em `lookupOpcoes`.
+  - Telas que declararam filtros novos: Entidade (banco / natureza jurídica /
+    condição de pagamento = lupa; papéis / status / tipo de pessoa / regime /
+    UF = checkbox), Bancos, Naturezas Jurídicas, Condições de Pagamento,
+    Documentos Gerados (tipo de documento = lupa), Despesas de Viagem
+    (cliente / consultor = lupa), Cofre de Senhas, Arquivos.
+  - `CLAUDE.md` §4: tabela de tipos de filtro + regra de ouro documentada.
+
 - **E-mail: Caixa de Saída revisada** (esta sessão):
   - A listagem agora traz `envio_status` / `envio_erro` /
     `envio_proxima_tentativa`; a Caixa de Saída tem renderização própria

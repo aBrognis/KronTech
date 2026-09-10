@@ -3,6 +3,7 @@ import FilterNumero from './FilterNumero.jsx'
 import FilterData from './FilterData.jsx'
 import FilterBooleano from './FilterBooleano.jsx'
 import FilterExato from './FilterExato.jsx'
+import FilterExatoMulti from '../../../components/filtros/FilterExatoMulti.jsx'
 import FilterFlags from './FilterFlags.jsx'
 import FilterHasFile from './FilterHasFile.jsx'
 
@@ -16,7 +17,8 @@ const FAMILIA = {
   avaliacao: 'numero', progresso: 'numero',
   data: 'data', data_hora: 'data', hora: 'data',
   booleano: 'booleano',
-  select: 'exato', radio: 'exato', pasta: 'exato', lookup: 'exato',
+  select: 'exato', radio: 'exato', pasta: 'exato',
+  lookup: 'lookup',
   flags: 'flags',
   arquivo: 'has_file', imagem: 'has_file',
 }
@@ -33,7 +35,20 @@ export default function ColumnFilter({ campo, value, onChange, pastasSugest, loo
     case 'numero':   return <FilterNumero campo={campo} value={value} onChange={onChange} />
     case 'data':     return <FilterData campo={campo} value={value} onChange={onChange} />
     case 'booleano': return <FilterBooleano value={value} onChange={onChange} />
-    case 'exato':    return <FilterExato campo={campo} value={value} onChange={onChange} pastasSugest={pastasSugest} lookupOpcoes={lookupOpcoes} />
+    case 'exato': {
+      // select / radio -> checkboxes multi. pasta (valores distintos) segue
+      // no dropdown de 1 valor (pode ser lista longa e livre).
+      const opcoes = Array.isArray(campo.opcoes) && campo.opcoes.length
+        ? campo.opcoes.map(o => ({ valor: o.valor, label: o.label }))
+        : null
+      if (opcoes) return <FilterExatoMulti opcoes={opcoes} value={value} onChange={onChange} compacto={opcoes.length > 12} />
+      return <FilterExato campo={campo} value={value} onChange={onChange} pastasSugest={pastasSugest} lookupOpcoes={lookupOpcoes} />
+    }
+    case 'lookup': {
+      // opcoes do lookup ja vem pre-carregadas em lookupOpcoes[nome_campo].
+      const opcoes = (lookupOpcoes?.[campo.nome_campo] || []).map(o => ({ valor: o.id, label: o.label }))
+      return <FilterExatoMulti opcoes={opcoes} value={value} onChange={onChange} compacto={opcoes.length > 12} />
+    }
     case 'flags':    return <FilterFlags campo={campo} value={value} onChange={onChange} />
     case 'has_file': return <FilterHasFile value={value} onChange={onChange} />
     default:         return null

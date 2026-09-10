@@ -145,7 +145,7 @@ export async function listarTipos() {
 const TIPOS_FILTRO_DOC = {
   codigo: 'texto', titulo: 'texto', cliente_nome: 'texto', autor: 'texto',
   criado_por: 'texto', nome_referencia: 'texto', cliente_id: 'numero',
-  status: 'exato', documento_tipo_id: 'exato',
+  status: { tipo: 'exato', multi: true }, documento_tipo_id: { tipo: 'lookup' },
   criado_em: 'data', atualizado_em: 'data',
 }
 

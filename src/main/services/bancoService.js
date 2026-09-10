@@ -5,8 +5,8 @@ import { montarFiltro } from './filtroSqlGenerico'
 // SELECT usa "FROM banco_001 b".
 const TIPOS_FILTRO = {
   codigo: 'texto', compe: 'texto', ispb: 'texto', nome: 'texto', nome_curto: 'texto',
-  tipo: 'exato', site: 'texto', telefone_sac: 'texto', pais: 'texto',
-  situacao_bacen: 'exato', ativo: 'booleano', criado_em: 'data',
+  tipo: { tipo: 'exato', multi: true }, site: 'texto', telefone_sac: 'texto', pais: 'texto',
+  situacao_bacen: { tipo: 'exato', multi: true }, ativo: 'booleano', criado_em: 'data',
 }
 
 // CRUD de Bancos + grids-filho (agencias, convenios de cobranca).

@@ -6,7 +6,7 @@ import { montarFiltro } from '../services/filtroSqlGenerico'
 const TIPOS_FILTRO_COFRE = {
   codigo: 'texto', sistema: 'texto', categoria: 'texto', url: 'texto', usuario: 'texto',
   observacoes: 'texto', tags: 'texto',
-  nivel_seguranca: 'exato', tipo_credencial: 'exato',
+  nivel_seguranca: { tipo: 'exato', multi: true }, tipo_credencial: { tipo: 'exato', multi: true },
   dt_validade: 'data', favorito: 'booleano',
   criado_em: 'data', alterado_em: 'data',
 }

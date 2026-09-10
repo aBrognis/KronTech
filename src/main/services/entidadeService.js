@@ -58,17 +58,24 @@ const nula = (v) => (v === '' || v === undefined ? null : v)
 
 // ── LISTAR (aba Acesso) ─────────────────────────────────────────────────
 // Filtros por coluna da aba Acesso (docs CLAUDE.md §4): se a entidade tem a
-// coluna, existe filtro para ela. `papeis` fica de fora do montarFiltro
-// generico porque e string com virgula (usa ILIKE), tratado a mao.
+// coluna, existe filtro para ela. FK (_id) e 'lookup' (= ANY(ids)); escolha
+// fixa e 'exato' multi (= ANY); `papeis` e 'exato' multi + csv (string com
+// virgula -> ILIKE OR). montarFiltro trata os tres.
 const TIPOS_FILTRO_ENTIDADE = {
   codigo: 'texto', nome: 'texto', apelido: 'texto', cnpj: 'texto', ie_rg: 'texto',
   inscricao_estadual: 'texto', inscricao_municipal: 'texto',
-  status: 'exato', tipo_pessoa: 'exato',
+  papeis: { tipo: 'exato', multi: true, csv: true },
+  status: { tipo: 'exato', multi: true },
+  tipo_pessoa: { tipo: 'exato', multi: true },
   telefone: 'texto', celular: 'texto', email: 'texto', site: 'texto',
-  cep: 'texto', logradouro: 'texto', bairro: 'texto', cidade: 'texto', uf: 'exato',
+  cep: 'texto', logradouro: 'texto', bairro: 'texto', cidade: 'texto',
+  uf: { tipo: 'exato', multi: true },
   porte: 'texto', situacao_cadastral: 'texto', cnae: 'texto',
-  regime_tributario: 'exato', contribuinte_icms: 'booleano', optante_simples: 'booleano',
-  natureza_juridica_id: 'exato', condicao_pagamento_id: 'exato', banco_id: 'exato',
+  regime_tributario: { tipo: 'exato', multi: true },
+  contribuinte_icms: 'booleano', optante_simples: 'booleano',
+  natureza_juridica_id: { tipo: 'lookup' },
+  condicao_pagamento_id: { tipo: 'lookup' },
+  banco_id: { tipo: 'lookup' },
   limite_credito: 'numero', dia_vencimento: 'numero',
   origem: 'texto', segmento: 'texto', grupo_economico: 'texto',
   data_nascimento: 'data', data_fundacao: 'data', data_primeiro_contato: 'data',
@@ -93,16 +100,9 @@ export async function listar({ busca, filtros, papel, status, uf } = {}) {
   if (status) { params.push(status);       cond.push(`e.status = $${params.length}`) }
   if (uf)     { params.push(uf);           cond.push(`e.uf = $${params.length}`) }
 
-  // filtros por coluna (painel novo)
+  // filtros por coluna (painel novo). papeis/lookup/multi: tudo pelo montarFiltro.
   if (filtros && Object.keys(filtros).length) {
-    // papeis: string com virgula -> ILIKE, nao vai pelo montarFiltro
-    if (filtros.papeis && filtros.papeis.valor) {
-      params.push(`%${filtros.papeis.valor}%`)
-      cond.push(`e.papeis ILIKE $${params.length}`)
-    }
-    const semPapeis = { ...filtros }
-    delete semPapeis.papeis
-    const r = montarFiltro(semPapeis, TIPOS_FILTRO_ENTIDADE, { alias: 'e' })
+    const r = montarFiltro(filtros, TIPOS_FILTRO_ENTIDADE, { alias: 'e' })
     if (r.where) {
       const base = params.length
       cond.push(r.where.replace(/^ AND /, '').replace(/\$(\d+)/g, (_, n) => `$${base + Number(n)}`))

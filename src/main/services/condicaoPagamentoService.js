@@ -5,12 +5,14 @@ import { montarFiltro } from './filtroSqlGenerico'
 
 // Filtros por coluna da aba Acesso (docs CLAUDE.md §4). alias 'c'.
 const TIPOS_FILTRO = {
-  codigo: 'texto', descricao: 'texto', tipo: 'exato', base_prazo: 'exato',
+  codigo: 'texto', descricao: 'texto',
+  tipo: { tipo: 'exato', multi: true }, base_prazo: { tipo: 'exato', multi: true },
   dias_uteis: 'booleano', empurrar_dia_util: 'booleano', dia_fixo_mes: 'numero',
   multa_percentual: 'numero', juros_mes_percentual: 'numero',
   desconto_percentual: 'numero', desconto_ate_dias: 'numero',
   acrescimo_parcelamento_percentual: 'numero', valor_minimo: 'numero',
-  max_parcelas: 'numero', papel_permitido: 'exato', forma_padrao: 'exato',
+  max_parcelas: 'numero',
+  papel_permitido: { tipo: 'exato', multi: true }, forma_padrao: { tipo: 'exato', multi: true },
   ativo: 'booleano', criado_em: 'data',
 }
 

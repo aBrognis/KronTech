@@ -37,12 +37,12 @@ const CAMPOS_BUSCA = [
 const COLUNAS_FILTRO = [
   { chave: 'codigo', label: 'Código', tipo: 'texto' },
   { chave: 'nome', label: 'Nome', tipo: 'texto' },
-  { chave: 'categoria', label: 'Categoria', tipo: 'texto' },
+  { chave: 'categoria', label: 'Categoria', tipo: 'exato', multi: true, opcoes: CATEGORIAS.map((c) => ({ valor: c, label: c })) },
   { chave: 'pasta', label: 'Pasta', tipo: 'texto' },
   { chave: 'tags', label: 'Tags', tipo: 'texto' },
   { chave: 'descricao', label: 'Descrição', tipo: 'texto' },
   { chave: 'arquivo_nome', label: 'Nome do arquivo', tipo: 'texto' },
-  { chave: 'arquivo_ext', label: 'Extensão', tipo: 'texto' },
+  { chave: 'arquivo_ext', label: 'Extensão', tipo: 'texto' },   // valores livres, contém
   { chave: 'arquivo_path', label: 'Caminho', tipo: 'texto' },
   { chave: 'arquivo_tamanho', label: 'Tamanho (bytes)', tipo: 'numero' },
   { chave: 'favorito', label: 'Favorito', tipo: 'booleano' },

@@ -32,7 +32,14 @@ export function criarCadastroPadrao(config) {
     normalizar = (d) => d,
   } = config
 
-  const tiposFiltro = Object.fromEntries(colunasFiltro.map((c) => [c.chave, c.tipo]))
+  // string simples ('texto') OU objeto com flags ({ tipo:'exato', multi:true,
+  // csv:true } / { tipo:'lookup', castArray }) — montarFiltro aceita as duas.
+  const tiposFiltro = Object.fromEntries(colunasFiltro.map((c) => [
+    c.chave,
+    (c.multi || c.csv || c.castArray || c.tipo === 'lookup')
+      ? { tipo: c.tipo, multi: c.multi, csv: c.csv, castArray: c.castArray }
+      : c.tipo,
+  ]))
 
   const ident = (s) => {
     if (!/^[a-z_][a-z0-9_]*$/i.test(s)) throw new Error(`identificador invalido: ${s}`)

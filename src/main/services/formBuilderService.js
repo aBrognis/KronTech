@@ -348,7 +348,8 @@ function opGroupForTipo(tipo) {
     avaliacao:'numero', progresso:'numero',
     data:'data', data_hora:'data', hora:'data',
     booleano:'booleano',
-    select:'exato', radio:'exato', pasta:'exato', lookup:'exato',
+    select:'exato', radio:'exato', pasta:'exato',
+    lookup:'lookup',
     flags:'flags', tags:'tags',
     arquivo:'has_file', imagem:'has_file',
   }
@@ -382,8 +383,22 @@ function buildFiltroSQL(f, tipoCampo, params) {
       return `${c} = $${push(f.valor)}`
     }
     case 'exato': {
+      // multi-escolha (checkboxes): f.valores = ['a','b'] -> = ANY($n)
+      const arr = Array.isArray(f.valores)
+        ? f.valores.filter((v) => v != null && v !== '' && v !== '__todos__')
+        : []
+      if (arr.length) return `${c} = ANY($${push(arr.map(String))})`
       if (!f.valor || f.valor === '__todos__') return null
       return `${c} = $${push(f.valor)}`
+    }
+    case 'lookup': {
+      // filtro por FK, multi-seleção. Coluna lookup do FormBuilder e sempre
+      // <nome>_id integer (ver inserirCampos, linha ~20).
+      const ids = Array.isArray(f.valores)
+        ? f.valores.filter((v) => v != null && v !== '').map((v) => Number(v))
+        : (f.valor != null && f.valor !== '' ? [Number(f.valor)] : [])
+      if (!ids.length) return null
+      return `${c} = ANY($${push(ids)}::int[])`
     }
     case 'flags': {                      // código de flag é sempre 1 caractere (ver OpcoesList.jsx)
       if (!f.valor) return null

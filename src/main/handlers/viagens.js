@@ -12,10 +12,11 @@ export const STATUS_VALIDOS = ['rascunho', 'nao_enviado', 'enviado', 'reembolsad
 // Filtros por coluna da aba Acesso (docs CLAUDE.md §4). alias 'd'.
 const TIPOS_FILTRO_DESPESA = {
   codigo: 'texto', consultor_nome: 'texto', cliente_nome: 'texto',
-  local_partida: 'texto', local_destino: 'texto', meio_transporte: 'texto',
+  local_partida: 'texto', local_destino: 'texto',
+  meio_transporte: { tipo: 'exato', multi: true },
   veiculo_numero: 'texto', veiculo_placa: 'texto', observacoes: 'texto',
-  consultor_id: 'numero', cliente_id: 'numero',
-  status: 'exato',
+  consultor_id: { tipo: 'lookup' }, cliente_id: { tipo: 'lookup' },
+  status: { tipo: 'exato', multi: true },
   data_inicio: 'data', data_fim: 'data', criado_em: 'data', alterado_em: 'data',
   total_despesas: 'numero',
 }

@@ -5,6 +5,8 @@ import FilterNumero from '../pages/formBuilderView/filters/FilterNumero.jsx'
 import FilterData from '../pages/formBuilderView/filters/FilterData.jsx'
 import FilterExato from '../pages/formBuilderView/filters/FilterExato.jsx'
 import FilterBooleano from '../pages/formBuilderView/filters/FilterBooleano.jsx'
+import FilterLookup from './filtros/FilterLookup.jsx'
+import FilterExatoMulti from './filtros/FilterExatoMulti.jsx'
 
 // Painel de filtros da aba Acesso das TELAS NATIVAS.
 //
@@ -17,9 +19,11 @@ import FilterBooleano from '../pages/formBuilderView/filters/FilterBooleano.jsx'
 //    colunas. Um filtro adicionado some sozinho quando fica sem valor.
 //
 // props:
-//   colunas: [{ chave, label, tipo, opcoes? }]
-//     tipo: 'texto' | 'numero' | 'data' | 'booleano' | 'exato'
-//     opcoes (so tipo 'exato'): [{ valor, label }]
+//   colunas: [{ chave, label, tipo, opcoes?, multi?, tabela?, campoLabel?, camposBusca? }]
+//     tipo: 'texto' | 'numero' | 'data' | 'booleano' | 'exato' | 'lookup'
+//     opcoes (tipo 'exato'): [{ valor, label }]. multi:true -> checkboxes.
+//     tipo 'lookup': tabela, campoValor?, campoLabel, camposBusca[] -> lupa.
+//   Regra CLAUDE.md §4: toda FK (_id) e 'lookup'; toda escolha fixa e multi.
 //   valores: { <chave>: { op, valor, valor2 } | null }
 //   onChange(chave, filtroOuNull)
 //   onBuscar()  onLimpar()  fLoading
@@ -35,9 +39,10 @@ export default function PainelFiltrosGrid({
     () => new Set(Object.entries(valores).filter(([, v]) => v).map(([k]) => k)),
     [valores]
   )
-  // Datas sao fixas (sempre no painel). Alem delas, o que o usuario adicionou
-  // ou o que ja tem valor.
-  const fixo = (c) => c.tipo === 'data'
+  // Datas, lookups (FK) e escolhas-fixas multi sao os filtros "de peso" do
+  // ERP: ficam sempre no painel. Alem deles, o que o usuario adicionou ou o
+  // que ja tem valor.
+  const fixo = (c) => c.tipo === 'data' || c.tipo === 'lookup' || (c.tipo === 'exato' && c.multi)
   const visiveis = colunas.filter((c) => fixo(c) || adicionados.has(c.chave) || comValor.has(c.chave))
   const disponiveis = colunas.filter((c) => !fixo(c) && !adicionados.has(c.chave) && !comValor.has(c.chave))
 
@@ -69,10 +74,29 @@ export default function PainelFiltrosGrid({
       case 'numero':   return <FilterNumero value={v} onChange={set} />
       case 'data':     return <FilterData campo={{ tipo: 'data' }} value={v} onChange={set} />
       case 'booleano': return <FilterBooleano value={v} onChange={set} />
-      case 'exato':    return <FilterExato campo={{ tipo: 'select', nome_campo: c.chave, opcoes: c.opcoes || [] }} value={v} onChange={set} />
+      case 'lookup':
+        return (
+          <FilterLookup
+            tabela={c.tabela}
+            campoValor={c.campoValor || 'id'}
+            campoLabel={c.campoLabel || 'nome'}
+            camposBusca={c.camposBusca || []}
+            titulo={c.tituloModal || `Consultar ${c.label}`}
+            value={v}
+            onChange={set}
+          />
+        )
+      case 'exato':
+        return c.multi
+          ? <FilterExatoMulti opcoes={c.opcoes || []} value={v} onChange={set} compacto={(c.opcoes || []).length > 12} />
+          : <FilterExato campo={{ tipo: 'select', nome_campo: c.chave, opcoes: c.opcoes || [] }} value={v} onChange={set} />
       default:         return <FilterTexto value={v} onChange={set} />
     }
   }
+
+  // Filtros largos ocupam 2 colunas da grade.
+  const spanDe = (c) =>
+    c.tipo === 'lookup' || (c.tipo === 'exato' && c.multi && (c.opcoes || []).length > 3) ? 'span 2' : undefined
 
   const menuFiltrado = menuBusca.trim()
     ? disponiveis.filter((c) => c.label.toLowerCase().includes(menuBusca.trim().toLowerCase()))
@@ -148,7 +172,7 @@ export default function PainelFiltrosGrid({
             </div>
 
             {visiveis.map((c) => (
-              <div key={c.chave} className="form-group" style={{ margin: 0, minWidth: 0 }}>
+              <div key={c.chave} className="form-group" style={{ margin: 0, minWidth: 0, gridColumn: spanDe(c) }}>
                 <label className="form-label" title={c.label}
                   style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {c.label}

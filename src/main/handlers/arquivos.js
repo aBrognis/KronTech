@@ -8,9 +8,11 @@ import { montarFiltro } from '../services/filtroSqlGenerico'
 // Filtros por coluna da aba Acesso (docs CLAUDE.md §4). Sem alias (query
 // numa tabela só).
 const TIPOS_FILTRO_ARQ = {
-  codigo: 'texto', nome: 'texto', categoria: 'texto', pasta: 'texto',
+  codigo: 'texto', nome: 'texto',
+  categoria: { tipo: 'exato', multi: true },
+  pasta: 'texto',
   tags: 'texto', descricao: 'texto', arquivo_nome: 'texto', arquivo_path: 'texto',
-  arquivo_ext: 'exato',
+  arquivo_ext: 'texto',
   arquivo_tamanho: 'numero',
   favorito: 'booleano',
   dt_criacao: 'data', dt_atualizacao: 'data',

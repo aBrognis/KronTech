@@ -9,6 +9,20 @@ import ColumnFilter from './filters/ColumnFilter.jsx'
 //    os que ja tem valor;
 //  - "+ Adicionar filtro" (na barra do titulo) abre a lista das demais.
 const TIPOS_DATA = new Set(['data', 'data_hora', 'hora'])
+// Filtros "de peso" do ERP: datas, FK (lookup) e escolha fixa (select/radio)
+// ficam sempre no painel; select/radio so quando tem opcoes.
+function ehFixo(c) {
+  if (TIPOS_DATA.has(c.tipo)) return true
+  if (c.tipo === 'lookup') return true
+  if ((c.tipo === 'select' || c.tipo === 'radio') && Array.isArray(c.opcoes) && c.opcoes.length) return true
+  return false
+}
+function ehLargo(c) {
+  if (c.tipo === 'lookup') return true
+  const n = Array.isArray(c.opcoes) ? c.opcoes.length : 0
+  if ((c.tipo === 'select' || c.tipo === 'radio') && n > 3) return true
+  return false
+}
 
 export default function PainelFiltros({ camposData, fFiltros, setFiltroCampo, fBusca, setFBusca, pastasSugest, lookupOpcoes, limparFiltrosAcesso, onBuscar, fLoading }) {
   const [aberto, setAberto] = useState(true)
@@ -23,7 +37,7 @@ export default function PainelFiltros({ camposData, fFiltros, setFiltroCampo, fB
     () => new Set(Object.entries(fFiltros).filter(([, v]) => v).map(([k]) => k)),
     [fFiltros]
   )
-  const fixo = (c) => TIPOS_DATA.has(c.tipo)
+  const fixo = ehFixo
   const visiveis = camposFiltraveis.filter(c => fixo(c) || adicionados.has(c.nome_campo) || comValor.has(c.nome_campo))
   const disponiveis = camposFiltraveis.filter(c => !fixo(c) && !adicionados.has(c.nome_campo) && !comValor.has(c.nome_campo))
 
@@ -120,7 +134,7 @@ export default function PainelFiltros({ camposData, fFiltros, setFiltroCampo, fB
             </div>
 
             {visiveis.map(c => (
-              <div key={c.id} className="form-group" style={{ margin: 0, minWidth: 0 }}>
+              <div key={c.id} className="form-group" style={{ margin: 0, minWidth: 0, gridColumn: ehLargo(c) ? 'span 2' : undefined }}>
                 <label className="form-label" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   title={c.label}>
                   {c.label}

@@ -124,9 +124,10 @@ export default function DocumentosGerados() {
     { chave: 'cliente_nome', label: 'Cliente', tipo: 'texto' },
     { chave: 'autor', label: 'Autor', tipo: 'texto' },
     { chave: 'criado_por', label: 'Criado por', tipo: 'texto' },
-    { chave: 'documento_tipo_id', label: 'Tipo de documento', tipo: 'exato',
-      opcoes: tipos.map((t) => ({ valor: String(t.id), label: t.nome })) },
-    { chave: 'status', label: 'Status', tipo: 'exato', opcoes: STATUS_OPCOES },
+    { chave: 'documento_tipo_id', label: 'Tipo de documento', tipo: 'lookup',
+      tabela: 'documento_tipo_001', campoLabel: 'nome',
+      camposBusca: [{ nome_campo: 'nome', label: 'Nome' }] },
+    { chave: 'status', label: 'Status', tipo: 'exato', multi: true, opcoes: STATUS_OPCOES },
     { chave: 'criado_em', label: 'Criado em', tipo: 'data' },
     { chave: 'atualizado_em', label: 'Atualizado em', tipo: 'data' },
   ], [tipos])
