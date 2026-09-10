@@ -11,19 +11,6 @@
 
 ## Aberto
 
-### Controle de acesso (permissões)
-
-As tabelas `kr_grupos_acesso_001`, `kr_grupo_permissoes_001`,
-`kr_usuario_permissoes_001`, `kr_usuario_grupo_001` e os campos
-`usuario_001.perm_*` / `perfil` existem no banco mas **nenhum código lê ou
-aplica**. A tela nativa de Usuário mostra o `perfil` (informativo) mas não
-edita mais os `perm_*` — a aba de Permissões foi removida por ser fachada.
-Falta o motor de verdade: cada tela nativa checar
-incluir/alterar/excluir/consultar do usuário logado, uma tela de
-Grupos/Perfis, e o `App.jsx`/`Sidebar` respeitarem as permissões. Escopo
-grande; só iniciar com pedido explícito. Quando entrar, decidir se
-`perm_*` (colunas soltas) some em favor de `kr_usuario_permissoes_001`.
-
 ### E-mail
 
 - Bugs e funções aprovadas acumuladas — o usuário disse que traria a lista
@@ -35,24 +22,6 @@ grande; só iniciar com pedido explícito. Quando entrar, decidir se
 
 ## Concluído recentemente
 
-- **Usuários: tela nativa nível ERP** (esta sessão): `usuario_001` deixou
-  de ser tela do FormBuilder e virou página dedicada (`pages/usuarios/`) no
-  padrão da Entidade. Schema enriquecido (migration
-  `1788916719794_usuario-campos-erp`): CPF, apelido, matrícula, ramal,
-  WhatsApp, admissão/desligamento, gestor (FK auto-referência), centro de
-  custo, **perfil** (admin/gerente/supervisor/operador/consulta),
-  expiração de acesso, último acesso, forçar troca de senha, 2FA, tema,
-  idioma, + tabela `usuario_senha_hist_001` (histórico de trocas de
-  senha). `usuarioService.js` + `handlers/usuario.js`; 3 abas densas
-  uma aba de Cadastro única (Identificação com checkbox "Ativo" +
-  banner/ação de bloquear, RH com autocomplete de setor/cargo/centro de
-  custo, Acesso, Segurança, Preferências, Histórico de senhas);
-  aba Acesso com `PainelFiltrosGrid` (24 filtros) + `TabelaResultados` +
-  status em massa. `auth:login` carimba `dt_ultimo_acesso`, checa
-  `dt_expiracao`/`bloqueado_ate`, conta `tentativas_login`, devolve
-  `perfil` + `forcarTrocaSenha`; desacoplado de `kr_tela_campos_001`.
-  Migration `1788915346560_usuario-tela-nativa` normaliza dados. `App.jsx`
-  redireciona `fb__usuario_001` → `usuarios`.
 - **E-mail: Caixa de Saída revisada** (esta sessão):
   - A listagem agora traz `envio_status` / `envio_erro` /
     `envio_proxima_tentativa`; a Caixa de Saída tem renderização própria

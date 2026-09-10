@@ -10,7 +10,6 @@ import { registerDashboardHandlers } from './handlers/dashboard'
 import { registerDashboardDemoHandlers } from './handlers/dashboardDemo'
 import { registerClipboardHandlers } from './handlers/clipboard'
 import { registerEntidadeHandlers } from './handlers/entidade'
-import { registerUsuarioHandlers } from './handlers/usuario'
 import { registerAuthHandlers } from './handlers/auth'
 import { registerConfigHandlers } from './handlers/config'
 import { registerUpdateHandlers } from './handlers/update'
@@ -47,7 +46,6 @@ export function registerHandlers() {
   registerDashboardDemoHandlers({ ipcMain, wrap, query })
   registerClipboardHandlers({ ipcMain, wrap })
   registerEntidadeHandlers({ ipcMain, wrap })
-  registerUsuarioHandlers({ ipcMain, wrap })
   registerAuthHandlers({ ipcMain, query, queryOne })
   registerConfigHandlers({ ipcMain, wrap, getConfigForFrontend, saveConfig, saveSectionConfig, saveGithubToken, saveAnthropicApiKey, saveCnpjaToken, INI_PATH })
   registerUpdateHandlers({ ipcMain, wrap })

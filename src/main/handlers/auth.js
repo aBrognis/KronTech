@@ -6,48 +6,36 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
     const login = String(usuario).toLowerCase().trim()
     const pwd   = String(senha)
     try {
-      // 1) Tabela usuario_001 (tela nativa de Usuário). Colunas login/senha
-      //    sao fixas no schema — nao dependem mais da definicao da tela no
-      //    FormBuilder (kr_tela_campos_001).
+      // 1) Tenta tabela usuario_001 se existir
       const tabelaExiste = await queryOne(
         `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='usuario_001'`
       )
       if (tabelaExiste) {
-        const row = await queryOne(
-          `SELECT id, login, nome, status, foto, perfil,
-                  dt_expiracao, forcar_troca_senha, bloqueado_ate,
-                  senha AS senha_hash
-           FROM usuario_001
-           WHERE LOWER(login)=$1 AND ativo=TRUE LIMIT 1`,
-          [login]
+        // Descobre qual coluna é o campo login (tipo='login') e qual é a senha
+        const colLogin = await queryOne(
+          `SELECT nome_campo FROM kr_tela_campos_001 tc
+           JOIN kr_telas_001 t ON t.id=tc.tela_id
+           WHERE t.nome_tabela='usuario_001' AND tc.tipo='login' AND tc.ativo=TRUE LIMIT 1`
         )
-        if (row) {
-          if (!row.senha_hash) return { ok: false, erro: 'Usuário sem senha definida. Contate o administrador.' }
-          if (row.status === 'inativo')   return { ok: false, erro: 'Usuário inativo.' }
-          if (row.status === 'bloqueado') return { ok: false, erro: 'Usuário bloqueado.' }
-          if (row.bloqueado_ate && new Date(row.bloqueado_ate) > new Date()) {
-            return { ok: false, erro: 'Usuário temporariamente bloqueado. Tente mais tarde.' }
-          }
-          if (row.dt_expiracao) {
-            const hoje = new Date().toISOString().slice(0, 10)
-            const exp = new Date(row.dt_expiracao).toISOString().slice(0, 10)
-            if (exp < hoje) return { ok: false, erro: 'Acesso deste usuário expirou. Contate o administrador.' }
-          }
-          const ok = await bcrypt.compare(pwd, row.senha_hash)
-          if (!ok) {
-            await query('UPDATE usuario_001 SET tentativas_login = tentativas_login + 1 WHERE id = $1', [row.id]).catch(() => {})
-            return { ok: false, erro: 'Senha incorreta.' }
-          }
-          // Sucesso: carimba o ultimo acesso e zera o contador de tentativas.
-          await query('UPDATE usuario_001 SET dt_ultimo_acesso = NOW(), tentativas_login = 0 WHERE id = $1', [row.id]).catch(() => {})
-          return {
-            ok: true,
-            user: {
-              id: row.id, usuario: row.login, nome: row.nome,
-              perfil: row.perfil || 'operador', foto: row.foto || null,
-              fonte: 'usuario_001',
-              forcarTrocaSenha: !!row.forcar_troca_senha,
-            },
+        const colSenha = await queryOne(
+          `SELECT nome_campo FROM kr_tela_campos_001 tc
+           JOIN kr_telas_001 t ON t.id=tc.tela_id
+           WHERE t.nome_tabela='usuario_001' AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`
+        )
+        if (colLogin && colSenha) {
+          const row = await queryOne(
+            `SELECT id, ${colLogin.nome_campo} AS login, nome, status, foto, ${colSenha.nome_campo} AS senha_hash
+             FROM usuario_001
+             WHERE LOWER(${colLogin.nome_campo})=$1 AND ativo=TRUE LIMIT 1`,
+            [login]
+          )
+          if (row) {
+            if (!row.senha_hash) return { ok: false, erro: 'Usuário sem senha definida. Contate o administrador.' }
+            const ok = await bcrypt.compare(pwd, row.senha_hash)
+            if (!ok) return { ok: false, erro: 'Senha incorreta.' }
+            if (row.status === 'inativo')   return { ok: false, erro: 'Usuário inativo.' }
+            if (row.status === 'bloqueado') return { ok: false, erro: 'Usuário bloqueado.' }
+            return { ok: true, user: { id: row.id, usuario: row.login, nome: row.nome, perfil: row.status || 'usuario', foto: row.foto || null, fonte: 'usuario_001' } }
           }
         }
       }
@@ -70,27 +58,20 @@ export function registerAuthHandlers({ ipcMain, query, queryOne }) {
     }
   })
 
-  ipcMain.handle('auth:redefinirSenha', async (_, { tabelaUsuario, campoCodigo, campoSenha, id, novaSenha }) => {
+  ipcMain.handle('auth:redefinirSenha', async (_, { tabelaUsuario, campoCodigo, id, novaSenha }) => {
     try {
       const hash = await bcrypt.hash(String(novaSenha), 10)
-      // campoSenha explicito evita depender da definicao da tela no
-      // FormBuilder (kr_tela_campos_001). Cai na descoberta so quando o
-      // chamador nao informa.
-      let colSenhaNome = campoSenha
-      if (!colSenhaNome) {
-        const colSenha = await queryOne(
-          `SELECT nome_campo FROM kr_tela_campos_001 tc
-           JOIN kr_telas_001 t ON t.id=tc.tela_id
-           WHERE t.nome_tabela=$1 AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`,
-          [tabelaUsuario]
-        )
-        colSenhaNome = colSenha?.nome_campo
-      }
-      if (!colSenhaNome) return { ok: false, erro: 'Coluna de senha não encontrada.' }
+      const colSenha = await queryOne(
+        `SELECT nome_campo FROM kr_tela_campos_001 tc
+         JOIN kr_telas_001 t ON t.id=tc.tela_id
+         WHERE t.nome_tabela=$1 AND tc.tipo='senha' AND tc.ativo=TRUE LIMIT 1`,
+        [tabelaUsuario]
+      )
+      if (!colSenha) return { ok: false, erro: 'Coluna de senha não encontrada.' }
       const pk = campoCodigo || 'id'
       const hasTs = await queryOne(`SELECT 1 FROM information_schema.columns WHERE table_name=$1 AND column_name='alterado_em' LIMIT 1`, [tabelaUsuario])
       const tsClause = hasTs ? `, alterado_em=NOW()` : ''
-      await query(`UPDATE ${tabelaUsuario} SET ${colSenhaNome}=$1${tsClause} WHERE ${pk}=$2`, [hash, id])
+      await query(`UPDATE ${tabelaUsuario} SET ${colSenha.nome_campo}=$1${tsClause} WHERE ${pk}=$2`, [hash, id])
       return { ok: true }
     } catch (e) {
       return { ok: false, erro: e.message }
