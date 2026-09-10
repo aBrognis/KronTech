@@ -144,6 +144,34 @@ export async function listarParaGestor(excluirId) {
   )
 }
 
+// Valores ja usados numa coluna de texto livre (setor, cargo, centro_custo)
+// — alimenta o <datalist> dos campos, mantendo consistencia sem virar
+// cadastro separado.
+const CAMPOS_LIVRE = new Set(['setor', 'cargo', 'centro_custo'])
+export async function valoresCampo(campo) {
+  if (!CAMPOS_LIVRE.has(campo)) return []
+  const rows = await query(
+    `SELECT DISTINCT ${campo} AS v FROM usuario_001
+     WHERE ${campo} IS NOT NULL AND ${campo} <> '' ORDER BY ${campo}`
+  )
+  return rows.map((r) => r.v)
+}
+
+// Ativar / bloquear / inativar um usuario (acao unica, nao select).
+export async function definirSituacao(id, situacao) {
+  if (!['ativo', 'inativo', 'bloqueado'].includes(situacao)) {
+    throw new Error(`Situação inválida: ${situacao}`)
+  }
+  const row = await queryOne(
+    `UPDATE usuario_001
+     SET status = $2, ativo = ($2 = 'ativo'), alterado_em = NOW()
+     WHERE id = $1 RETURNING id`,
+    [id, situacao]
+  )
+  if (!row) throw new Error('Usuário não encontrado.')
+  return { id, situacao }
+}
+
 // ── validacao / preparo comum ─────────────────────────────────────────
 async function prepararCampos(dados, { idAtual = null } = {}) {
   const d = norm(dados)
@@ -166,7 +194,12 @@ async function prepararCampos(dados, { idAtual = null } = {}) {
     senhaHash = await bcrypt.hash(String(d.senha), 10)
   }
 
-  if (d.ativo === undefined && d.status) d.ativo = d.status !== 'inativo'
+  // A ficha manda `ativo` (checkbox); o status espelha: ativo -> 'ativo',
+  // desmarcado -> 'inativo'. 'bloqueado' so entra pela acao definirSituacao,
+  // entao aqui um usuario bloqueado que for gravado com "Ativo" marcado
+  // volta pra 'ativo' de propria vontade do editor.
+  if (d.ativo === true) d.status = 'ativo'
+  else if (d.ativo === false) d.status = d.status === 'bloqueado' ? 'bloqueado' : 'inativo'
 
   return { d, senhaHash }
 }
@@ -249,9 +282,10 @@ export async function excluir(id) {
 // ── STATUS EM MASSA ───────────────────────────────────────────────────
 export async function mudarStatusLote(ids, status) {
   if (!Array.isArray(ids) || !ids.length) return { atualizadas: 0 }
+  // ativo = true so quando status = 'ativo' (bloqueado nao e "ativo").
   const rows = await query(
     `UPDATE usuario_001
-     SET status = $2, ativo = ($2 <> 'inativo'), alterado_em = NOW()
+     SET status = $2, ativo = ($2 = 'ativo'), alterado_em = NOW()
      WHERE id = ANY($1::int[]) RETURNING id`,
     [ids, status]
   )

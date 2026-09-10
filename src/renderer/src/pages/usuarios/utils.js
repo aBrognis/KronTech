@@ -28,8 +28,10 @@ export const IDIOMAS = [
 
 export const EMPTY_FORM = {
   id: null, codigo: '',
-  // identificacao
-  nome: '', apelido: '', documento: '', matricula: '', status: 'ativo', foto: '',
+  // identificacao — `ativo` e o campo principal (checkbox); `status` espelha
+  // ('ativo' | 'inativo'), e 'bloqueado' so vem pela acao de bloquear.
+  nome: '', apelido: '', documento: '', matricula: '', foto: '',
+  ativo: true, status: 'ativo',
   // acesso
   login: '', senha: '', perfil: 'operador',
   dt_expiracao: '', forcar_troca_senha: false, dois_fatores: false,
@@ -56,6 +58,7 @@ export function paraForm(d) {
     documento: d.documento || '',
     matricula: d.matricula || '',
     status: d.status || 'ativo',
+    ativo: d.ativo !== false,
     foto: d.foto || '',
     login: d.login || '',
     senha: '',
@@ -90,7 +93,10 @@ export function paraForm(d) {
 export function paraPayload(f) {
   const p = {
     nome: f.nome, apelido: f.apelido, documento: f.documento, matricula: f.matricula,
-    status: f.status, foto: f.foto,
+    // manda o checkbox; o service deriva o `status` a partir dele
+    // (bloqueado so muda pela acao dedicada).
+    ativo: !!f.ativo, status: f.status,
+    foto: f.foto,
     login: f.login, perfil: f.perfil,
     dt_expiracao: f.dt_expiracao || null,
     forcar_troca_senha: !!f.forcar_troca_senha,

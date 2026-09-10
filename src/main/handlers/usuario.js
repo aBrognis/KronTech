@@ -9,4 +9,6 @@ export function registerUsuarioHandlers({ ipcMain, wrap }) {
   ipcMain.handle('usuario:mudarStatusLote', wrap((_e, { ids, status }) => usuarioService.mudarStatusLote(ids, status)))
   ipcMain.handle('usuario:redefinirSenha', wrap((_e, { id, novaSenha, porNome, forcarTroca }) => usuarioService.redefinirSenha(id, novaSenha, { porNome, forcarTroca })))
   ipcMain.handle('usuario:listarParaGestor', wrap((_e, id) => usuarioService.listarParaGestor(id)))
+  ipcMain.handle('usuario:valoresCampo', wrap((_e, campo) => usuarioService.valoresCampo(campo)))
+  ipcMain.handle('usuario:definirSituacao', wrap((_e, { id, situacao }) => usuarioService.definirSituacao(id, situacao)))
 }

@@ -8,13 +8,7 @@ import TabelaResultados from '../../components/TabelaResultados'
 import { notificar } from '../../components/Notificacao'
 import { fmtDataBR, fmtDataHoraBR } from '../../lib/utils/data.js'
 import { EMPTY_FORM, paraForm, paraPayload, STATUS, statusMeta, PERFIS, perfilMeta } from './utils'
-import AbaDados from './AbaDados'
-import AbaAcessoCredenciais from './AbaAcessoCredenciais'
-
-const ABAS_FORM = [
-  { id: 'dados', label: 'Dados', Comp: AbaDados },
-  { id: 'credenciais', label: 'Acesso', Comp: AbaAcessoCredenciais },
-]
+import FormularioUsuario from './FormularioUsuario'
 
 // Filtros da aba Acesso — um por coluna consultável de usuario_001.
 const COLUNAS_FILTRO = [
@@ -87,11 +81,8 @@ export default function Usuarios({ newTrigger }) {
   const [erro, setErro] = useState(null)
   const [confirmExcluir, setConfirmExcluir] = useState(false)
 
-  // aba: 'acesso' | id de ABAS_FORM (a aba de cadastro E uma das do form).
-  const [aba, setAba] = useState('dados')
-  const activeTab = aba === 'acesso' ? 'acesso' : 'cadastro'
-  const setActiveTab = (t) => setAba(t === 'acesso' ? 'acesso' : 'dados')
-  const setAbaForm = (a) => setAba(a)
+  // Duas abas só: 'acesso' (a lista) e 'cadastro' (o formulário inteiro).
+  const [activeTab, setActiveTab] = useState('cadastro')
 
   // aba Acesso — filtros independentes, so roda ao clicar Buscar.
   const [busca, setBusca] = useState('')
@@ -167,7 +158,6 @@ export default function Usuarios({ newTrigger }) {
     setErro(null)
     setMode('new')
     setActiveTab('cadastro')
-    setAbaForm('dados')
   }
   function handleDesistir() {
     if (currentIdx >= 0 && registros[currentIdx]) carregarForm(registros[currentIdx])
@@ -226,7 +216,6 @@ export default function Usuarios({ newTrigger }) {
     setCurrentIdx(idx)
     carregarForm(registros[idx])
     setActiveTab('cadastro')
-    setAbaForm('dados')
   }
 
   // ── selecao em massa ──
@@ -262,19 +251,12 @@ export default function Usuarios({ newTrigger }) {
     [fResultados, pagina, porPagina]
   )
   const isRO = mode === 'view'
-  const AbaAtiva = ABAS_FORM.find((a) => a.id === (aba === 'acesso' ? 'dados' : aba)) || ABAS_FORM[0]
-  const ctx = { form, setForm, isRO, erro }
 
   return (
     <div className="page-with-footer">
-      <div className="page-tabs" style={{ overflowX: 'auto', flexWrap: 'nowrap' }}>
-        <button className={`page-tab${aba === 'acesso' ? ' active' : ''}`} onClick={() => setAba('acesso')}>Acesso</button>
-        {ABAS_FORM.map((a) => (
-          <button key={a.id}
-            className={`page-tab${aba === a.id ? ' active' : ''}`}
-            style={{ fontSize: 11.5 }}
-            onClick={() => setAba(a.id)}>{a.label}</button>
-        ))}
+      <div className="page-tabs">
+        <button className={`page-tab${activeTab === 'acesso' ? ' active' : ''}`} onClick={() => setActiveTab('acesso')}>Acesso</button>
+        <button className={`page-tab${activeTab === 'cadastro' ? ' active' : ''}`} onClick={() => setActiveTab('cadastro')}>Cadastro</button>
         {form.id && <span className="page-tab-info">{form.codigo || '----'} · {form.nome || '(sem nome)'}</span>}
       </div>
 
@@ -340,7 +322,8 @@ export default function Usuarios({ newTrigger }) {
 
         {activeTab === 'cadastro' && (
           <div className="entidade-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', paddingRight: 8 }}>
-            <AbaAtiva.Comp {...ctx} />
+            <FormularioUsuario form={form} setForm={setForm} isRO={isRO}
+              onSituacaoMudou={() => { carregarTudo(); if (fResultados) carregarAcesso() }} />
           </div>
         )}
       </div>

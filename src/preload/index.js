@@ -147,6 +147,8 @@ const api = {
     mudarStatusLote:  (p)  => ipcRenderer.invoke('usuario:mudarStatusLote', p),
     redefinirSenha:   (p)  => ipcRenderer.invoke('usuario:redefinirSenha', p),
     listarParaGestor: (id) => ipcRenderer.invoke('usuario:listarParaGestor', id),
+    valoresCampo:     (c)  => ipcRenderer.invoke('usuario:valoresCampo', c),
+    definirSituacao:  (p)  => ipcRenderer.invoke('usuario:definirSituacao', p),
   },
   clipboard: {
     write: (texto) => ipcRenderer.invoke('clipboard:write', texto),

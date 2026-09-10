@@ -44,7 +44,9 @@ grande; só iniciar com pedido explícito. Quando entrar, decidir se
   expiração de acesso, último acesso, forçar troca de senha, 2FA, tema,
   idioma, + tabela `usuario_senha_hist_001` (histórico de trocas de
   senha). `usuarioService.js` + `handlers/usuario.js`; 3 abas densas
-  (Dados / Acesso com histórico de senhas + preferências);
+  uma aba de Cadastro única (Identificação com checkbox "Ativo" +
+  banner/ação de bloquear, RH com autocomplete de setor/cargo/centro de
+  custo, Acesso, Segurança, Preferências, Histórico de senhas);
   aba Acesso com `PainelFiltrosGrid` (24 filtros) + `TabelaResultados` +
   status em massa. `auth:login` carimba `dt_ultimo_acesso`, checa
   `dt_expiracao`/`bloqueado_ate`, conta `tentativas_login`, devolve
