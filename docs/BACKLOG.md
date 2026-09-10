@@ -14,13 +14,15 @@
 ### Controle de acesso (permissões)
 
 As tabelas `kr_grupos_acesso_001`, `kr_grupo_permissoes_001`,
-`kr_usuario_permissoes_001`, `kr_usuario_grupo_001` existem no banco mas
-**nenhum código lê ou aplica**. Os campos `usuario_001.perm_cadastros /
-perm_financeiro / perm_relatorios / perm_config` também não têm efeito — a
-tela nativa de Usuário grava, mas o sistema ignora. Falta o motor: cada tela
-nativa checar incluir/alterar/excluir/consultar do usuário logado, uma tela
-de Grupos/Perfis, e o `App.jsx`/`Sidebar` respeitarem as permissões. Escopo
-grande; só iniciar com pedido explícito.
+`kr_usuario_permissoes_001`, `kr_usuario_grupo_001` e os campos
+`usuario_001.perm_*` / `perfil` existem no banco mas **nenhum código lê ou
+aplica**. A tela nativa de Usuário mostra o `perfil` (informativo) mas não
+edita mais os `perm_*` — a aba de Permissões foi removida por ser fachada.
+Falta o motor de verdade: cada tela nativa checar
+incluir/alterar/excluir/consultar do usuário logado, uma tela de
+Grupos/Perfis, e o `App.jsx`/`Sidebar` respeitarem as permissões. Escopo
+grande; só iniciar com pedido explícito. Quando entrar, decidir se
+`perm_*` (colunas soltas) some em favor de `kr_usuario_permissoes_001`.
 
 ### E-mail
 
@@ -42,7 +44,7 @@ grande; só iniciar com pedido explícito.
   expiração de acesso, último acesso, forçar troca de senha, 2FA, tema,
   idioma, + tabela `usuario_senha_hist_001` (histórico de trocas de
   senha). `usuarioService.js` + `handlers/usuario.js`; 3 abas densas
-  (Dados / Acesso com histórico de senhas / Permissões 2x2 + preferências);
+  (Dados / Acesso com histórico de senhas + preferências);
   aba Acesso com `PainelFiltrosGrid` (24 filtros) + `TabelaResultados` +
   status em massa. `auth:login` carimba `dt_ultimo_acesso`, checa
   `dt_expiracao`/`bloqueado_ate`, conta `tentativas_login`, devolve

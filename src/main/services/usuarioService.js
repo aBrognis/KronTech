@@ -21,8 +21,6 @@ const COLS = [
   'email', 'telefone', 'ramal', 'whatsapp',
   // RH
   'setor', 'cargo', 'centro_custo', 'admissao', 'desligamento', 'gestor_id',
-  // permissoes
-  'perm_cadastros', 'perm_financeiro', 'perm_relatorios', 'perm_config',
   // preferencias / complemento
   'tema', 'idioma', 'observacoes', 'ativo', 'favorito',
 ]
@@ -34,7 +32,6 @@ const MAXLEN = {
   login: 100, perfil: 20,
   email: 150, telefone: 30, ramal: 10, whatsapp: 30,
   setor: 100, cargo: 100, centro_custo: 60,
-  perm_cadastros: 100, perm_financeiro: 100, perm_relatorios: 100, perm_config: 100,
   tema: 10, idioma: 8,
 }
 
@@ -101,7 +98,6 @@ export async function listar({ busca, filtros } = {}) {
             u.email, u.telefone, u.ramal, u.whatsapp,
             u.setor, u.cargo, u.centro_custo, u.admissao, u.desligamento, u.gestor_id,
             g.nome AS gestor_nome,
-            u.perm_cadastros, u.perm_financeiro, u.perm_relatorios, u.perm_config,
             u.tema, u.idioma, u.observacoes, u.ativo, u.favorito, u.criado_em, u.alterado_em,
             (u.senha IS NOT NULL AND u.senha <> '') AS tem_senha,
             (u.dt_expiracao IS NOT NULL AND u.dt_expiracao < CURRENT_DATE) AS acesso_expirado
@@ -123,7 +119,6 @@ export async function obter(id) {
             u.email, u.telefone, u.ramal, u.whatsapp,
             u.setor, u.cargo, u.centro_custo, u.admissao, u.desligamento, u.gestor_id,
             g.nome AS gestor_nome,
-            u.perm_cadastros, u.perm_financeiro, u.perm_relatorios, u.perm_config,
             u.tema, u.idioma, u.observacoes, u.ativo, u.favorito, u.criado_em, u.alterado_em,
             (u.senha IS NOT NULL AND u.senha <> '') AS tem_senha
      FROM usuario_001 u

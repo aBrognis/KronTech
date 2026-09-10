@@ -4,7 +4,7 @@ import { FormGrid, Secao, CampoTexto, CampoSelect, CampoCheck } from '../../comp
 import InputData from '../../components/InputData'
 import { notificar } from '../../components/Notificacao'
 import { fmtDataHoraBR, fmtDataBR } from '../../lib/utils/data.js'
-import { PERFIS, perfilMeta } from './utils'
+import { PERFIS, perfilMeta, TEMAS, IDIOMAS } from './utils'
 
 export default function AbaAcessoCredenciais({ form, setForm, isRO }) {
   const novo = !form.id
@@ -102,6 +102,11 @@ export default function AbaAcessoCredenciais({ form, setForm, isRO }) {
           Este usuário não tem senha definida e não consegue entrar no sistema. Use "Redefinir senha".
         </div>
       )}
+
+      <Secao titulo="Preferências do usuário" cols="minmax(0, 1fr) minmax(0, 1fr)">
+        <CampoSelect form={form} setForm={setForm} isRO={isRO} campo="tema" label="Tema da interface" opcoes={TEMAS} />
+        <CampoSelect form={form} setForm={setForm} isRO={isRO} campo="idioma" label="Idioma" opcoes={IDIOMAS} />
+      </Secao>
 
       {!novo && form.historicoSenha?.length > 0 && (
         <Secao titulo="Histórico de senhas" largura="full" cols="1fr">

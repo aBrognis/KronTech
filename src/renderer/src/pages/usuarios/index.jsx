@@ -10,12 +10,10 @@ import { fmtDataBR, fmtDataHoraBR } from '../../lib/utils/data.js'
 import { EMPTY_FORM, paraForm, paraPayload, STATUS, statusMeta, PERFIS, perfilMeta } from './utils'
 import AbaDados from './AbaDados'
 import AbaAcessoCredenciais from './AbaAcessoCredenciais'
-import AbaPermissoes from './AbaPermissoes'
 
 const ABAS_FORM = [
   { id: 'dados', label: 'Dados', Comp: AbaDados },
   { id: 'credenciais', label: 'Acesso', Comp: AbaAcessoCredenciais },
-  { id: 'permissoes', label: 'Permissões', Comp: AbaPermissoes },
 ]
 
 // Filtros da aba Acesso — um por coluna consultável de usuario_001.

@@ -26,45 +26,6 @@ export const IDIOMAS = [
   { valor: 'es', label: 'Español' },
 ]
 
-// Permissoes por modulo — guardadas como string de letras separadas por
-// virgula (ex: "V,I,E"). Ainda NAO sao aplicadas pelo sistema.
-export const GRUPOS_PERMISSAO = [
-  {
-    campo: 'perm_cadastros', label: 'Cadastros',
-    opcoes: [
-      { valor: 'V', label: 'Visualizar' },
-      { valor: 'I', label: 'Incluir' },
-      { valor: 'E', label: 'Editar' },
-      { valor: 'X', label: 'Excluir' },
-    ],
-  },
-  {
-    campo: 'perm_financeiro', label: 'Financeiro',
-    opcoes: [
-      { valor: 'V', label: 'Visualizar' },
-      { valor: 'I', label: 'Incluir' },
-      { valor: 'E', label: 'Editar' },
-      { valor: 'X', label: 'Excluir' },
-    ],
-  },
-  {
-    campo: 'perm_relatorios', label: 'Relatórios',
-    opcoes: [
-      { valor: 'V', label: 'Visualizar' },
-      { valor: 'E', label: 'Exportar' },
-      { valor: 'P', label: 'Imprimir' },
-    ],
-  },
-  {
-    campo: 'perm_config', label: 'Configurações',
-    opcoes: [
-      { valor: 'C', label: 'Acessar configurações' },
-      { valor: 'U', label: 'Gerenciar usuários' },
-      { valor: 'B', label: 'Backup / Restauração' },
-    ],
-  },
-]
-
 export const EMPTY_FORM = {
   id: null, codigo: '',
   // identificacao
@@ -77,8 +38,6 @@ export const EMPTY_FORM = {
   // RH
   setor: '', cargo: '', centro_custo: '',
   admissao: '', desligamento: '', gestor_id: '', gestor_nome: '',
-  // permissoes
-  perm_cadastros: '', perm_financeiro: '', perm_relatorios: '', perm_config: '',
   // preferencias / complemento
   tema: '', idioma: 'pt-BR', observacoes: '', favorito: false,
   // somente leitura (vindos do backend)
@@ -115,10 +74,6 @@ export function paraForm(d) {
     desligamento: d10(d.desligamento),
     gestor_id: d.gestor_id ? String(d.gestor_id) : '',
     gestor_nome: d.gestor_nome || '',
-    perm_cadastros: d.perm_cadastros || '',
-    perm_financeiro: d.perm_financeiro || '',
-    perm_relatorios: d.perm_relatorios || '',
-    perm_config: d.perm_config || '',
     tema: d.tema || '',
     idioma: d.idioma || 'pt-BR',
     observacoes: d.observacoes || '',
@@ -145,8 +100,6 @@ export function paraPayload(f) {
     admissao: f.admissao || null,
     desligamento: f.desligamento || null,
     gestor_id: f.gestor_id || null,
-    perm_cadastros: f.perm_cadastros, perm_financeiro: f.perm_financeiro,
-    perm_relatorios: f.perm_relatorios, perm_config: f.perm_config,
     tema: f.tema, idioma: f.idioma,
     observacoes: f.observacoes, favorito: !!f.favorito,
   }
