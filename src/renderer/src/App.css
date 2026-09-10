@@ -684,6 +684,16 @@ input[type="date"]::-webkit-datetime-edit-year-field:focus {
 .fav-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; color: var(--t2); }
 .fav-check input { accent-color: var(--or); cursor: pointer; }
 
+/* Todo checkbox e radio do sistema segue a cor de destaque (var(--or)),
+   que reage à cor escolhida em Configurações. Vale para telas nativas,
+   formulários, e os checkboxes do grid da aba de Acesso (TabelaResultados).
+   Um input inline com accentColor próprio ainda sobrepõe isto, mas o
+   default agora é a cor do sistema, não o azul do browser. */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--or);
+}
+
 /* Campos desabilitados (modo view) — idênticos aos ativos */
 .form-input:disabled,
 .form-select:disabled,
