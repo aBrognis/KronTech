@@ -263,10 +263,15 @@ AbaAcesso.jsx`). Não recriar por tela — chave de `localStorage`
 
 **3. Os filtros:** um por coluna consultável (abaixo).
 
-Fonte única: **`components/PainelFiltrosGrid.jsx`** — painel retrátil, um
-filtro por coluna, tipado, em grade responsiva, mais busca geral. Filtros só
-aplicam ao clicar "Buscar" (ou Enter). Reusa os `Filter*` do FormBuilder
-(`pages/formBuilderView/filters/`) — que já são genéricos.
+Fonte única: **`components/PainelFiltrosGrid.jsx`** — painel retrátil. **Não
+despeja os 30+ filtros de uma vez**: sempre visíveis ficam a busca geral + os
+filtros de **data** (`tipo: 'data'`) + os que o usuário adicionou + os que já
+têm valor. Um botão **"Adicionar filtro"** na barra do título abre a lista
+das demais colunas; um filtro adicionado some sozinho quando fica sem valor.
+O poder continua o mesmo (qualquer coluna é filtrável), mas a tela não fica
+tomada. Filtros só aplicam ao clicar "Buscar" (ou Enter). Reusa os `Filter*`
+do FormBuilder (`pages/formBuilderView/filters/`). O painel do FormBuilder
+(`pages/formBuilderView/PainelFiltros.jsx`) segue o mesmo padrão.
 
 **Tela via `TelaCadastroPadrao`:** passe a prop `colunasFiltro`:
 
