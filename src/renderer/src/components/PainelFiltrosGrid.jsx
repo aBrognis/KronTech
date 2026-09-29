@@ -13,8 +13,8 @@ import FilterExatoMulti from './filtros/FilterExatoMulti.jsx'
 // Toda tela nativa com aba Acesso usa este componente. O usuario pode
 // filtrar por QUALQUER coluna consultavel (regra CLAUDE.md §4), mas o painel
 // nao despeja os 30+ filtros de uma vez:
-//  - sempre visiveis: a busca geral + os filtros de DATA (tipo 'data') + os
-//    que o usuario adicionou + os que ja tem valor;
+//  - sempre visiveis: os filtros de DATA / FK (lookup) / escolha-fixa multi,
+//    mais os que o usuario adicionou e os que ja tem valor;
 //  - "+ Adicionar filtro" (na barra do titulo) abre a lista das demais
 //    colunas. Um filtro adicionado some sozinho quando fica sem valor.
 //
@@ -27,10 +27,8 @@ import FilterExatoMulti from './filtros/FilterExatoMulti.jsx'
 //   valores: { <chave>: { op, valor, valor2 } | null }
 //   onChange(chave, filtroOuNull)
 //   onBuscar()  onLimpar()  fLoading
-//   busca, onBusca  (a busca geral, string)
 export default function PainelFiltrosGrid({
   colunas = [], valores = {}, onChange, onBuscar, onLimpar, fLoading,
-  busca = '', onBusca,
 }) {
   const [aberto, setAberto] = useState(true)
   const [adicionados, setAdicionados] = useState(() => new Set())
@@ -39,14 +37,15 @@ export default function PainelFiltrosGrid({
     () => new Set(Object.entries(valores).filter(([, v]) => v).map(([k]) => k)),
     [valores]
   )
-  // Datas, lookups (FK) e escolhas-fixas multi sao os filtros "de peso" do
-  // ERP: ficam sempre no painel. Alem deles, o que o usuario adicionou ou o
-  // que ja tem valor.
-  const fixo = (c) => c.tipo === 'data' || c.tipo === 'lookup' || (c.tipo === 'exato' && c.multi)
+  // Fixos (sempre no painel): datas e lookups (FK) - os filtros que o usuario
+  // quase sempre quer. Os checkboxes de escolha fixa (Papel, Status, UF...)
+  // sao muitos e ocupam muito espaco, entao entram por "Adicionar filtro" ou
+  // quando ja tem valor. `fixo: true` na coluna forca a exibicao.
+  const fixo = (c) => c.fixo === true || c.tipo === 'data' || c.tipo === 'lookup'
   const visiveis = colunas.filter((c) => fixo(c) || adicionados.has(c.chave) || comValor.has(c.chave))
   const disponiveis = colunas.filter((c) => !fixo(c) && !adicionados.has(c.chave) && !comValor.has(c.chave))
 
-  const qtdAtivos = comValor.size + (busca.trim() ? 1 : 0)
+  const qtdAtivos = comValor.size
 
   const [menuAberto, setMenuAberto] = useState(false)
   const [menuBusca, setMenuBusca] = useState('')
@@ -82,6 +81,7 @@ export default function PainelFiltrosGrid({
             campoLabel={c.campoLabel || 'nome'}
             camposBusca={c.camposBusca || []}
             titulo={c.tituloModal || `Consultar ${c.label}`}
+            placeholder={c.placeholder || 'Todos'}
             value={v}
             onChange={set}
           />
@@ -161,20 +161,13 @@ export default function PainelFiltrosGrid({
       </div>
 
       {aberto && (
-        <div style={{ padding: '4px 14px 14px', borderTop: '1px solid var(--bd)', paddingTop: 12 }}
+        <div style={{ padding: '14px', borderTop: '1px solid var(--bd)' }}
           onKeyDown={(e) => e.key === 'Enter' && onBuscar()}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10, marginBottom: 12, alignItems: 'end' }}>
-            <div className="form-group" style={{ margin: 0, minWidth: 0 }}>
-              <label className="form-label">Busca geral</label>
-              <input className="form-input form-input-sm" value={busca}
-                onChange={(e) => onBusca(e.target.value)}
-                placeholder="buscar em todos os campos de texto..." />
-            </div>
-
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '14px 16px', marginBottom: 16, alignItems: 'start' }}>
             {visiveis.map((c) => (
               <div key={c.chave} className="form-group" style={{ margin: 0, minWidth: 0, gridColumn: spanDe(c) }}>
                 <label className="form-label" title={c.label}
-                  style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 5 }}>
                   {c.label}
                 </label>
                 {renderFiltro(c)}
@@ -182,7 +175,7 @@ export default function PainelFiltrosGrid({
             ))}
           </div>
 
-          <button type="button" className="btn btn-primary" style={{ height: 32, padding: '0 16px' }}
+          <button type="button" className="btn btn-primary" style={{ height: 34, padding: '0 20px' }}
             onClick={onBuscar} disabled={fLoading}>
             <Search size={13} /> {fLoading ? 'Buscando...' : 'Buscar'}
           </button>

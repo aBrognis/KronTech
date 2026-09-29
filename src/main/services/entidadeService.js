@@ -62,6 +62,7 @@ const nula = (v) => (v === '' || v === undefined ? null : v)
 // fixa e 'exato' multi (= ANY); `papeis` e 'exato' multi + csv (string com
 // virgula -> ILIKE OR). montarFiltro trata os tres.
 const TIPOS_FILTRO_ENTIDADE = {
+  id: { tipo: 'lookup' },
   codigo: 'texto', nome: 'texto', apelido: 'texto', cnpj: 'texto', ie_rg: 'texto',
   inscricao_estadual: 'texto', inscricao_municipal: 'texto',
   papeis: { tipo: 'exato', multi: true, csv: true },

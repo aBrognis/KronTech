@@ -36,12 +36,19 @@ const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','P
 // Filtros da aba Acesso, abrangente (docs CLAUDE.md §4): toda coluna
 // consultavel de entidade_001 tem um filtro tipado aqui.
 const COLUNAS_FILTRO = [
-  { chave: 'codigo', label: 'Código', tipo: 'texto' },
+  { chave: 'id', label: 'Entidade', tipo: 'lookup', fixo: true, tabela: 'entidade_001', campoLabel: 'nome',
+    tituloModal: 'Consultar entidade', placeholder: 'Todas as entidades',
+    camposBusca: [
+      { nome_campo: 'nome', label: 'Nome / Razão Social' },
+      { nome_campo: 'apelido', label: 'Apelido / Fantasia' },
+      { nome_campo: 'cnpj', label: 'CPF / CNPJ' },
+      { nome_campo: 'codigo', label: 'Código' },
+    ] },
   { chave: 'nome', label: 'Nome / Razão Social', tipo: 'texto' },
   { chave: 'apelido', label: 'Apelido / Fantasia', tipo: 'texto' },
   { chave: 'cnpj', label: 'CPF / CNPJ', tipo: 'texto' },
-  { chave: 'papeis', label: 'Papel', tipo: 'exato', multi: true, csv: true, opcoes: PAPEIS },
-  { chave: 'status', label: 'Status', tipo: 'exato', multi: true, opcoes: STATUS },
+  { chave: 'papeis', label: 'Papel', tipo: 'exato', multi: true, csv: true, fixo: true, opcoes: PAPEIS },
+  { chave: 'status', label: 'Status', tipo: 'exato', multi: true, fixo: true, opcoes: STATUS },
   { chave: 'tipo_pessoa', label: 'Tipo de pessoa', tipo: 'exato', multi: true, opcoes: TIPOS_PESSOA },
   { chave: 'banco_id', label: 'Banco', tipo: 'lookup', tabela: 'banco_001', campoLabel: 'nome',
     camposBusca: [{ nome_campo: 'nome', label: 'Nome' }, { nome_campo: 'compe', label: 'Compe' }] },
@@ -176,7 +183,6 @@ export default function Entidade({ newTrigger, sessao }) {
   const setAbaForm = (a) => setAba(a)
 
   // aba Acesso — filtros independentes, so roda ao clicar Buscar
-  const [busca, setBusca] = useState('')
   const [filtrosCol, setFiltrosCol] = useState({}) // { chave: {op,valor,valor2} | null }
   const [fResultados, setFResultados] = useState(null)
   const [fLoading, setFLoading] = useState(false)
@@ -240,7 +246,6 @@ export default function Entidade({ newTrigger, sessao }) {
     setFLoading(true)
     try {
       const params = {}
-      if (busca.trim()) params.busca = busca.trim()
       const fc = Object.fromEntries(Object.entries(filtrosCol).filter(([, v]) => v))
       if (Object.keys(fc).length) params.filtros = fc
       const res = await window.api.entidade.listar(params)
@@ -252,10 +257,10 @@ export default function Entidade({ newTrigger, sessao }) {
     } finally {
       setFLoading(false)
     }
-  }, [busca, filtrosCol])
+  }, [filtrosCol])
 
   const setFiltroCol = (chave, f) => setFiltrosCol((prev) => ({ ...prev, [chave]: f }))
-  function limparFiltros() { setBusca(''); setFiltrosCol({}) }
+  function limparFiltros() { setFiltrosCol({}) }
 
   function navTo(idx) {
     if (idx < 0 || idx >= registros.length) return
@@ -390,8 +395,6 @@ export default function Entidade({ newTrigger, sessao }) {
               onBuscar={carregarAcesso}
               onLimpar={limparFiltros}
               fLoading={fLoading}
-              busca={busca}
-              onBusca={setBusca}
             />
 
             {fResultados === null ? (
