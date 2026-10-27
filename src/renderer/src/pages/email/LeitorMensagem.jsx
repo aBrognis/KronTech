@@ -127,6 +127,19 @@ function cssTema(escuro) {
        sobrar e imagem ausente) nunca carregam — esconde pra nao mostrar o
        icone de "imagem quebrada". */
     img[src^="file:"], img[src^="cid:"], img[src^="kmail:"] { display: none !important; }
+    /* Fonte SEMPRE a do sistema, nunca a que o remetente mandou - e a maior
+       causa de "ora uma fonte, ora outra" entre e-mails diferentes.
+       !important pra vencer o font-family inline que a maioria dos
+       remetentes aplica em cada <td>/<span> (sem isso uma regra em body{}
+       nunca ganha de estilo inline). Mesma familia do resto do app
+       (--fb em styles/tokens.css). O TAMANHO da fonte fica de fora desta
+       regra de proposito: aqui o remetente pode legitimamente usar fonte
+       pequena pra legenda/rodape, texto grande pra titulo etc - normalizar
+       o tamanho tambem destruiria a hierarquia visual do e-mail. O que
+       NAO pode variar por causa do nosso app (e nao do remetente) e corrigido
+       abaixo: o encolhimento de TUDO (inclusive o texto) só porque uma
+       tabela de assinatura é larga. */
+    * { font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif !important; }
   `
 }
 
@@ -184,7 +197,14 @@ function CorpoHtmlIsolado({ html, escuro, onImagem }) {
             //    iframe (o sandbox so permite navegar o proprio iframe, e o
             //    site clicado costuma bloquear <iframe> -> iframe fica branco
             //    e o e-mail "some"). Era exatamente esse o bug relatado.
+            // <area href> cobre imagem com mapa de links clicaveis (layout
+            // antigo de newsletter): o clique nao cai num <a>, cai na propria
+            // <img usemap>, mas o browser resolve pra o <area> correspondente
+            // via elementFromPoint - closest() sozinho nao pega isso.
             const link = e.target?.closest?.('a[href]')
+              || (e.target?.tagName === 'IMG' && e.target.useMap
+                ? doc.querySelector(`map[name="${e.target.useMap.replace(/^#/, '')}"] area[href]`)
+                : null)
             if (link) {
               const href = link.getAttribute('href') || ''
               e.preventDefault()
@@ -252,13 +272,22 @@ function CorpoHtmlIsolado({ html, escuro, onImagem }) {
   // minusculo em producao (imagens da assinatura carregam da rede e
   // inflavam o scrollWidth medido).
   const precisaEscalar = larguraEfetiva > 0 && dispEfetiva > 0 && larguraEfetiva > dispEfetiva + 24
-  const escala = precisaEscalar ? dispEfetiva / larguraEfetiva : 1
-  const larguraIframe = escala < 1 ? larguraEfetiva : '100%'
+  const escalaBruta = precisaEscalar ? dispEfetiva / larguraEfetiva : 1
+  // Piso de legibilidade: abaixo disso o TEXTO fica minusculo demais so
+  // porque 1 tabela de assinatura/layout e larga (era exatamente a
+  // reclamacao "hora com letra pequena"). Quando o calculo pediria encolher
+  // mais que isso, mantem o e-mail no tamanho normal e deixa ele rolar na
+  // horizontal (igual Gmail/Outlook web fazem com newsletter larga) em vez
+  // de miniaturizar o texto inteiro.
+  const PISO_ESCALA = 0.8
+  const escala = escalaBruta < PISO_ESCALA ? 1 : escalaBruta
+  const rolaNaHorizontal = escalaBruta < PISO_ESCALA && precisaEscalar
+  const larguraIframe = escala < 1 ? larguraEfetiva : (rolaNaHorizontal ? larguraEfetiva : '100%')
 
   return (
     <div
       ref={wrapRef}
-      style={{ width: '100%', height: altura * escala, overflow: 'hidden' }}
+      style={{ width: '100%', height: altura * escala, overflow: rolaNaHorizontal ? 'auto' : 'hidden' }}
     >
       <iframe
         ref={iframeRef}

@@ -2,7 +2,7 @@ import { existsSync, rmSync, readFileSync } from 'fs'
 import { join, extname } from 'path'
 import { query, queryOne } from '../db'
 import { getConfig, resolverBaseAnexos } from '../config'
-import { atualizarBadgeNaoLidas } from './emailSyncService'
+import { atualizarBadgeNaoLidas, marcarLidaNoServidor } from './emailSyncService'
 
 // O corpo_html guarda `kmail://anexo/<id>` (leve). O <iframe srcdoc> do
 // leitor NAO carrega protocolo custom (origem opaca). Entao, so na hora de
@@ -266,18 +266,21 @@ export async function marcarLida(mensagemId, lida = true) {
   const registro = await queryOne('UPDATE email_mensagem_001 SET lida = $2 WHERE id = $1 RETURNING *', [mensagemId, lida])
   if (!registro) throw new Error('Mensagem não encontrada.')
   atualizarBadgeNaoLidas().catch(() => {})
+  // Espelha no servidor (\Seen) em segundo plano - nunca atrasa nem falha a
+  // resposta local por causa disso (rede fora, conta offline...).
+  marcarLidaNoServidor([registro], lida).catch(() => {})
   return registro
 }
 
-// Estado local do KronTech, não espelha a flag \Seen no servidor IMAP —
-// mesmo comportamento de marcarLida() já existente, só em lote.
+// Em lote: mesmo espelhamento de marcarLida(), em segundo plano.
 export async function marcarLidaLote(ids, lida = true) {
   if (!Array.isArray(ids) || !ids.length) return { atualizadas: 0 }
   const rows = await query(
-    'UPDATE email_mensagem_001 SET lida = $1 WHERE id = ANY($2::int[]) RETURNING id',
+    'UPDATE email_mensagem_001 SET lida = $1 WHERE id = ANY($2::int[]) RETURNING id, conta_id, pasta_imap, uid_imap',
     [lida, ids]
   )
   atualizarBadgeNaoLidas().catch(() => {})
+  marcarLidaNoServidor(rows, lida).catch(() => {})
   return { atualizadas: rows.length }
 }
 

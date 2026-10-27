@@ -626,6 +626,55 @@ export async function apendarEmailEnviado(contaId, rawMime) {
   }
 }
 
+// Espelha marcarLida/marcarLidaLote (estado local do app) na flag \Seen do
+// servidor IMAP, pra webmail/celular enxergarem o mesmo estado de leitura.
+// Best-effort: nunca lanca - se a conta estiver offline ou a mensagem ja
+// tiver sumido do servidor, o estado local ja foi gravado e fica assim
+// mesmo (o app continua funcionando sem IMAP; so o espelhamento falha).
+// `mensagens`: linhas de email_mensagem_001 com conta_id/pasta_imap/uid_imap.
+export async function marcarLidaNoServidor(mensagens, lida) {
+  if (!Array.isArray(mensagens) || !mensagens.length) return
+  const porConta = new Map()
+  for (const m of mensagens) {
+    if (!m.conta_id || !m.pasta_imap || !m.uid_imap) continue
+    if (!porConta.has(m.conta_id)) porConta.set(m.conta_id, [])
+    porConta.get(m.conta_id).push(m)
+  }
+  for (const [contaId, msgs] of porConta) {
+    try {
+      const conta = await queryOne('SELECT * FROM email_conta_001 WHERE id = $1 AND ativa = true', [contaId])
+      if (!conta) continue
+      const idle = conexoesIdle.get(contaId)
+      const reusar = idle && idle.usable
+      const client = reusar ? idle : new ImapFlow({
+        host: conta.imap_host, port: conta.imap_porta, secure: conta.imap_seguranca === 'tls',
+        auth: await authImap(conta), logger: false,
+      })
+      try {
+        if (!reusar) await client.connect()
+        const porPasta = new Map()
+        for (const m of msgs) {
+          if (!porPasta.has(m.pasta_imap)) porPasta.set(m.pasta_imap, [])
+          porPasta.get(m.pasta_imap).push(String(m.uid_imap))
+        }
+        for (const [pastaImap, uids] of porPasta) {
+          const lock = await client.getMailboxLock(pastaImap)
+          try {
+            if (lida) await client.messageFlagsAdd(uids.join(','), ['\\Seen'], { uid: true })
+            else await client.messageFlagsRemove(uids.join(','), ['\\Seen'], { uid: true })
+          } finally {
+            lock.release()
+          }
+        }
+      } finally {
+        if (!reusar) { try { await client.logout() } catch { /* ignore */ } }
+      }
+    } catch (err) {
+      console.warn(`[emailSync] marcarLidaNoServidor (conta ${contaId}):`, err.message)
+    }
+  }
+}
+
 // Retorna a quantidade de mensagens genuinamente novas processadas, somada
 // de todas as pastas sincronizadas.
 // Caminho rapido do IDLE: baixa so a INBOX. Reaproveita descobrirPastas pra
@@ -797,7 +846,18 @@ async function processarMensagem(conta, msg, pasta) {
   //    pra secao Anexos como antes.
   const todosAnexos = parsed.attachments || []
   const inlineImgs = todosAnexos.filter(a => a.related && /^image\//i.test(a.contentType || ''))
-  const anexosReais = todosAnexos.filter(a => !a.related)
+  // Assinatura digital S/MIME (multipart/signed): o mailparser entrega a
+  // parte PKCS#7 como um anexo normal (related:false), mas e so a assinatura
+  // criptografica da mensagem, nunca conteudo que o usuario anexou - nao deve
+  // aparecer na lista de Anexos. Reconhece pelo content-type OU pelo nome
+  // padrao (smime.p7s / smime.p7m), que e como todo cliente de e-mail gera.
+  const ehAssinaturaDigital = (a) => {
+    const tipo = (a.contentType || '').toLowerCase().split(';')[0].trim()
+    if (/^application\/(x-)?pkcs7-(signature|mime)$/.test(tipo)) return true
+    if (tipo === 'application/pkcs7-signature') return true
+    return /^smime\.p7[sm]$/i.test((a.filename || '').trim())
+  }
+  const anexosReais = todosAnexos.filter(a => !a.related && !ehAssinaturaDigital(a))
 
   // Classifica uma imagem INLINE: e so decoracao de assinatura/logo (fica
   // embutida no corpo e nada mais) ou conteudo de verdade (print colado,
@@ -855,20 +915,27 @@ async function processarMensagem(conta, msg, pasta) {
     corpoHtml = corpoHtml.replace(/<img\b[^>]*\bsrc\s*=\s*["']file:[^>]*>/gi, '')
   }
 
+  // Estado de lida: semeado da flag \Seen que o PROPRIO servidor IMAP ja
+  // tinha pra esse e-mail (lido no celular/webmail antes de chegar aqui).
+  // Sem isso, todo e-mail baixado nascia "nao lida" mesmo ja tendo sido lido
+  // noutro cliente - inflava o badge e mostrava em negrito o que o usuario
+  // ja tinha visto. `msg.flags` do imapflow e um Set<string>.
+  const jaLidaNoServidor = msg.flags instanceof Set && msg.flags.has('\\Seen')
+
   // 1) Insere a mensagem (com o corpo_html ainda referenciando cid:).
   const row = await queryOne(
     `INSERT INTO email_mensagem_001
        (conta_id, uid_imap, pasta_imap, pasta_id, message_id, in_reply_to, thread_id,
         remetente_nome, remetente_email, destinatarios, copia, assunto,
-        corpo_texto, corpo_html, data_envio, tem_anexo, tamanho_bytes, origem)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'recebido')
+        corpo_texto, corpo_html, data_envio, tem_anexo, tamanho_bytes, origem, lida)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'recebido',$18)
      ON CONFLICT (conta_id, pasta_imap, uid_imap) DO NOTHING
      RETURNING id`,
     [
       conta.id, String(msg.uid), pasta.caminho_imap, pasta.id, parsed.messageId || null, parsed.inReplyTo || null, calcularThreadId(parsed),
       remetente?.name || '', remetente?.address || '', JSON.stringify(destinatarios), JSON.stringify(copia),
       parsed.subject || '', parsed.text || '', corpoHtml,
-      parsed.date || new Date(), anexosReais.length > 0, msg.source.length,
+      parsed.date || new Date(), anexosReais.length > 0, msg.source.length, jaLidaNoServidor,
     ]
   )
   if (!row) return false
