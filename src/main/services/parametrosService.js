@@ -39,11 +39,17 @@ export async function listar({ categoria, busca } = {}) {
   return rows.map((r) => ({ ...r, valor_tipado: normalizarValor(r.tipo, r.valor) }))
 }
 
+// Estrutura de navegacao em 2 niveis: [{ grupo, categorias: [...] }], ordenada.
 export async function listarCategorias() {
   const rows = await query(
-    `SELECT DISTINCT categoria FROM kr_parametros_001 WHERE ativo = true ORDER BY categoria`
+    `SELECT DISTINCT grupo, categoria FROM kr_parametros_001 WHERE ativo = true ORDER BY grupo, categoria`
   )
-  return rows.map((r) => r.categoria)
+  const porGrupo = new Map()
+  for (const r of rows) {
+    if (!porGrupo.has(r.grupo)) porGrupo.set(r.grupo, [])
+    porGrupo.get(r.grupo).push(r.categoria)
+  }
+  return [...porGrupo.entries()].map(([grupo, categorias]) => ({ grupo, categorias }))
 }
 
 // Valor ja tipado (boolean/number/string), pronto pra uso direto no codigo.
