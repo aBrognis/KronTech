@@ -11,12 +11,72 @@
 
 ## Aberto
 
-### E-mail
+### E-mail (lista do usuário, 27/10) — PRÓXIMO A INICIAR
 
-- Bugs e funções aprovadas acumuladas — o usuário disse que traria a lista
-  do que quer verificar. Não iniciar sem essa lista.
-- (opcional) `PaginacaoCompacta` de `ListaMensagens.jsx` reimplementa o
-  `PaginacaoBar` genérico "porque a coluna é estreita" — dívida menor.
+Vários bugs acumulados, levantados pelo usuário, ainda não investigados a
+fundo:
+
+- **Mensagem não lida não atualiza** — indicador de lida/não lida com
+  comportamento errado.
+- **Links externos não abrem** — clicar num link do corpo do e-mail não faz
+  nada (ou abre errado). Investigar o handler de links no leitor de e-mail
+  (provavelmente falta `shell.openExternal` / target blindado).
+- **Resolução/fonte inconsistente do corpo do e-mail** — ora abre com boa
+  resolução, ora com letra pequena; ora com uma fonte, ora com outra. Cheiro
+  de falta de normalização do HTML recebido (sem CSS reset no iframe/sandbox
+  de renderização, ou herdando estilo inline variado de cada remetente).
+- **Anexos mal separados** — assinatura digital (provavelmente .p7s/.asc de
+  e-mails assinados S/MIME) está entrando como anexo visível. Precisa
+  decidir de vez a lógica de o que conta como "anexo real" x parte MIME
+  técnica (assinatura, inline image referenciada no HTML, etc.) e aplicar de
+  forma consistente no parser de recebimento.
+- Itens antigos ainda pendentes: `PaginacaoCompacta` de `ListaMensagens.jsx`
+  reimplementa o `PaginacaoBar` genérico "porque a coluna é estreita" (dívida
+  menor).
+
+**Não iniciar sem mapear os bugs no código primeiro** (seguir CLAUDE.md:
+investigar antes de perguntar, nunca advinhar causa e pedir teste às cegas).
+
+### Integrações futuras (lista do usuário, 27/10) — AINDA NÃO APROVADAS PARA EXECUÇÃO
+
+Levantadas pelo usuário como visão, mas nenhuma tem plano aprovado ainda.
+Cada uma precisa de investigação técnica (API disponível? autenticação?
+limites?) antes de virar plano:
+
+- **Integração com a API de um ERP de terceiro ↔ Agenda do sistema**,
+  trazendo atendimentos e assuntos. **Função opt-in por tela de parâmetros**
+  (ver item "tela de Parâmetros" abaixo) — não é todo cliente que usa esse
+  ERP, não pode virar comportamento padrão do produto. Tratar sempre como
+  "o ERP externo do cliente" nos textos versionados (nunca citar o nome
+  próprio desse ERP, por pedido explícito do usuário).
+- **Criar link do Meet → gravar automaticamente na Agenda do sistema**,
+  também via parâmetro (nem todo cliente quer o evento duplicado na Agenda).
+  Precisa decidir o gatilho: hook no botão de criar reunião, ou integração
+  com Google Calendar API observando eventos novos.
+- **Tela de WhatsApp dentro do sistema** — usar WhatsApp integrado ao
+  KronTech. Decisão grande de arquitetura antes de qualquer código: API
+  oficial (WhatsApp Business Cloud API, paga, precisa número dedicado e
+  aprovação Meta) vs. biblioteca não oficial (baileys/whatsapp-web.js,
+  grátis mas não suportada oficialmente, risco de ban). Também decidir
+  armazenamento (mensagens no Postgres, como o e-mail) e se é 1 número por
+  empresa ou por usuário.
+- **Tela "Parâmetros" sólida e nova** — tela central onde o usuário liga/
+  desliga funções opcionais (as 3 integrações acima dependem dela), e essas
+  flags mudam o comportamento de outras telas em runtime. Arquitetura:
+  provavelmente uma tabela `kr_parametros_001` (chave/valor ou colunas
+  tipadas por domínio), um serviço central (`parametrosService.js`) com
+  cache em memória (não bater no banco a cada render), e um hook/contexto
+  React (`useParametros()`) pras telas consultarem. **Esta tela é
+  pré-requisito das 3 integrações acima** — melhor sequência:
+  1) desenhar e aprovar a tela de Parâmetros primeiro (ela sozinha já é
+     entregável, mesmo sem nenhuma integração ligada ainda);
+  2) depois cada integração entra como 1 parâmetro + sua função.
+
+**Nenhuma das 4 acima tem plano aprovado.** Antes de codar qualquer uma,
+investigar a API/viabilidade técnica e levar um plano curto pro usuário
+aprovar (ver padrão de planning do projeto). Ordem sugerida: Parâmetros →
+WhatsApp (maior impacto de produto) → Meet→Agenda (mais simples) →
+ERP externo → Agenda (mais específico de 1 cliente).
 
 ---
 
