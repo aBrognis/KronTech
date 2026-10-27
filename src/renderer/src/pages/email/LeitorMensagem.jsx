@@ -132,14 +132,31 @@ function cssTema(escuro) {
        !important pra vencer o font-family inline que a maioria dos
        remetentes aplica em cada <td>/<span> (sem isso uma regra em body{}
        nunca ganha de estilo inline). Mesma familia do resto do app
-       (--fb em styles/tokens.css). O TAMANHO da fonte fica de fora desta
-       regra de proposito: aqui o remetente pode legitimamente usar fonte
-       pequena pra legenda/rodape, texto grande pra titulo etc - normalizar
-       o tamanho tambem destruiria a hierarquia visual do e-mail. O que
-       NAO pode variar por causa do nosso app (e nao do remetente) e corrigido
-       abaixo: o encolhimento de TUDO (inclusive o texto) só porque uma
-       tabela de assinatura é larga. */
+       (--fb em styles/tokens.css). */
     * { font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif !important; }
+    /* Tamanho base TAMBEM fixo (14px, igual ao resto do app): a maioria dos
+       e-mails - sobretudo os automaticos/de sistema, como notificacao de
+       pendencia - nao tem hierarquia de titulo/corpo nenhuma, so um
+       font-size escolhido ao acaso por quem gerou o template (mesmo
+       remetente manda um e-mail com letra grande e outro com letra
+       pequena). Aplica em body (herda pra quem nao define o proprio
+       tamanho) E, com !important, nas tags de texto corrido onde o
+       remetente mais costuma fixar um font-size inline/herdado direto
+       (p/span/td/li/a) - sem !important essas regras nunca vencem o
+       style="font-size:Npx" que templates de sistema aplicam o tempo
+       todo. Fica de fora <h1>-<h6>, <font size=...> e qualquer coisa com
+       classe/estilo que declare escala (ex: assinatura com fonte grande
+       de proposito) nao e sobrescrito por essas tags especificas. */
+    body { font-size: 14px; line-height: 1.55; }
+    p, span, td, th, li, a {
+      font-size: 14px !important; line-height: 1.55 !important;
+    }
+    /* ...mas nao dentro de um titulo de verdade (h1-h6) - senao um <span>
+       usado pra colorir parte de um titulo grande ficava do tamanho do
+       texto normal, quebrando a hierarquia que o remetente quis dar. */
+    h1, h1 *, h2, h2 *, h3, h3 *, h4, h4 *, h5, h5 *, h6, h6 * {
+      font-size: revert !important; line-height: revert !important;
+    }
   `
 }
 
