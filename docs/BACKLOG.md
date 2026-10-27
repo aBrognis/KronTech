@@ -13,36 +13,28 @@
 
 ### E-mail (lista do usuário, 27/10)
 
-3 dos 4 bugs reportados foram investigados, causa raiz confirmada no código
-e corrigidos nesta sessão (commit `60e0083`) — **falta validar no app real**:
-
+- ✅ **Links externos** — confirmado funcionando pelo usuário. Resolvido.
 - ✅ **Mensagem "não lida" errada** — a sincronização nunca lia a flag
   `\Seen` do servidor IMAP; todo e-mail baixado nascia "não lida" mesmo já
   tendo sido lido no celular/webmail antes. Corrigido: semeia `lida` a
   partir de `msg.flags` na sincronização, e `marcarLida`/`marcarLidaLote`
   agora espelham o estado de volta pro servidor (`\Seen`), em segundo
   plano, sem travar a UI se a conta estiver offline.
-- ✅ **Fonte/resolução inconsistente** — duas causas reais, as duas
-  corrigidas: (a) o CSS do leitor nunca forçava a fonte do sistema, cada
-  remetente trazia a sua; (b) o `transform: scale()` que encolhe e-mails
-  largos (newsletter, assinatura em tabela) encolhia o CORPO INTEIRO —
-  texto incluso — só por causa de 1 elemento largo. Agora há um piso de
-  escala (0.8): abaixo disso o e-mail fica no tamanho normal e rola na
-  horizontal, como Gmail/Outlook web fazem, em vez de miniaturizar o texto.
 - ✅ **Assinatura digital S/MIME como anexo** — o `mailparser` entrega a
   parte PKCS#7 (`.p7s`/`.p7m`) como anexo comum, nunca era filtrada.
   Reconhecida agora por content-type e nome padrão, excluída da lista de
   Anexos. (Nenhum e-mail assinado digitalmente no banco ainda pra conferir
   visualmente — só confirma de fato quando chegar um.)
-- ⚠️ **Links externos não abrem** — analisado a fundo; o mecanismo existente
-  (intercepta clique em `<a href>`, abre via `shell.openExternal`,
-  `setWindowOpenHandler` como rede de segurança) é logicamente correto.
-  Adicionado suporte a `<area href>` (mapa de imagem clicável, layout
-  antigo de newsletter), que não era coberto — mas a causa do "às vezes
-  falha" relatado **não foi reproduzida**. **Preciso de uma amostra**: a
-  próxima vez que um link não abrir, usar "Encaminhar" nesse e-mail pra
-  você mesmo (ou salvar o `.eml`) e me passar — sem o HTML real que falha,
-  não dá pra avançar sem adivinhar.
+- ✅ **Fonte/resolução inconsistente** — 1ª rodada só forçou `font-family`;
+  o usuário trouxe 2 prints do mesmo template de e-mail automático (mesmo
+  remetente) com `font-size` bem diferente entre eles, confirmando que
+  faltava normalizar o tamanho também. Corrigido (commit `df41850`):
+  `body` com `font-size: 14px` base + reforço `!important` nas tags de
+  texto corrido (p/span/td/th/li/a), com `h1`-`h6` (e filhos) preservados
+  via `font-size: revert` pra não esmagar título real. Mais o fix anterior
+  do `transform: scale()` que encolhia o corpo inteiro por causa de 1
+  elemento largo (piso de escala 0.8, rola na horizontal abaixo disso).
+  **Ainda não validado visualmente pelo usuário após este 2º ajuste.**
 
 Itens antigos ainda pendentes: `PaginacaoCompacta` de `ListaMensagens.jsx`
 reimplementa o `PaginacaoBar` genérico "porque a coluna é estreita" (dívida
