@@ -335,6 +335,12 @@ const api = {
   municipio: {
     buscar: (termo) => ipcRenderer.invoke('municipio:buscar', termo),
   },
+  parametros: {
+    listar:            (filtros)    => ipcRenderer.invoke('parametros:listar', filtros),
+    listarCategorias:  ()           => ipcRenderer.invoke('parametros:listarCategorias'),
+    obter:             (chave)      => ipcRenderer.invoke('parametros:obter', chave),
+    atualizar:         (id, dados)  => ipcRenderer.invoke('parametros:atualizar', id, dados),
+  },
   iaProvedor: {
     listar:           ()          => ipcRenderer.invoke('iaProvedor:listar'),
     modelosSugeridos: ()          => ipcRenderer.invoke('iaProvedor:modelosSugeridos'),

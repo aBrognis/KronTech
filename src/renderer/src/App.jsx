@@ -23,6 +23,7 @@ import NaturezasJuridicas from './pages/NaturezasJuridicas'
 import CondicoesPagamento from './pages/CondicoesPagamento'
 import Bancos from './pages/Bancos'
 import Entidade from './pages/entidade'
+import Parametros from './pages/Parametros'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
 
@@ -46,6 +47,7 @@ const PAGE_META = {
   arquivos:            { title: 'Arquivos',              sub: 'FERRAMENTAS · GESTÃO DE ARQUIVOS'  },
   sql:                 { title: 'Editor SQL',            sub: 'FERRAMENTAS · POSTGRESQL'          },
   formbuilder:         { title: 'Criador de Telas',      sub: 'FERRAMENTAS · CADASTROS DINÂMICOS' },
+  parametros:          { title: 'Parâmetros',            sub: 'FERRAMENTAS · COMPORTAMENTO DO SISTEMA' },
   configuracoes:       { title: 'Configuração do Sistema', sub: 'SISTEMA · CONFIGURAÇÕES'         },
 }
 
@@ -526,6 +528,7 @@ export default function App() {
       case 'bancos':             return <Bancos newTrigger={newTrigger} />
       case 'arquivos':           return <Arquivos newTrigger={newTrigger} />
       case 'sql':                return <EditorSQL />
+      case 'parametros':         return <Parametros />
       case 'configuracoes':      return <Configuracoes />
       default:                   return <Dashboard onNavigate={handleNavigate} />
     }

@@ -37,6 +37,7 @@ import { registerEmailSyncControl } from './handlers/emailSyncControl'
 import { registerPromptIaHandlers } from './handlers/promptIa'
 import { registerCadastrosApoioHandlers } from './handlers/cadastrosApoio'
 import { registerMunicipioHandlers } from './handlers/municipio'
+import { registerParametrosHandlers } from './handlers/parametros'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -73,4 +74,5 @@ export function registerHandlers() {
   registerPromptIaHandlers({ ipcMain, wrap })
   registerCadastrosApoioHandlers({ ipcMain, wrap })
   registerMunicipioHandlers({ ipcMain, wrap })
+  registerParametrosHandlers({ ipcMain, wrap })
 }

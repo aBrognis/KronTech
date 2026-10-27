@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap, Receipt, Lock,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut, FileText, Search, Mail,
-  Landmark, Scale, CreditCard, Users
+  Landmark, Scale, CreditCard, Users, SlidersHorizontal
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -51,6 +51,7 @@ export const MENU_BASE = [
       { id: 'sql',                 label: 'Editor SQL',       Icon: Database   },
       { id: 'documentos-gerados',  label: 'Documentos',       Icon: FileText   },
       { id: 'formbuilder',         label: 'KronTech Designer', Icon: LayoutGrid },
+      { id: 'parametros',          label: 'Parâmetros',       Icon: SlidersHorizontal },
     ]
   }
 ]

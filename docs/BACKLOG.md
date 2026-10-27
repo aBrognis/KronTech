@@ -40,46 +40,52 @@ Itens antigos ainda pendentes: `PaginacaoCompacta` de `ListaMensagens.jsx`
 reimplementa o `PaginacaoBar` genérico "porque a coluna é estreita" (dívida
 menor).
 
-### Integrações futuras (lista do usuário, 27/10) — AINDA NÃO APROVADAS PARA EXECUÇÃO
+### Integrações futuras — pré-requisito concluído, integrações ainda não
 
-Levantadas pelo usuário como visão, mas nenhuma tem plano aprovado ainda.
-Cada uma precisa de investigação técnica (API disponível? autenticação?
-limites?) antes de virar plano:
+- ✅ **Tela "Parâmetros"** (esta sessão) — pré-requisito das 3 integrações
+  abaixo, entregue e funcional. `kr_parametros_001` (migration
+  `1793142135480_criar-parametros`): colunas tipadas (`chave`, `categoria`,
+  `rotulo`, `descricao`, `tipo`, `opcoes` jsonb, `valor`), não chave-valor
+  puro. `parametrosService.js` com cache em memória por chave (mesmo
+  precedente de `oauthService.js`). Handlers `parametros:listar/
+  listarCategorias/obter/atualizar`. Tela `pages/Parametros.jsx` (menu
+  Ferramentas): abas por categoria, filtro de texto, lista com badge Sim/Não,
+  editor lateral (nunca `<select>` pra booleano, dois radio Sim/Não). Hook
+  `lib/useParametros.js` (`useParametro(chave)`) pras telas consumirem a
+  flag sem bater no IPC toda hora — invalidado via `CustomEvent
+  krontech:parametros-changed`, mesmo padrão leve de
+  `krontech:config-changed`. **Sem multi-empresa** (decisão: 1 banco = 1
+  cliente, não precisa), **sem aba "Parâmetros Tela"**, **1 valor por
+  parâmetro** (não multi-posição) — escopo reduzido por decisão do usuário
+  ao comparar com o print de referência (ERP legado com centenas de
+  parâmetros multi-posição e por empresa).
+  Seed inicial (3 parâmetros, todos `valor='N'`, opt-in):
+  `agenda.integracao_erp_externo`, `agenda.meet_grava_automatico`,
+  `whatsapp.habilitado`. Nenhum tem função real ligada ainda.
+
+As 3 integrações em si continuam **sem plano aprovado**, cada uma precisa de
+investigação técnica (API, autenticação, limites) antes de virar plano:
 
 - **Integração com a API de um ERP de terceiro ↔ Agenda do sistema**,
-  trazendo atendimentos e assuntos. **Função opt-in por tela de parâmetros**
-  (ver item "tela de Parâmetros" abaixo) — não é todo cliente que usa esse
-  ERP, não pode virar comportamento padrão do produto. Tratar sempre como
-  "o ERP externo do cliente" nos textos versionados (nunca citar o nome
-  próprio desse ERP, por pedido explícito do usuário).
-- **Criar link do Meet → gravar automaticamente na Agenda do sistema**,
-  também via parâmetro (nem todo cliente quer o evento duplicado na Agenda).
-  Precisa decidir o gatilho: hook no botão de criar reunião, ou integração
-  com Google Calendar API observando eventos novos.
-- **Tela de WhatsApp dentro do sistema** — usar WhatsApp integrado ao
-  KronTech. Decisão grande de arquitetura antes de qualquer código: API
-  oficial (WhatsApp Business Cloud API, paga, precisa número dedicado e
-  aprovação Meta) vs. biblioteca não oficial (baileys/whatsapp-web.js,
-  grátis mas não suportada oficialmente, risco de ban). Também decidir
-  armazenamento (mensagens no Postgres, como o e-mail) e se é 1 número por
-  empresa ou por usuário.
-- **Tela "Parâmetros" sólida e nova** — tela central onde o usuário liga/
-  desliga funções opcionais (as 3 integrações acima dependem dela), e essas
-  flags mudam o comportamento de outras telas em runtime. Arquitetura:
-  provavelmente uma tabela `kr_parametros_001` (chave/valor ou colunas
-  tipadas por domínio), um serviço central (`parametrosService.js`) com
-  cache em memória (não bater no banco a cada render), e um hook/contexto
-  React (`useParametros()`) pras telas consultarem. **Esta tela é
-  pré-requisito das 3 integrações acima** — melhor sequência:
-  1) desenhar e aprovar a tela de Parâmetros primeiro (ela sozinha já é
-     entregável, mesmo sem nenhuma integração ligada ainda);
-  2) depois cada integração entra como 1 parâmetro + sua função.
+  trazendo atendimentos e assuntos. Chave já reservada:
+  `agenda.integracao_erp_externo`. Tratar sempre como "o ERP externo do
+  cliente" nos textos versionados (nunca citar o nome próprio desse ERP, por
+  pedido explícito do usuário).
+- **Criar link do Meet → gravar automaticamente na Agenda do sistema**.
+  Chave já reservada: `agenda.meet_grava_automatico`. Precisa decidir o
+  gatilho: hook no botão de criar reunião, ou integração com Google
+  Calendar API observando eventos novos.
+- **Tela de WhatsApp dentro do sistema**. Chave já reservada:
+  `whatsapp.habilitado`. Decisão grande de arquitetura antes de qualquer
+  código: API oficial (WhatsApp Business Cloud API, paga, precisa número
+  dedicado e aprovação Meta) vs. biblioteca não oficial (baileys/
+  whatsapp-web.js, grátis mas não suportada oficialmente, risco de ban).
+  Também decidir armazenamento (Postgres, como o e-mail) e se é 1 número
+  por empresa ou por usuário.
 
-**Nenhuma das 4 acima tem plano aprovado.** Antes de codar qualquer uma,
-investigar a API/viabilidade técnica e levar um plano curto pro usuário
-aprovar (ver padrão de planning do projeto). Ordem sugerida: Parâmetros →
-WhatsApp (maior impacto de produto) → Meet→Agenda (mais simples) →
-ERP externo → Agenda (mais específico de 1 cliente).
+Ordem sugerida: WhatsApp (maior impacto de produto) → Meet→Agenda (mais
+simples) → ERP externo → Agenda (mais específico de 1 cliente). Cada uma
+leva um plano curto pro usuário aprovar antes de codar.
 
 ---
 
