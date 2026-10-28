@@ -28,6 +28,14 @@ function viewDaJanela(win) {
   return views.get(win.id)
 }
 
+// O WhatsApp Web verifica o User-Agent e rejeita o default do Electron (que
+// inclui o sufixo "Electron/30.x.x") com a mensagem "atualize o Chrome" -
+// mesmo o Chromium por baixo sendo recente o bastante. UA de um Chrome
+// desktop real (sem o sufixo Electron) resolve: o WhatsApp Web so olha a
+// string, nao ha verificacao mais profunda de engine.
+const USER_AGENT_WHATSAPP =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
+
 export function registerWhatsappHandlers({ ipcMain, wrap }) {
   ipcMain.handle('whatsapp:abrir', wrap((e, sessaoUsuario) => {
     const win = BrowserWindow.fromWebContents(e.sender)
@@ -45,6 +53,7 @@ export function registerWhatsappHandlers({ ipcMain, wrap }) {
         sandbox: false,
       },
     })
+    view.webContents.setUserAgent(USER_AGENT_WHATSAPP)
     view.webContents.setWindowOpenHandler(({ url }) => {
       shell.openExternal(url)
       return { action: 'deny' }
