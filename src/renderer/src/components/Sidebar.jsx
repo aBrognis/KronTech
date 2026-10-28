@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   LayoutDashboard, CalendarDays, Package, Zap, Receipt, Lock,
   Database, ChevronDown, ChevronLeft, FolderOpen, LayoutGrid, RefreshCw, Settings, Settings2, LogOut, FileText, Search, Mail,
-  Landmark, Scale, CreditCard, Users, SlidersHorizontal
+  Landmark, Scale, CreditCard, Users, SlidersHorizontal, MessageCircle
 } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import './Sidebar.css'
@@ -29,6 +29,7 @@ export const MENU_BASE = [
       { id: 'viagens',      label: 'Despesas de Viagem',  Icon: Receipt      },
       { id: 'cofre-senhas', label: 'Cofre de Senhas',     Icon: Lock         },
       { id: 'email',        label: 'E-mails',             Icon: Mail         },
+      { id: 'whatsapp',     label: 'WhatsApp',            Icon: MessageCircle },
     ]
   },
   {

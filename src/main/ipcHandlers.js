@@ -38,6 +38,7 @@ import { registerPromptIaHandlers } from './handlers/promptIa'
 import { registerCadastrosApoioHandlers } from './handlers/cadastrosApoio'
 import { registerMunicipioHandlers } from './handlers/municipio'
 import { registerParametrosHandlers } from './handlers/parametros'
+import { registerWhatsappHandlers } from './handlers/whatsapp'
 
 export function registerHandlers() {
   registerJanelaHandlers({ ipcMain, wrap })
@@ -75,4 +76,5 @@ export function registerHandlers() {
   registerCadastrosApoioHandlers({ ipcMain, wrap })
   registerMunicipioHandlers({ ipcMain, wrap })
   registerParametrosHandlers({ ipcMain, wrap })
+  registerWhatsappHandlers({ ipcMain, wrap })
 }

@@ -341,6 +341,13 @@ const api = {
     obter:             (chave)      => ipcRenderer.invoke('parametros:obter', chave),
     atualizar:         (id, dados)  => ipcRenderer.invoke('parametros:atualizar', id, dados),
   },
+  whatsapp: {
+    abrir:            (sessaoUsuario) => ipcRenderer.invoke('whatsapp:abrir', sessaoUsuario),
+    atualizarBounds:  (bounds)        => ipcRenderer.invoke('whatsapp:atualizarBounds', bounds),
+    esconder:         ()              => ipcRenderer.invoke('whatsapp:esconder'),
+    mostrar:          ()              => ipcRenderer.invoke('whatsapp:mostrar'),
+    fecharSessao:     (sessaoUsuario) => ipcRenderer.invoke('whatsapp:fecharSessao', sessaoUsuario),
+  },
   iaProvedor: {
     listar:           ()          => ipcRenderer.invoke('iaProvedor:listar'),
     modelosSugeridos: ()          => ipcRenderer.invoke('iaProvedor:modelosSugeridos'),

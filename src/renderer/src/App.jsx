@@ -24,6 +24,7 @@ import CondicoesPagamento from './pages/CondicoesPagamento'
 import Bancos from './pages/Bancos'
 import Entidade from './pages/entidade'
 import Parametros from './pages/Parametros'
+import Whatsapp from './pages/Whatsapp'
 import { useTheme } from './hooks/useTheme'
 import './App.css'
 
@@ -39,6 +40,7 @@ const PAGE_META = {
   viagens:             { title: 'Despesas de Viagem',     sub: 'GESTÃO · REEMBOLSOS'               },
   'cofre-senhas':      { title: 'Cofre de Senhas',        sub: 'SEGURANÇA · CREDENCIAIS'            },
   email:               { title: 'E-mails',                sub: 'GESTÃO · CAIXA DE ENTRADA'          },
+  whatsapp:            { title: 'WhatsApp',                sub: 'GESTÃO · ATENDIMENTO'               },
   'documentos-gerados':{ title: 'Documentos',             sub: 'FERRAMENTAS · GERAÇÃO DE DOCUMENTOS' },
   entidade:            { title: 'Entidades',              sub: 'CADASTROS · CLIENTES, FORNECEDORES' },
   'naturezas-juridicas':{ title: 'Naturezas Jurídicas',   sub: 'CADASTROS · APOIO'                  },
@@ -521,6 +523,7 @@ export default function App() {
       case 'viagens':            return <Viagens newTrigger={newTrigger} sessao={sessao} />
       case 'cofre-senhas':       return <CofreSenhas newTrigger={newTrigger} sessao={sessao} />
       case 'email':              return <Email newTrigger={newTrigger} />
+      case 'whatsapp':           return <Whatsapp sessao={sessao} />
       case 'documentos-gerados': return <DocumentosGerados newTrigger={newTrigger} />
       case 'entidade':           return <Entidade newTrigger={newTrigger} />
       case 'naturezas-juridicas': return <NaturezasJuridicas newTrigger={newTrigger} />
@@ -539,7 +542,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} onLogout={() => { window.api.email?.pararSync?.(); setSessao(null); setAppPhase('login') }} />
+      <Sidebar activePage={currentPageId} onNavigate={handleNavigate} telasVersion={telasVersion} sessao={sessao} onLogout={() => { window.api.email?.pararSync?.(); window.api.whatsapp?.esconder?.(); setSessao(null); setAppPhase('login') }} />
       <div className="main">
 
         {/* Topbar */}

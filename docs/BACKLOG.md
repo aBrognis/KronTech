@@ -75,17 +75,54 @@ investigação técnica (API, autenticação, limites) antes de virar plano:
   Chave já reservada: `agenda.meet_grava_automatico`. Precisa decidir o
   gatilho: hook no botão de criar reunião, ou integração com Google
   Calendar API observando eventos novos.
-- **Tela de WhatsApp dentro do sistema**. Chave já reservada:
-  `whatsapp.habilitado`. Decisão grande de arquitetura antes de qualquer
-  código: API oficial (WhatsApp Business Cloud API, paga, precisa número
-  dedicado e aprovação Meta) vs. biblioteca não oficial (baileys/
-  whatsapp-web.js, grátis mas não suportada oficialmente, risco de ban).
-  Também decidir armazenamento (Postgres, como o e-mail) e se é 1 número
-  por empresa ou por usuário.
+- **ERP externo ↔ Agenda**: investigação iniciada e **pausada** (esta
+  sessão). `C:\APIExterna` não é uma API HTTP chamável — é um app desktop
+  Delphi (telas de Agenda/OS/Tarefas daquele ERP), rodando localmente, sem
+  servidor web nem acesso documentado a banco. Retomar só quando houver
+  clareza de COMO extrair os dados (acesso de leitura ao banco do ERP
+  externo, ou exportação periódica de arquivo) — nenhuma das duas está
+  disponível ainda.
 
-Ordem sugerida: WhatsApp (maior impacto de produto) → Meet→Agenda (mais
-simples) → ERP externo → Agenda (mais específico de 1 cliente). Cada uma
-leva um plano curto pro usuário aprovar antes de codar.
+---
+
+## ✅ WhatsApp embutido — CONCLUÍDO (esta sessão)
+
+Chave `whatsapp.habilitado` (já existia) agora liga de verdade uma aba
+"WhatsApp" funcional. Decisão de arquitetura (com o usuário, via perguntas):
+nada de API paga nem biblioteca não-oficial (risco de ban) — **embute o
+WhatsApp Web real** (`web.whatsapp.com`) dentro do app via `BrowserView` do
+Electron, sobreposto à área de conteúdo da aba. Cada usuário escaneia o QR
+code uma vez (sessão isolada por usuário via `session.fromPartition`,
+persistida em disco) e continua logado nas próximas vezes, igual ao
+WhatsApp Web no navegador comum. **Nenhuma mensagem é guardada no Postgres**
+— decisão explícita de escopo enxuto; `entidade_interacao_001.tipo='whatsapp'`
+(já existente, de uma migration anterior) fica registrado como caminho
+futuro se um dia for necessário log de conversa por cliente.
+
+Introduz 3 mecanismos inéditos no projeto (confirmado por investigação:
+nenhum existia antes):
+- `BrowserView` (não `<webview>`, não janela filha como o Designer) —
+  `src/main/handlers/whatsapp.js`, uma view por `BrowserWindow` (`Map` por
+  `win.id`), resolvida sempre via `BrowserWindow.fromWebContents(e.sender)`
+  (mesmo padrão já usado em `handlers/arquivos.js`, `handlers/janela.js`
+  etc.), nunca uma referência global de janela.
+- Sessão nomeada por usuário: `persist:whatsapp-<fonte>-<id>`, onde
+  `fonte`/`id` vêm do objeto `sessao` do renderer (não existe "usuário
+  atual" no processo main — passado explicitamente a cada chamada). Único
+  outro precedente de `partition` no projeto era a string fixa
+  `'oauth-outlook'` em `oauthService.js`.
+- Posicionamento: `ResizeObserver` num `<div>` vazio em `pages/Whatsapp.jsx`
+  manda bounds pro main (`whatsapp:atualizarBounds`) sempre que o tamanho
+  muda. Como o KronTech mantém TODAS as abas montadas ao mesmo tempo
+  (`display:none`/`flex`, nunca desmonta ao trocar de aba — ver
+  `tab-content-area` em `App.jsx`), esconder/mostrar a view **não depende**
+  de handlers dedicados: a aba escondida encolhe o `<div>` pra 0x0, o
+  `ResizeObserver` dispara, a view some sozinha. `whatsapp:esconder` só
+  roda no unmount real (fechar a aba) ou no logout do app
+  (`App.jsx onLogout`, evita vazar sessão de um usuário pro próximo login).
+
+Fora de escopo (explícito): nenhuma automação de leitura/envio programático
+de mensagens (reimplementaria o risco de ban que o usuário quis evitar).
 
 ---
 
