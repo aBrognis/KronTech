@@ -36,6 +36,27 @@ function viewDaJanela(win) {
 const USER_AGENT_WHATSAPP =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 
+// Ctrl+scroll pra zoom, igual a qualquer navegador de verdade — uma
+// BrowserView nao tem isso de graca (e comportamento do Chrome como app
+// completo, nao do motor Chromium exposto via Electron). Passos e limites
+// identicos ao Chrome (25%-300%, incrementos de ~10%).
+const ZOOM_PASSOS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+function habilitarZoomPorScroll(webContents) {
+  webContents.on('input-event', (_e, input) => {
+    if (input.type !== 'mouseWheel') return
+    if (!input.modifiers?.includes('control')) return
+    const atual = webContents.getZoomFactor()
+    const idx = ZOOM_PASSOS.reduce((melhor, v, i) =>
+      Math.abs(v - atual) < Math.abs(ZOOM_PASSOS[melhor] - atual) ? i : melhor, 0)
+    // Convencao do Electron (Chromium Blink) e deltaY > 0 = roda pra cima
+    // (afastando de voce) = aumenta zoom, igual ao Chrome de verdade. Se na
+    // pratica sair invertido nesta maquina, so trocar o sinal abaixo.
+    const aumentando = (input.deltaY || 0) > 0
+    const novoIdx = Math.min(ZOOM_PASSOS.length - 1, Math.max(0, idx + (aumentando ? 1 : -1)))
+    webContents.setZoomFactor(ZOOM_PASSOS[novoIdx])
+  })
+}
+
 export function registerWhatsappHandlers({ ipcMain, wrap }) {
   ipcMain.handle('whatsapp:abrir', wrap((e, sessaoUsuario) => {
     const win = BrowserWindow.fromWebContents(e.sender)
@@ -58,6 +79,7 @@ export function registerWhatsappHandlers({ ipcMain, wrap }) {
       shell.openExternal(url)
       return { action: 'deny' }
     })
+    habilitarZoomPorScroll(view.webContents)
     view.webContents.loadURL('https://web.whatsapp.com')
 
     views.set(win.id, view)
