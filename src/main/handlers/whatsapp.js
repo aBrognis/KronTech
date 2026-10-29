@@ -1,4 +1,4 @@
-import { BrowserWindow, BrowserView, session, shell } from 'electron'
+import { BrowserWindow, BrowserView, session, shell, Menu, MenuItem } from 'electron'
 
 // WhatsApp embutido: nao e uma integracao que troca dados com o WhatsApp,
 // e literalmente o WhatsApp Web (web.whatsapp.com) aberto dentro do app via
@@ -35,6 +35,44 @@ function viewDaJanela(win) {
 // string, nao ha verificacao mais profunda de engine.
 const USER_AGENT_WHATSAPP =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
+
+// O corretor ortografico do Chromium existe no Electron, mas nao vem
+// ligado/configurado numa BrowserView, e NAO desenha menu de contexto
+// sozinho (isso e o Chrome como app completo fazendo, nao o motor exposto
+// via Electron) - sem os dois abaixo, nem o sublinhado vermelho nem o
+// clique-direito com sugestao aparecem.
+function habilitarCorretorOrtografico(ses) {
+  ses.setSpellCheckerLanguages(['pt-BR', 'en-US'])
+  ses.setSpellCheckerEnabled(true)
+}
+
+// Menu de contexto minimo: sugestoes de correcao (quando a palavra sob o
+// cursor esta errada) + Cortar/Copiar/Colar/Selecionar tudo em campo
+// editavel. Sem isso a BrowserView nao tem clique-direito nenhum.
+function habilitarMenuContexto(webContents) {
+  webContents.on('context-menu', (_e, params) => {
+    const menu = new Menu()
+    if (params.misspelledWord) {
+      for (const sugestao of params.dictionarySuggestions) {
+        menu.append(new MenuItem({
+          label: sugestao,
+          click: () => webContents.replaceMisspelling(sugestao),
+        }))
+      }
+      if (params.dictionarySuggestions.length) menu.append(new MenuItem({ type: 'separator' }))
+    }
+    if (params.isEditable) {
+      menu.append(new MenuItem({ label: 'Recortar', role: 'cut', enabled: params.editFlags.canCut }))
+      menu.append(new MenuItem({ label: 'Copiar', role: 'copy', enabled: params.editFlags.canCopy }))
+      menu.append(new MenuItem({ label: 'Colar', role: 'paste', enabled: params.editFlags.canPaste }))
+      menu.append(new MenuItem({ type: 'separator' }))
+      menu.append(new MenuItem({ label: 'Selecionar tudo', role: 'selectAll', enabled: params.editFlags.canSelectAll }))
+    } else if (params.selectionText) {
+      menu.append(new MenuItem({ label: 'Copiar', role: 'copy' }))
+    }
+    if (menu.items.length) menu.popup()
+  })
+}
 
 // Ctrl+scroll pra zoom, igual a qualquer navegador de verdade — uma
 // BrowserView nao tem isso de graca (e comportamento do Chrome como app
@@ -74,12 +112,14 @@ export function registerWhatsappHandlers({ ipcMain, wrap }) {
         sandbox: false,
       },
     })
+    habilitarCorretorOrtografico(view.webContents.session)
     view.webContents.setUserAgent(USER_AGENT_WHATSAPP)
     view.webContents.setWindowOpenHandler(({ url }) => {
       shell.openExternal(url)
       return { action: 'deny' }
     })
     habilitarZoomPorScroll(view.webContents)
+    habilitarMenuContexto(view.webContents)
     view.webContents.loadURL('https://web.whatsapp.com')
 
     views.set(win.id, view)
