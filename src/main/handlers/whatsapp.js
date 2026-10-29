@@ -77,7 +77,9 @@ function habilitarMenuContexto(webContents) {
 // Ctrl+scroll pra zoom, igual a qualquer navegador de verdade — uma
 // BrowserView nao tem isso de graca (e comportamento do Chrome como app
 // completo, nao do motor Chromium exposto via Electron). Passos e limites
-// identicos ao Chrome (25%-300%, incrementos de ~10%).
+// identicos ao Chrome (25%-300%, incrementos de ~10%). Ctrl+0 restaura 100%
+// (role 'resetZoom' nao se aplica aqui pois nao ha menu/atalho de app sobre
+// a BrowserView - tratado via before-input-event abaixo).
 const ZOOM_PASSOS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3]
 function habilitarZoomPorScroll(webContents) {
   webContents.on('input-event', (_e, input) => {
@@ -86,12 +88,19 @@ function habilitarZoomPorScroll(webContents) {
     const atual = webContents.getZoomFactor()
     const idx = ZOOM_PASSOS.reduce((melhor, v, i) =>
       Math.abs(v - atual) < Math.abs(ZOOM_PASSOS[melhor] - atual) ? i : melhor, 0)
-    // Convencao do Electron (Chromium Blink) e deltaY > 0 = roda pra cima
-    // (afastando de voce) = aumenta zoom, igual ao Chrome de verdade. Se na
-    // pratica sair invertido nesta maquina, so trocar o sinal abaixo.
-    const aumentando = (input.deltaY || 0) > 0
+    // deltaY < 0 = rodou pra cima (afastando de voce) = aumenta zoom.
+    // (sinal testado e corrigido na pratica - a 1a tentativa estava invertida,
+    // so "diminuir" funcionava).
+    const aumentando = (input.deltaY || 0) < 0
     const novoIdx = Math.min(ZOOM_PASSOS.length - 1, Math.max(0, idx + (aumentando ? 1 : -1)))
     webContents.setZoomFactor(ZOOM_PASSOS[novoIdx])
+  })
+  // Ctrl+0 restaura 100%, igual a qualquer navegador (KeyboardEvent.key
+  // '0' cobre tanto a tecla numerica principal quanto o numpad).
+  webContents.on('before-input-event', (_e, input) => {
+    if (input.type !== 'keyDown') return
+    if (!input.control) return
+    if (input.key === '0') webContents.setZoomFactor(1)
   })
 }
 
